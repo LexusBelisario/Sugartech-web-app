@@ -1,0 +1,90 @@
+/* === Form Modal Overlay === */
+.taxmap-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(20, 20, 20, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+/* === Modal Content === */
+.modal-content {
+  background: #fff;
+  padding: 1.5rem 2rem;
+  border-radius: 6px;
+  width: 380px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
+  font-family: "Segoe UI", sans-serif;
+  transform: scale(0.95);
+  transform-origin: top center;
+}
+
+.modal-title {
+  text-align: center;
+  font-weight: bold;
+  font-size: 15px;
+  margin-bottom: 1rem;
+}
+
+/* === Form Fields === */
+.form-group {
+  margin-bottom: 10px;
+}
+
+.form-group label {
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* === Grid Layout for Metadata === */
+.quad-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 20px;
+  margin-top: 10px;
+}
+
+/* === Modal Action Buttons === */
+.form-buttons {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.form-buttons button {
+  padding: 6px 20px;
+  font-size: 14px;
+  border: 1px solid #000;
+  background: white;
+  color: #000;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 0 6px;
+}
+
+.form-buttons button:hover {
+  background: #000;
+  color: #fff;
+}
+
+/* === Remove arrows in number input === */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

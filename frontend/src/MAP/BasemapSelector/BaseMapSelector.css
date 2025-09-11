@@ -1,0 +1,53 @@
+/* Container for button behaves like a Leaflet control */
+.basemap-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  position: relative;
+}
+
+/* Button same style as zoom buttons */
+.basemap-toggle-button {
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  line-height: 30px;
+  text-align: center;
+  background: #fff;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 0;
+}
+
+.basemap-toggle-button:hover {
+  background: #f0f0f0;
+}
+
+/* Panel now attaches directly under the button */
+.basemap-panel {
+  position: absolute;
+  top: 35px;   /* sits right under button (button is 30px) */
+  right: 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 8px 10px;
+  width: 180px;
+  font-size: 13px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+}
+
+.basemap-panel h4 {
+  margin: 0 0 6px 0;
+  font-size: 13px;
+  font-weight: bold;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 4px;
+}
+
+.basemap-panel div {
+  margin: 4px 0;
+}

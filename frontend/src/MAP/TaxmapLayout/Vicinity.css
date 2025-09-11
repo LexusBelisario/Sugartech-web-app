@@ -1,0 +1,138 @@
+/* === Vicinity Map Tab Panel === */
+.vicinity-map-tab {
+  padding: 1.25rem;
+  background: #f4f4f4;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 14px;
+  color: #333;
+}
+
+/* Labels */
+.vicinity-map-tab label {
+  display: block;
+  margin: 1rem 0 0.3rem;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* Select and input fields */
+.vicinity-map-tab select,
+.vicinity-map-tab input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+/* Disabled fields */
+.vicinity-map-tab select:disabled {
+  background: #eee;
+  color: #888;
+  cursor: not-allowed;
+}
+
+/* General button */
+.vicinity-map-tab button {
+  background-color: #7b57b1;
+  color: white;
+  font-weight: bold;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 1rem;
+  font-size: 14px;
+}
+
+.vicinity-map-tab button:hover {
+  background-color: #5c3f89;
+}
+
+/* Row containing layer selector and add button */
+.vicinity-map-tab .layer-add-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+/* "+" add button */
+.vicinity-map-tab .layer-add-row button {
+  background: #f9f9f9;
+  border: 1px solid #bbb;
+  border-radius: 5px;
+  width: 38px;
+  height: 38px;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: bold;
+  color: #7b57b1;
+  cursor: pointer;
+  margin-top: 0;
+}
+
+.vicinity-map-tab .layer-add-row button:hover {
+  background: #e6e6e6;
+}
+
+/* Other Layers box */
+.vicinity-map-tab .other-layers-box {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  margin-top: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.vicinity-map-tab .other-layers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vicinity-map-tab .other-layer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background: #f9f9f9;
+  font-size: 14px;
+}
+
+.vicinity-map-tab .other-layer-item button {
+  background: none;
+  border: none;
+  font-weight: bold;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: #888;
+}
+
+.vicinity-map-tab .other-layer-item button:hover {
+  color: #c00;
+}
+
+/* Preview overlay */
+.vicinity-preview {
+  position: absolute;
+  top: 10%;
+  left: 10%;
+  width: 80%;
+  height: 70%;
+  background: #fff;
+  border: 1px solid #aaa;
+  padding: 20px;
+  z-index: 10000;
+  overflow: auto;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}

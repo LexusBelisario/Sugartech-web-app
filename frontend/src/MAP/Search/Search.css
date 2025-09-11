@@ -1,0 +1,204 @@
+/* === SEARCH POPUP PANEL === */
+.search-popup {
+  position: absolute; /* Anchored relative to the page */
+  top: 0;
+  left: 0;
+  width: 330px;
+  max-height: 100vh; /* Prevents overflow beyond the viewport */
+  background-color: rgb(227, 227, 227);
+  padding: 16px;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.3); /* Adds right-side shadow */
+  z-index: 2100;
+  transform: translateX(-100%); /* Initially hidden (off-screen left) */
+  transition: transform 0.3s ease; /* Smooth slide-in effect */
+  overflow: hidden; /* Hides content overflow during animation */
+}
+
+.search-popup.visible {
+  transform: translateX(0); /* Slide into view when "visible" class is added */
+}
+
+/* === INNER WRAPPER (scrollable content) === */
+#searchPopupInner {
+  font-family: sans-serif;
+  max-height: 95vh;
+  overflow-y: auto; /* Allows scrolling within inner popup */
+  padding-right: 6px; /* Space for scrollbar */
+}
+
+#searchPopupInner h2 {
+  margin-top: 0; /* Remove default top margin from title */
+}
+
+/* === BUTTON ROW STYLING === */
+.button-row {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+
+.button-row button {
+  flex: 1; /* Evenly distribute button widths */
+  text-align: center;
+}
+
+.button-row .search-btn.active,
+.button-row .clear-btn.active {
+  background-color: #ffffff;
+  color: rgb(0, 0, 0);
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* === INPUT FIELD GRID === */
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 columns equally spaced */
+  gap: 10px 16px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+/* === INDIVIDUAL INPUT CELL === */
+.field-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 10px;
+}
+
+.field-cell label {
+  font-size: 13px;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1;
+  padding-bottom: 2px;
+}
+
+.field-cell input,
+.field-cell select {
+  margin: 0;
+  font-size: 13px;
+  padding: 4px 6px;
+  height: auto;
+  max-width: 100%;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* === CLOSE BUTTON (TOP-RIGHT) === */
+.close-btn {
+  float: right;
+  margin-bottom: 10px;
+  background-color: #fffbfb;
+  color: rgb(16, 16, 16);
+  border: 1px solid #000000;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.close-btn:hover {
+  background-color: #ad1414;
+  color: white;
+}
+
+/* === SEARCH BUTTON === */
+.search-btn {
+  background-color: #050505;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 4px;
+  margin-right: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.search-btn:hover {
+  background-color: #a1a1a1;
+}
+
+/* === CLEAR BUTTON === */
+.clear-btn {
+  background-color: #1c1c1c;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.clear-btn:hover {
+  background-color: #495057;
+}
+
+/* === SEARCH RESULTS PANEL === */
+.search-results {
+  font-size: 16px;
+  max-height: 330px; /* Scrollable height limit */
+  padding: 12px;
+  background-color: white;
+  overflow-y: auto;
+  border-radius: 4px;
+  margin-top: 12px;
+  border-top: 1px solid #ccc;
+  display: block;
+}
+
+.search-results ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.search-results li {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.search-results li:hover {
+  background-color: #adadad;
+}
+
+.search-results li.selected {
+  background-color: yellow;
+  font-weight: bold;
+}
+
+/* === TAB CONTENT WRAPPER === */
+.tab-content {
+  margin-top: 12px;
+}
+
+.search-close-btn {
+  float: right;
+  margin-bottom: 12px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  background-color: #f9f9f9;
+  color: #000;
+  border: 1px solid #000;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+  height: 30px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-close-btn:hover {
+  background-color: #ad1414;
+  color: white;
+}

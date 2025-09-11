@@ -1,0 +1,110 @@
+.tmcr-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 480px;
+  max-width: 90vw;
+  height: 100vh;
+  background: #f4f4f4;
+  border-right: 1px solid #ccc;
+  z-index: 9999;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1);
+
+  display: flex;
+  flex-direction: column;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.tmcr-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: #f4f4f4;
+}
+
+/* Header (tabs) */
+.tmcr-sidebar .tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #e0e0e0;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #bbb;
+  font-weight: bold;
+  font-size: 18px;
+  color: #333;
+}
+
+/* Close button */
+.tmcr-sidebar .close-btn {
+  font-size: 14px;
+  padding: 4px 12px;
+  border: 1px solid #000;
+  background: white;
+  color: #000;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.tmcr-sidebar .close-btn:hover {
+  background: #8d1313;
+  color: white;
+}
+
+/* Form container for selects and button */
+.form-row {
+  display: flex;
+  flex-wrap: wrap;      /* allow wrapping on smaller widths */
+  gap: 12px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+/* Select elements styling */
+.tmcr-sidebar select {
+  flex: 1 1 180px;      /* flex-grow:1, flex-shrink:1, base width 180px */
+  min-width: 150px;
+  height: 38px;
+  font-size: 16px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  outline: none;
+}
+
+/* Button styling */
+.tmcr-sidebar button.set-table-btn {
+  flex: 0 0 auto;      /* don't grow or shrink, keep natural width */
+  padding: 10px 16px;
+  background-color: #000000;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background-color 0.3s, transform 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tmcr-sidebar button.set-table-btn:hover {
+  background-color: #464646;
+  transform: scale(1.03);
+}
+
+/* Dropdowns below schema/table row */
+.tmcr-sidebar .dropdown-row {
+  margin-bottom: 16px;
+}
+
+.tmcr-sidebar .dropdown-row select {
+  padding: 6px 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  min-width: 180px;
+  max-width: 100%;
+}

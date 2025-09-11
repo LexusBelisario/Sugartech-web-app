@@ -1,0 +1,345 @@
+/* === Fullscreen Overlay Backdrop === */
+.layout-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(250, 250, 250, 0.95);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+/* === Paper-Sized Layout Scaled + Centered === */
+.print-layout {
+  position: relative;
+  background-color: white !important;
+  width: calc(42cm - 6cm);    /* True A3 width minus 6cm margins */
+  height: calc(29.7cm - 2cm); /* True A3 height minus 2cm margins */
+  box-sizing: border-box;
+  overflow: hidden;
+  transform-origin: center;
+}
+
+
+
+
+/* === Map Canvas === */
+.map-canvas {
+  width: 100%;
+  height: 100%;
+  background-color: white !important;
+  z-index: 1;
+}
+
+/* === Force White for Leaflet Panes === */
+.leaflet-pane,
+.leaflet-map-pane {
+  background-color: white !important;
+  opacity: 1 !important;
+}
+
+/* === Section Index Overlay (Bottom Right Box) === */
+.index-overlay {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  transform: translate(8%, 5%);
+  background-color: #ffffff !important;
+  border: 1px solid black;
+  margin: 0;
+  padding: 0;
+  font-size: 11px;
+  box-shadow: none;
+  z-index: 1000;
+  box-sizing: border-box;
+  border-radius: 0;
+  opacity: 1 !important;
+  pointer-events: none;
+}
+
+
+
+
+
+/* === Section Header and Scale === */
+.info-header {
+  font-weight: bold;
+  font-size: 13px;
+  margin-top: 26px;      /* ✅ add this */
+  margin-bottom: 8px;
+  line-height: 1.3;
+  width: 100%;
+  display: block;
+  text-align: center !important;
+}
+
+
+
+.info-scale {
+  text-align: center;
+  margin-bottom: 10px;
+  margin-top: -20px;
+  font-size: 11px;
+    background-color: white; /* ✅ Add this */
+}
+
+.scale-value {
+  border: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background-color: white; /* ✅ Add this too */
+}
+
+/* === Signature Block Styling === */
+.sig-block {
+  margin-bottom: 8px;
+}
+
+.sig-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.sig-label {
+  font-weight: bold;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.sig-line {
+  border-bottom: 1px solid black;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 10px;
+  text-align: center;
+}
+
+.sig-title {
+  font-size: 9px;
+  font-style: italic;
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* === Location Table Format === */
+.loc-table {
+  margin-top: 8px;
+  font-size: 10px;
+}
+
+.loc-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+
+.loc-item {
+  flex: 1;
+  text-align: center;
+}
+
+.loc-label {
+  font-weight: bold;
+  margin-top: 2px;
+}
+
+.underlined {
+  border-bottom: 1px solid black;
+  display: inline-block;
+  min-width: 70px;
+  padding: 1px 3px;
+}
+
+/* === Disclaimer Box === */
+.layout-disclaimer-box {
+  border: 1px solid black;
+  font-size: 9px;
+  text-align: justify;
+  padding: 5px;
+  margin-top: 10px;
+}
+
+/* === Footer Buttons (Below Paper) === */
+.layout-footer {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 100;
+}
+
+.layout-footer button {
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: bold;
+  border: 1px solid #333;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.layout-footer button:hover {
+  background: #333;
+  color: white;
+}
+
+/* === Engraved Labels for Map === */
+.engraved-label {
+  font-size: 11px;
+  font-weight: bold;
+  color: black;
+  text-shadow: 1px 1px 1px white;
+  white-space: nowrap;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* === Top Toolbar Buttons === */
+.layout-toolbar {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: flex;
+  gap: 12px;
+}
+
+.layout-toolbar button {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: bold;
+  border: 1px solid #444;
+  background: white;
+  color: #444;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.layout-toolbar button:hover {
+  background: #444;
+  color: white;
+}
+
+@media print {
+  /* Force exact A3 layout with custom margins */
+  .print-container {
+    width: calc(42cm - 6cm);   /* A3 width minus 5cm left + 1cm right */
+    height: calc(29.7cm - 2cm); /* A3 height minus 1cm top/bottom */
+    margin: 1cm 1cm 1cm 5cm;
+    background: white;
+    box-sizing: border-box;
+    display: block;
+  }
+
+  .print-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Preserve aspect ratio */
+    display: block;
+  }
+}
+
+
+.print-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background: white;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.index-overlay-logo {
+  position: absolute;
+  top: 0px; /* Adjust as needed to position above title */
+  left: 50%;
+  transform: translateX(-50%) scale(1.8); /* center and enlarge */
+  width: 100px;
+  height: 50px;
+  object-fit: contain;
+  z-index: 2;
+}
+
+
+
+
+/* === Rotated Road Name Labels === */
+.road-label {
+  background: transparent;
+  color: #222;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+  text-shadow: 1px 1px 2px white;
+  transform-origin: center center !important;  /* ✅ Ensure rotation works */
+  pointer-events: none;
+}
+
+.layout-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 4px solid black;
+  z-index: 999;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+@media print {
+  .layout-border {
+    border: 4px solid black;
+  }
+}
+
+.loc-cross-table {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  position: relative;
+  gap: 8px 12px;
+  padding: 4px 0;
+}
+
+.loc-cross-table::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: black;
+  transform: translateX(-0.5px);
+}
+
+
+
+.loc-cell {
+  text-align: center;
+  font-size: 10px;
+}
+
+.loc-value {
+  border-bottom: 1px solid black;
+  padding: 1px 4px;
+  margin-bottom: 2px;
+}
+
+.loc-label {
+  font-weight: bold;
+}

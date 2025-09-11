@@ -1,0 +1,137 @@
+/* Consolidate popup container */
+#consolidatePopup {
+  position: fixed;
+  top: 100px;
+  right: -400px;
+  width: 320px;
+  background: white;
+  border: 1px solid #888;
+  padding: 16px;
+  z-index: 3000;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+  transition: right 0.3s ease;
+  font-family: sans-serif;
+}
+
+/* Show the popup */
+#consolidatePopup.visible {
+  right: 20px;
+}
+
+/* Header */
+#consolidatePopup h3 {
+  margin: 0;
+  font-size: 16px;
+  flex-grow: 1;
+  color: #222;
+}
+
+.consolidate-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* Close button */
+.consolidate-header .close-btn {
+  background-color: #000000;
+  color: white;
+  font-weight: bold;
+  font-size: 13px;
+  border: 1px solid black;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.consolidate-header .close-btn:hover {
+  background-color: #a0001c;
+}
+
+/* Instructions */
+.consolidate-instructions p {
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+/* Label above parcel list */
+.consolidate-selected-label {
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 4px;
+  margin-top: 10px;
+  color: #333;
+}
+
+/* PIN list container */
+.consolidate-pin-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 20px 0;
+  max-height: 120px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Each PIN entry */
+.consolidate-pin-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-bottom: 1px solid #eee;
+  font-size: 13px;
+  color: #333;
+}
+
+/* Remove “×” button next to PIN */
+.remove-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+}
+
+.remove-btn:hover {
+  color: red;
+}
+
+/* Button row */
+.consolidate-popup-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Base button style */
+.consolidate-btn {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+  transition: opacity 0.2s;
+}
+
+/* Confirm button */
+.consolidate-btn.confirm {
+  background-color: #020202;
+  color: white;
+}
+
+/* Cancel button */
+.consolidate-btn.cancel {
+  background-color: #ccc;
+  color: black;
+}
+
+/* Hover for all buttons */
+.consolidate-btn:hover {
+  opacity: 0.85;
+}
