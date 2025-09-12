@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import text  # Add this import
+from sqlalchemy import text
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 import bcrypt
@@ -8,8 +8,9 @@ import jwt
 import os
 import re
 
-from db import get_auth_db, set_current_cred_number
-from auth.models import User, Credentials
+from db import get_auth_db
+from auth.models import User, Credentials, Admin
+from auth.access_control import AccessControl
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -21,15 +22,17 @@ class LoginRequest(BaseModel):
 class RegisterRequest(BaseModel):
     username: str
     password: str
-    cred_number: int
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     message: str
+    access_status: str
+    access_message: str
+    user_type: str
 
 # JWT settings
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this")
+SECRET_KEY = os.getenv("SECRET_KEY", "secret_ngani")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 1440))
 
@@ -84,7 +87,37 @@ def create_access_token(data: dict):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(request: LoginRequest, auth_db: Session = Depends(get_auth_db)):
-    # Get user from auth DB
+    # First, try to find user in admin table
+    admin = auth_db.query(Admin).filter(Admin.user_name == request.username).first()
+    
+    if admin:
+        # Admin login flow
+        if not verify_password(request.password, admin.password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password"
+            )
+        
+        # Create JWT token for admin
+        token_data = {
+            "user_id": admin.id,
+            "username": admin.user_name,
+            "email": admin.email,
+            "user_type": "admin",
+            "full_name": f"{admin.first_name} {admin.last_name}"
+        }
+        access_token = create_access_token(token_data)
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "message": "Admin login successful",
+            "access_status": "approved",
+            "access_message": "Full admin access granted",
+            "user_type": "admin"
+        }
+    
+    # If not admin, check regular users table
     user = auth_db.query(User).filter(User.user_name == request.username).first()
     
     if not user:
@@ -93,51 +126,34 @@ async def login(request: LoginRequest, auth_db: Session = Depends(get_auth_db)):
             detail="User not found"
         )
     
-    # Verify password
+    # Regular user login flow
     if not verify_password(request.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect password"
         )
     
-    # Get credentials info
-    credentials = auth_db.query(Credentials).filter(
-        Credentials.cred_number == user.cred_number
-    ).first()
+    # Check user access using AccessControl
+    access_info = AccessControl.check_user_access(user)
     
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="No database credentials found for user"
-        )
-    
-    # Test connection to main DB
-    try:
-        from db import create_main_engine
-        engine = create_main_engine(credentials)
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))  # Wrap SQL in text()
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Cannot connect to database: {str(e)}"
-        )
-    
-    # Set current credential number for backward compatibility
-    set_current_cred_number(user.cred_number)
-    
-    # Create JWT token
+    # Create JWT token for regular user
     token_data = {
         "user_id": user.id,
         "username": user.user_name,
-        "cred_number": user.cred_number
+        "user_type": "user",
+        "provincial_access": user.provincial_access,
+        "municipal_access": user.municipal_access,
+        "access_status": access_info['status']
     }
     access_token = create_access_token(token_data)
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "message": f"Connected to {credentials.dbname} database"
+        "message": "Login successful" if access_info['status'] == 'approved' else "Login successful but with limited access",
+        "access_status": access_info['status'],
+        "access_message": access_info['message'],
+        "user_type": "user"
     }
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -158,23 +174,13 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
             detail="Username already exists"
         )
     
-    # Check if credentials exist
-    credentials = auth_db.query(Credentials).filter(
-        Credentials.cred_number == request.cred_number
-    ).first()
-    
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid credential number"
-        )
-    
     # Create new user with hashed password
     hashed_pw = hash_password(request.password)
     new_user = User(
         user_name=request.username,
         password=hashed_pw,
-        cred_number=request.cred_number
+        provincial_access=None,  # Will need admin approval
+        municipal_access=None    # Will need admin approval
     )
     
     auth_db.add(new_user)
@@ -182,8 +188,7 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
     auth_db.refresh(new_user)
     
     return {
-        "message": "User registered successfully",
+        "message": "User registered successfully. Please contact admin for access approval.",
         "username": new_user.user_name,
-        "cred_number": new_user.cred_number,
-        "password_requirements": "Password meets all security requirements"
+        "status": "pending_approval"
     }

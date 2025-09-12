@@ -7,6 +7,7 @@ import uvicorn
 # Import routers
 # from db import router as db_router  # REMOVE THIS LINE - no more router in db.py
 from auth.routes import router as auth_router  # ADD THIS LINE
+from admin.routes import router as admin_router 
 from routes.view import router as view_router
 from routes.edit import router as edit_router
 from routes.consolidate import router as merge_router
@@ -34,7 +35,7 @@ app.add_middleware(
 
 # Register auth router
 app.include_router(auth_router, prefix="/api")
-
+app.include_router(admin_router)
 app.include_router(view_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
 app.include_router(edit_router, prefix="/api")

@@ -118,5 +118,6 @@ class ApiService {
   }
 }
 
+// Export both the API_BASE and the ApiService
 export default API_BASE;
 export { ApiService, API_BASE as API };

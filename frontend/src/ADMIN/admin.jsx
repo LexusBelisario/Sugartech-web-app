@@ -5,9 +5,6 @@ import AdminSidebar from "./components/admin_sidebar";
 import AdminDashboard from "./pages/admin_dashboard";
 import AdminFileUpload from "./pages/admin_file_upload";
 import UserManagement from "./pages/user_management";
-// Import other components when ready
-// import AdminUserGroups from './admin_user_groups';
-// import AdminRoleManagement from './admin_role_management';
 
 const Admin = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -37,12 +34,6 @@ const Admin = () => {
             <Route path="/dashboard" element={<AdminDashboard />} />
             <Route path="/users" element={<UserManagement />} />
             <Route path="/data-upload" element={<AdminFileUpload />} />{" "}
-            {/* Add this route */}
-            {/* Add more routes when components are ready */}
-            {/* <Route path="/user-management" element={<AdminUserManagement />} />
-            <Route path="/role-management" element={<AdminRoleManagement />} />
-            <Route path="/user-groups" element={<AdminUserGroups />} />
-            <Route path="/data-manager" element={<AdminDataManager />} /> */}
           </Routes>
         </main>
       </div>
