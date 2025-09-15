@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./Table_Column.css";
-import API from "../../api";
+import API from "../../api.js";
 
 const Table_Column = ({ schema, table, onApply, onClose }) => {
   const [columns, setColumns] = useState([]);
@@ -45,19 +45,28 @@ const Table_Column = ({ schema, table, onApply, onClose }) => {
     <div id="tableColumnPopup" className="visible">
       <div className="table-column-header">
         <h3>Select Column to Style</h3>
-        <button className="close-btn" onClick={onClose}>Close</button>
+        <button className="close-btn" onClick={onClose}>
+          Close
+        </button>
       </div>
 
       <div style={{ padding: "12px 16px" }}>
         <label>Available Columns:</label>
         <select
-          style={{ marginTop: "8px", padding: "6px", fontSize: "14px", width: "100%" }}
+          style={{
+            marginTop: "8px",
+            padding: "6px",
+            fontSize: "14px",
+            width: "100%",
+          }}
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
         >
           <option value="">-- Select Column --</option>
           {columns.map((col) => (
-            <option key={col} value={col}>{col}</option>
+            <option key={col} value={col}>
+              {col}
+            </option>
           ))}
         </select>
 

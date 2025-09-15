@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import L from "leaflet";
-import API from "../../api";
+import API from "../../api.js";
 import "./AddLandmarks.css";
 import { useSchema } from "../SchemaContext";
 import { useMap } from "react-leaflet";
@@ -134,14 +134,18 @@ const AddLandmark = ({ visible, onClose, onAdded }) => {
     <div className="add-landmark-panel leaflet-top leaflet-right">
       <div className="add-landmark-header">
         <h3 className="add-landmark-title">Add Landmark</h3>
-        <button onClick={closePopup} className="add-landmark-close">×</button>
+        <button onClick={closePopup} className="add-landmark-close">
+          ×
+        </button>
       </div>
 
       <div className="add-landmark-instructions">
         <ol>
           <li>Click on any point on the map to add a landmark.</li>
           <li>Fill in the required details.</li>
-          <li>Click <b>Save</b> to store it.</li>
+          <li>
+            Click <b>Save</b> to store it.
+          </li>
         </ol>
       </div>
 
@@ -172,8 +176,12 @@ const AddLandmark = ({ visible, onClose, onAdded }) => {
           <option value="Gas Station">Gas Station</option>
           <option value="Religious Entities">Religious Entities</option>
           <option value="Recreational Entities">Recreational Entities</option>
-          <option value="Telecommunication Entities">Telecommunication Entities</option>
-          <option value="Transportation Entities">Transportation Entities</option>
+          <option value="Telecommunication Entities">
+            Telecommunication Entities
+          </option>
+          <option value="Transportation Entities">
+            Transportation Entities
+          </option>
           <option value="Financial Entities">Financial Entities</option>
           <option value="Industrial Entities">Industrial Entities</option>
           <option value="Subdivision">Subdivision</option>
@@ -201,8 +209,12 @@ const AddLandmark = ({ visible, onClose, onAdded }) => {
       </label>
 
       <div className="add-landmark-footer">
-        <button onClick={handleSave} className="add-landmark-save">Save</button>
-        <button onClick={closePopup} className="add-landmark-cancel">Cancel</button>
+        <button onClick={handleSave} className="add-landmark-save">
+          Save
+        </button>
+        <button onClick={closePopup} className="add-landmark-cancel">
+          Cancel
+        </button>
       </div>
     </div>
   );

@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
-import API from "../../api";
+import API from "../../api.js";
 import "./LandmarkInfotool.css";
 import { useSchema } from "../SchemaContext";
 
-const LandmarkInfoTool = ({ visible, data, onClose, startEditable = false }) => {
+const LandmarkInfoTool = ({
+  visible,
+  data,
+  onClose,
+  startEditable = false,
+}) => {
   const { schema } = useSchema();
-  const [formData, setFormData] = useState({ name: "", type: "", barangay: "", descr: "" });
+  const [formData, setFormData] = useState({
+    name: "",
+    type: "",
+    barangay: "",
+    descr: "",
+  });
   const [editable, setEditable] = useState(false);
 
   useEffect(() => {
@@ -92,7 +102,9 @@ const LandmarkInfoTool = ({ visible, data, onClose, startEditable = false }) => 
         <h3 className="landmark-info-title">
           {editable ? "Update Landmark" : "Landmark Information"}
         </h3>
-        <button onClick={onClose} className="landmark-info-close">Close</button>
+        <button onClick={onClose} className="landmark-info-close">
+          Close
+        </button>
       </div>
 
       <div className="landmark-info-section">
@@ -120,7 +132,9 @@ const LandmarkInfoTool = ({ visible, data, onClose, startEditable = false }) => 
           >
             <option value="">Select Type</option>
             {landmarkTypes.map((type) => (
-              <option key={type} value={type}>{type}</option>
+              <option key={type} value={type}>
+                {type}
+              </option>
             ))}
           </select>
         ) : (
@@ -160,11 +174,23 @@ const LandmarkInfoTool = ({ visible, data, onClose, startEditable = false }) => 
       <div className="landmark-info-footer">
         {editable ? (
           <>
-            <button onClick={handleSave} className="landmark-info-save">Save</button>
-            <button onClick={() => setEditable(false)} className="landmark-info-cancel">Cancel</button>
+            <button onClick={handleSave} className="landmark-info-save">
+              Save
+            </button>
+            <button
+              onClick={() => setEditable(false)}
+              className="landmark-info-cancel"
+            >
+              Cancel
+            </button>
           </>
         ) : (
-          <button onClick={() => setEditable(true)} className="landmark-info-edit">Edit</button>
+          <button
+            onClick={() => setEditable(true)}
+            className="landmark-info-edit"
+          >
+            Edit
+          </button>
         )}
       </div>
     </div>

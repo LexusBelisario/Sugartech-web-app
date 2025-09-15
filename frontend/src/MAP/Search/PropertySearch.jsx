@@ -1,19 +1,33 @@
 import React, { useEffect, useState } from "react";
 import SearchResults from "./SearchResults";
 import { clearParcelHighlights } from "./SearchHelpers";
-import API from "../../api";
-
+import API from "../../api.js";
 
 const PropertySearch = ({ schema }) => {
   const [attributeData, setAttributeData] = useState([]);
   const [filters, setFilters] = useState({
-    province: "", municipal: "", barangay: "", section: "",
-    parcel: "", pin: "", arpn: "", octtct: "", td: "", cct: "",
-    survey: "", cad: "", name: "", block: "", lot: ""
+    province: "",
+    municipal: "",
+    barangay: "",
+    section: "",
+    parcel: "",
+    pin: "",
+    arpn: "",
+    octtct: "",
+    td: "",
+    cct: "",
+    survey: "",
+    cad: "",
+    name: "",
+    block: "",
+    lot: "",
   });
 
   const [dropdownOptions, setDropdownOptions] = useState({
-    provinces: [], municipals: [], barangays: [], sections: []
+    provinces: [],
+    municipals: [],
+    barangays: [],
+    sections: [],
   });
 
   const [searchResults, setSearchResults] = useState([]);
@@ -42,7 +56,7 @@ const PropertySearch = ({ schema }) => {
     const barangays = new Set();
     const sections = new Set();
 
-    attributeData.forEach(p => {
+    attributeData.forEach((p) => {
       if (p.province) provinces.add(p.province);
 
       if (!filters.province || p.province === filters.province) {
@@ -69,16 +83,16 @@ const PropertySearch = ({ schema }) => {
       provinces: [...provinces].sort(),
       municipals: [...municipals].sort(),
       barangays: [...barangays].sort(),
-      sections: [...sections].sort()
+      sections: [...sections].sort(),
     });
   }, [attributeData, filters.province, filters.municipal, filters.barangay]);
 
   const updateFilter = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   const clearForm = () => {
-    setFilters(Object.fromEntries(Object.keys(filters).map(k => [k, ""])));
+    setFilters(Object.fromEntries(Object.keys(filters).map((k) => [k, ""])));
     setSearchResults([]);
     setSearchTriggered(false);
     setSelectedPin(null);
@@ -87,7 +101,7 @@ const PropertySearch = ({ schema }) => {
   };
 
   const handlePropertySearch = () => {
-    const hasInput = Object.values(filters).some(val => val.trim() !== "");
+    const hasInput = Object.values(filters).some((val) => val.trim() !== "");
     if (!hasInput) {
       setNoInputMessage(true);
       setSearchResults([]);
@@ -100,32 +114,41 @@ const PropertySearch = ({ schema }) => {
     setSelectedPin(null);
     clearParcelHighlights();
 
-    const matches = attributeData.filter(p => {
+    const matches = attributeData.filter((p) => {
       return (
         (!filters.province || p.province === filters.province) &&
         (!filters.municipal || p.municipal === filters.municipal) &&
         (!filters.barangay || p.barangay === filters.barangay) &&
         (!filters.section || p.section === filters.section) &&
-        (!filters.parcel || (p.parcel && p.parcel.toLowerCase().includes(filters.parcel))) &&
-        (!filters.pin || (p.pin && p.pin.toLowerCase().includes(filters.pin))) &&
-        (!filters.arpn || (p.arpn && p.arpn.toLowerCase().includes(filters.arpn))) &&
-        (!filters.octtct || (p.octtct && p.octtct.toLowerCase().includes(filters.octtct))) &&
+        (!filters.parcel ||
+          (p.parcel && p.parcel.toLowerCase().includes(filters.parcel))) &&
+        (!filters.pin ||
+          (p.pin && p.pin.toLowerCase().includes(filters.pin))) &&
+        (!filters.arpn ||
+          (p.arpn && p.arpn.toLowerCase().includes(filters.arpn))) &&
+        (!filters.octtct ||
+          (p.octtct && p.octtct.toLowerCase().includes(filters.octtct))) &&
         (!filters.td || (p.td && p.td.toLowerCase().includes(filters.td))) &&
-        (!filters.cct || (p.cct && p.cct.toLowerCase().includes(filters.cct))) &&
-        (!filters.survey || (p.survey && p.survey.toLowerCase().includes(filters.survey))) &&
-        (!filters.cad || (p.cad_no && p.cad_no.toLowerCase().includes(filters.cad))) &&
-        (!filters.name || (
+        (!filters.cct ||
+          (p.cct && p.cct.toLowerCase().includes(filters.cct))) &&
+        (!filters.survey ||
+          (p.survey && p.survey.toLowerCase().includes(filters.survey))) &&
+        (!filters.cad ||
+          (p.cad_no && p.cad_no.toLowerCase().includes(filters.cad))) &&
+        (!filters.name ||
           (p.l_lastname && p.l_lastname.toLowerCase().includes(filters.name)) ||
-          (p.l_frstname && p.l_frstname.toLowerCase().includes(filters.name))
-        )) &&
-        (!filters.block || (p.blk_no && p.blk_no.toLowerCase().includes(filters.block))) &&
-        (!filters.lot || (p.lot_no && p.lot_no.toLowerCase().includes(filters.lot)))
+          (p.l_frstname &&
+            p.l_frstname.toLowerCase().includes(filters.name))) &&
+        (!filters.block ||
+          (p.blk_no && p.blk_no.toLowerCase().includes(filters.block))) &&
+        (!filters.lot ||
+          (p.lot_no && p.lot_no.toLowerCase().includes(filters.lot)))
       );
     });
 
     const pins = matches
-      .map(m => m.pin)
-      .filter(pin => !!pin)
+      .map((m) => m.pin)
+      .filter((pin) => !!pin)
       .filter((v, i, arr) => arr.indexOf(v) === i)
       .sort((a, b) => {
         const parse = (pin) => {
@@ -141,9 +164,19 @@ const PropertySearch = ({ schema }) => {
     // Highlight on map
     for (const { feature, layer } of window.parcelLayers || []) {
       if (pins.includes(feature.properties.pin)) {
-        layer.setStyle({ color: "black", weight: 2, fillColor: "lime", fillOpacity: 0.2 });
+        layer.setStyle({
+          color: "black",
+          weight: 2,
+          fillColor: "lime",
+          fillOpacity: 0.2,
+        });
       } else {
-        layer.setStyle({ color: "black", weight: 1, fillColor: "black", fillOpacity: 0.1 });
+        layer.setStyle({
+          color: "black",
+          weight: 1,
+          fillColor: "black",
+          fillOpacity: 0.1,
+        });
       }
     }
   };
@@ -154,26 +187,50 @@ const PropertySearch = ({ schema }) => {
         {["province", "municipal", "barangay", "section"].map((field) => (
           <div className="field-cell" key={field}>
             <label>{field}</label>
-            <select value={filters[field]} onChange={(e) => updateFilter(field, e.target.value)}>
+            <select
+              value={filters[field]}
+              onChange={(e) => updateFilter(field, e.target.value)}
+            >
               <option value="">- Select -</option>
               {dropdownOptions[`${field}s`]?.map((val) => (
-                <option key={val} value={val}>{val}</option>
+                <option key={val} value={val}>
+                  {val}
+                </option>
               ))}
             </select>
           </div>
         ))}
 
-        {["parcel", "pin", "arpn", "octtct", "td", "cct", "survey", "cad", "name", "block", "lot"].map((field) => (
+        {[
+          "parcel",
+          "pin",
+          "arpn",
+          "octtct",
+          "td",
+          "cct",
+          "survey",
+          "cad",
+          "name",
+          "block",
+          "lot",
+        ].map((field) => (
           <div className="field-cell" key={field}>
             <label>{field.toUpperCase()}</label>
-            <input value={filters[field]} onChange={(e) => updateFilter(field, e.target.value)} />
+            <input
+              value={filters[field]}
+              onChange={(e) => updateFilter(field, e.target.value)}
+            />
           </div>
         ))}
       </div>
 
       <div className="button-row">
-        <button className="search-btn" onClick={handlePropertySearch}>Search</button>
-        <button className="clear-btn" onClick={clearForm}>Clear</button>
+        <button className="search-btn" onClick={handlePropertySearch}>
+          Search
+        </button>
+        <button className="clear-btn" onClick={clearForm}>
+          Clear
+        </button>
       </div>
 
       {searchTriggered && (

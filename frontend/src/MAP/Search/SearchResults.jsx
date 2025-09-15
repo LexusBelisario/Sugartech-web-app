@@ -1,16 +1,22 @@
 // SearchResults.jsx
-import API from "../../api";
+import API from "../../api_service";
 import React from "react";
 
 // Displays the list of matched parcel PINs after a property search
 // Also handles click behavior to highlight and zoom to a selected result
 
-const SearchResults = ({ pins = [], noInput = false, selectedPin, setSelectedPin }) => {
-
+const SearchResults = ({
+  pins = [],
+  noInput = false,
+  selectedPin,
+  setSelectedPin,
+}) => {
   // Called when a user clicks on a result
   const handleResultClick = (pin) => {
     // Find the matching parcel by its PIN
-    const match = window.parcelLayers?.find(({ feature }) => feature.properties.pin === pin);
+    const match = window.parcelLayers?.find(
+      ({ feature }) => feature.properties.pin === pin
+    );
     if (!match) return;
 
     // Reset the previously selected parcel (if any) to lime highlight
@@ -20,7 +26,7 @@ const SearchResults = ({ pins = [], noInput = false, selectedPin, setSelectedPin
           color: "black",
           weight: 2,
           fillColor: "lime",
-          fillOpacity: 0.2
+          fillOpacity: 0.2,
         });
       }
     });
@@ -33,7 +39,7 @@ const SearchResults = ({ pins = [], noInput = false, selectedPin, setSelectedPin
       color: "yellow",
       weight: 3,
       fillColor: "yellow",
-      fillOpacity: 0.3
+      fillOpacity: 0.3,
     });
 
     // Zoom the map to the bounds of the selected parcel
@@ -41,19 +47,18 @@ const SearchResults = ({ pins = [], noInput = false, selectedPin, setSelectedPin
 
     // Show parcel info in the info popup (if supported)
     // Optional: you can show a loader or disable clicks while this runs
-const schema = match.feature.properties.source_schema;
+    const schema = match.feature.properties.source_schema;
 
-fetch(`${API}/parcel-info?schema=${schema}&pin=${pin}`)
-  .then(res => res.json())
-  .then(json => {
-    if (json.status === "success" && json.data) {
-      window.populateParcelInfo(json.data);
-    } else {
-      console.warn("Parcel info not found for", pin);
-    }
-  })
-  .catch(err => console.error("Error loading parcel info:", err));
-
+    fetch(`${API}/parcel-info?schema=${schema}&pin=${pin}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.status === "success" && json.data) {
+          window.populateParcelInfo(json.data);
+        } else {
+          console.warn("Parcel info not found for", pin);
+        }
+      })
+      .catch((err) => console.error("Error loading parcel info:", err));
   };
 
   // === No input warning ===
@@ -73,13 +78,19 @@ fetch(`${API}/parcel-info?schema=${schema}&pin=${pin}`)
       {pins.length === 0 ? (
         // No matches found
         <>
-          <p><b>Results:</b> 0</p>
-          <p style={{ color: "#555", fontStyle: "italic" }}>No matches found.</p>
+          <p>
+            <b>Results:</b> 0
+          </p>
+          <p style={{ color: "#555", fontStyle: "italic" }}>
+            No matches found.
+          </p>
         </>
       ) : (
         // Display matched PINs as clickable list items
         <>
-          <p><b>Results:</b> {pins.length}</p>
+          <p>
+            <b>Results:</b> {pins.length}
+          </p>
           <ul>
             {pins.map((pin, idx) => (
               <li

@@ -3,21 +3,30 @@ import React, { useEffect, useState, useRef } from "react";
 import { useMap } from "react-leaflet";
 import { useSchema } from "../SchemaContext";
 import Table_Column from "../LandLegend/Table_Column.jsx";
-import API from "../../api";
+import API from "../../api_service.js";
 
 const RoadNetwork = () => {
-  const map = useMap();               // ✅ get map directly
-  const { schema } = useSchema();     // ✅ use schema from context
+  const map = useMap(); // ✅ get map directly
+  const { schema } = useSchema(); // ✅ use schema from context
   const [selectedColumn, setSelectedColumn] = useState("road_type");
   const [showColumnPopup, setShowColumnPopup] = useState(false);
   const [geojsonData, setGeojsonData] = useState(null);
-  const isBusy = useRef(false);       // ✅ persistent
+  const isBusy = useRef(false); // ✅ persistent
 
   const predefinedColors = [
-    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-    "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
   ];
-  const generateColor = (index) => predefinedColors[index % predefinedColors.length];
+  const generateColor = (index) =>
+    predefinedColors[index % predefinedColors.length];
 
   useEffect(() => {
     if (!schema) {
@@ -84,7 +93,7 @@ const RoadNetwork = () => {
 
     const types = Array.from(
       new Set(
-        geojson.features.map(f =>
+        geojson.features.map((f) =>
           (f.properties?.[column] || "unknown").toString().trim().toLowerCase()
         )
       )
@@ -97,7 +106,10 @@ const RoadNetwork = () => {
 
     const group = L.geoJSON(geojson, {
       style: (feature) => {
-        const val = (feature.properties?.[column] || "unknown").toString().trim().toLowerCase();
+        const val = (feature.properties?.[column] || "unknown")
+          .toString()
+          .trim()
+          .toLowerCase();
         return {
           color: colorMap[val],
           weight: 2,
@@ -116,7 +128,8 @@ const RoadNetwork = () => {
     window.roadLayerGroup = group;
 
     if (window.addThematicLegend) {
-      window.addThematicLegend("roadnetwork", (
+      window.addThematicLegend(
+        "roadnetwork",
         <>
           <strong>Road Network Legend:</strong>
           <div className="legend-items">
@@ -131,7 +144,7 @@ const RoadNetwork = () => {
             ))}
           </div>
         </>
-      ));
+      );
     }
   };
 

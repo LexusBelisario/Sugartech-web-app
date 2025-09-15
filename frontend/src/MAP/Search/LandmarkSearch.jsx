@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { clearParcelHighlights } from "./SearchHelpers";
 import L from "leaflet";
-import API from "../../api";
+import API from "../../api.js";
 
 // === Helper to get icon path based on landmark type ===
 function getIconPath(type) {
@@ -17,7 +17,7 @@ function getIconPath(type) {
     "police station": "Police Station.svg",
     "recreational entities": "Recreational Entities.svg",
     "religious entities": "Religious Entities.svg",
-    "subdivision": "Subdivision.svg",
+    subdivision: "Subdivision.svg",
     "telecommunication entities": "Telecommunication Entities.svg",
     "transportation entities": "Transportation Entities.svg",
   };
@@ -47,17 +47,21 @@ const LandmarkSearch = ({ schema }) => {
     if (!schema) return;
 
     fetch(`${API}/single-table?schema=${schema}&table=Landmarks`)
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         const feats = data?.features || [];
         setFeatures(feats);
 
-        const uniqueTypes = [...new Set(feats.map(f => f.properties?.type).filter(Boolean))].sort();
-        const uniqueBarangays = [...new Set(feats.map(f => f.properties?.barangay).filter(Boolean))].sort();
+        const uniqueTypes = [
+          ...new Set(feats.map((f) => f.properties?.type).filter(Boolean)),
+        ].sort();
+        const uniqueBarangays = [
+          ...new Set(feats.map((f) => f.properties?.barangay).filter(Boolean)),
+        ].sort();
         setTypeOptions(uniqueTypes);
         setBarangayOptions(uniqueBarangays);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Failed to load landmarks:", err);
         setFeatures([]);
         setTypeOptions([]);
@@ -75,14 +79,16 @@ const LandmarkSearch = ({ schema }) => {
     const barangayTerm = queryBarangay.trim().toLowerCase();
 
     const matched = features
-      .filter(f => {
+      .filter((f) => {
         const props = f.properties || {};
-        const nameMatch = !nameTerm || props.name?.toLowerCase().includes(nameTerm);
+        const nameMatch =
+          !nameTerm || props.name?.toLowerCase().includes(nameTerm);
         const typeMatch = !typeTerm || props.type?.toLowerCase() === typeTerm;
-        const brgyMatch = !barangayTerm || props.barangay?.toLowerCase() === barangayTerm;
+        const brgyMatch =
+          !barangayTerm || props.barangay?.toLowerCase() === barangayTerm;
         return nameMatch && typeMatch && brgyMatch;
       })
-      .map(feature => {
+      .map((feature) => {
         const props = feature.properties || {};
         const name = props.name;
         const iconPath = getIconPath(props.type);
@@ -107,7 +113,7 @@ const LandmarkSearch = ({ schema }) => {
   };
 
   const handleResultClick = (name) => {
-    const match = results.find(r => r.name === name);
+    const match = results.find((r) => r.name === name);
     if (!match) return;
 
     setSelected(name);
@@ -148,33 +154,49 @@ const LandmarkSearch = ({ schema }) => {
 
         <div className="field-cell" style={{ gridColumn: "span 2" }}>
           <label>Type</label>
-          <select value={queryType} onChange={(e) => setQueryType(e.target.value)}>
+          <select
+            value={queryType}
+            onChange={(e) => setQueryType(e.target.value)}
+          >
             <option value="">-- Select Type --</option>
             {typeOptions.map((t, i) => (
-              <option key={i} value={t}>{t}</option>
+              <option key={i} value={t}>
+                {t}
+              </option>
             ))}
           </select>
         </div>
 
         <div className="field-cell" style={{ gridColumn: "span 2" }}>
           <label>Barangay</label>
-          <select value={queryBarangay} onChange={(e) => setQueryBarangay(e.target.value)}>
+          <select
+            value={queryBarangay}
+            onChange={(e) => setQueryBarangay(e.target.value)}
+          >
             <option value="">-- Select Barangay --</option>
             {barangayOptions.map((b, i) => (
-              <option key={i} value={b}>{b}</option>
+              <option key={i} value={b}>
+                {b}
+              </option>
             ))}
           </select>
         </div>
       </div>
 
       <div className="button-row">
-        <button className="search-btn" onClick={handleSearch}>Search</button>
-        <button className="clear-btn" onClick={handleClear}>Clear</button>
+        <button className="search-btn" onClick={handleSearch}>
+          Search
+        </button>
+        <button className="clear-btn" onClick={handleClear}>
+          Clear
+        </button>
       </div>
 
       {(query || queryType || queryBarangay) && (
         <div className="search-results">
-          <p><b>Results:</b> {results.length}</p>
+          <p>
+            <b>Results:</b> {results.length}
+          </p>
           {results.length === 0 ? (
             <p style={{ fontStyle: "italic" }}>No matching landmarks found.</p>
           ) : (

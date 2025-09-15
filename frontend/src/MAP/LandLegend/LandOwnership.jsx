@@ -2,22 +2,26 @@
 import React, { useEffect, useState } from "react";
 import L from "leaflet";
 import Table_Column from "./Table_Column";
-import API from "../../api";
+import API from "../../api.js";
 import { useSchema } from "../SchemaContext";
 import { useMap } from "react-leaflet";
 
 let landOwnershipLayer = null;
 
 const LandOwnership = () => {
-  const map = useMap();             // ✅ get map from context
-  const { schema } = useSchema();   // ✅ get schema from context
+  const map = useMap(); // ✅ get map from context
+  const { schema } = useSchema(); // ✅ get schema from context
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [selectedColumn, setSelectedColumn] = useState("ownership");
 
   const generateColorMap = (features, key) => {
-    const categories = [...new Set(
-      features.map(f => f.properties[key]).filter(v => v !== null && v !== undefined && v !== "")
-    )];
+    const categories = [
+      ...new Set(
+        features
+          .map((f) => f.properties[key])
+          .filter((v) => v !== null && v !== undefined && v !== "")
+      ),
+    ];
     const total = categories.length || 1;
     const colorMap = {};
     categories.forEach((cat, i) => {
@@ -37,37 +41,42 @@ const LandOwnership = () => {
     const colorMap = generateColorMap(features, col);
 
     landOwnershipLayer = L.geoJSON(features, {
-      style: feature => {
+      style: (feature) => {
         const val = feature.properties[col];
         return {
           color: "#444",
           weight: 1,
           fillOpacity: 0.6,
-          fillColor: (val !== null && val !== undefined && val !== "")
-            ? colorMap[val]
-            : "#cccccc"
+          fillColor:
+            val !== null && val !== undefined && val !== ""
+              ? colorMap[val]
+              : "#cccccc",
         };
       },
       onEachFeature: (feature, layer) => {
         const val = feature.properties[col];
         layer.bindPopup(`<strong>${col}:</strong> ${val ?? "N/A"}`);
-      }
+      },
     }).addTo(map);
 
     // ✅ legend uses fragment so gray wrapper shows
-    window.addLandInfoLegend?.("landownership", (
+    window.addLandInfoLegend?.(
+      "landownership",
       <>
         <strong>Land Ownership</strong>
         <div className="legend-items">
           {Object.entries(colorMap).map(([value, color]) => (
             <div key={value}>
-              <span className="legend-swatch" style={{ backgroundColor: color }}></span>
+              <span
+                className="legend-swatch"
+                style={{ backgroundColor: color }}
+              ></span>
               {value}
             </div>
           ))}
         </div>
       </>
-    ));
+    );
   };
 
   const fetchAndRender = (col) => {
@@ -83,18 +92,18 @@ const LandOwnership = () => {
         if (attrData.status !== "success" || !attrData.data) return;
 
         const attrMap = {};
-        attrData.data.forEach(attr => {
+        attrData.data.forEach((attr) => {
           attrMap[attr.pin] = attr;
         });
 
-        const mergedFeatures = geoData.features.map(f => ({
+        const mergedFeatures = geoData.features.map((f) => ({
           ...f,
-          properties: { ...f.properties, ...(attrMap[f.properties.pin] || {}) }
+          properties: { ...f.properties, ...(attrMap[f.properties.pin] || {}) },
         }));
 
         renderLayer(mergedFeatures, col);
       })
-      .catch(err => console.error("❌ Failed to reload:", err));
+      .catch((err) => console.error("❌ Failed to reload:", err));
   };
 
   useEffect(() => {
@@ -113,23 +122,30 @@ const LandOwnership = () => {
       const attrUrl = `${API}/attribute-table?schema=${schema}`;
 
       Promise.all([fetch(geoUrl), fetch(attrUrl)])
-        .then(([geoRes, attrRes]) => Promise.all([geoRes.json(), attrRes.json()]))
+        .then(([geoRes, attrRes]) =>
+          Promise.all([geoRes.json(), attrRes.json()])
+        )
         .then(([geoData, attrData]) => {
           if (!geoData.features || geoData.features.length === 0) return;
           if (attrData.status !== "success" || !attrData.data) return;
 
           const attrMap = {};
-          attrData.data.forEach(attr => {
+          attrData.data.forEach((attr) => {
             attrMap[attr.pin] = attr;
           });
 
-          const mergedFeatures = geoData.features.map(f => ({
+          const mergedFeatures = geoData.features.map((f) => ({
             ...f,
-            properties: { ...f.properties, ...(attrMap[f.properties.pin] || {}) }
+            properties: {
+              ...f.properties,
+              ...(attrMap[f.properties.pin] || {}),
+            },
           }));
 
           const props = mergedFeatures[0].properties;
-          const match = Object.keys(props).find(k => k.toLowerCase() === "ownership");
+          const match = Object.keys(props).find(
+            (k) => k.toLowerCase() === "ownership"
+          );
 
           if (match) {
             setSelectedColumn(match);
@@ -139,7 +155,7 @@ const LandOwnership = () => {
             setShowColumnSelector(true);
           }
         })
-        .catch(err => console.error("❌ Fetch error:", err));
+        .catch((err) => console.error("❌ Fetch error:", err));
     };
 
     return () => {
@@ -164,7 +180,7 @@ const LandOwnership = () => {
       {showColumnSelector && (
         <Table_Column
           schema={schema}
-          table="JoinedTable"   // ✅ always attribute table
+          table="JoinedTable" // ✅ always attribute table
           onApply={handleColumnApply}
           onClose={() => setShowColumnSelector(false)}
         />

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useMap } from "react-leaflet";
 import { loadGeoTable } from "../view";
 import "./consolidate.css";
-import API from "../../api";
+import API from "../../api.js";
 import { useSchema } from "../SchemaContext";
 import ParcelClickHandler from "../ParcelClickHandler";
 
@@ -15,9 +15,9 @@ const Consolidate = ({ onClose }) => {
   // ✅ Callback from ParcelClickHandler
   const handleParcelSelect = (pin, feature, isSelected) => {
     if (isSelected) {
-      setSelected(prev => [...prev, feature]);
+      setSelected((prev) => [...prev, feature]);
     } else {
-      setSelected(prev => prev.filter(f => f.properties.pin !== pin));
+      setSelected((prev) => prev.filter((f) => f.properties.pin !== pin));
     }
   };
 
@@ -37,22 +37,22 @@ const Consolidate = ({ onClose }) => {
 
     const prefix = fullParts.slice(0, 4).join("-");
     const matches = (window.parcelLayers || [])
-      .map(p => p.feature?.properties?.pin)
-      .filter(p => p?.startsWith(prefix));
+      .map((p) => p.feature?.properties?.pin)
+      .filter((p) => p?.startsWith(prefix));
 
     const suffixes = matches
-      .map(p => {
+      .map((p) => {
         const parts = p.split("-");
         return parseInt(parts[4]);
       })
-      .filter(n => !isNaN(n));
+      .filter((n) => !isNaN(n));
 
     const nextSuffix = Math.max(...suffixes, 0) + 1;
     setNewPin(`${prefix}-${String(nextSuffix).padStart(3, "0")}`);
   }, [selected]);
 
   const removeFromList = (pin) => {
-    setSelected(prev => prev.filter(f => f.properties.pin !== pin));
+    setSelected((prev) => prev.filter((f) => f.properties.pin !== pin));
     // let ParcelClickHandler handle style reset automatically
   };
 
@@ -67,7 +67,9 @@ const Consolidate = ({ onClose }) => {
     }
 
     try {
-      const validGeometries = selected.map(f => f.geometry).filter(g => g?.type && g?.coordinates);
+      const validGeometries = selected
+        .map((f) => f.geometry)
+        .filter((g) => g?.type && g?.coordinates);
       if (validGeometries.length < 2) {
         alert("Must have at least 2 valid geometries.");
         return;
@@ -77,7 +79,9 @@ const Consolidate = ({ onClose }) => {
       const firstPin = selected[0].properties.pin;
 
       const fullInfoRes = await fetch(
-        `${API}/parcel-info?pin=${encodeURIComponent(firstPin)}&schema=${encodeURIComponent(schema)}`
+        `${API}/parcel-info?pin=${encodeURIComponent(
+          firstPin
+        )}&schema=${encodeURIComponent(schema)}`
       );
       const fullInfoJson = await fullInfoRes.json();
 
@@ -150,19 +154,30 @@ const Consolidate = ({ onClose }) => {
   return (
     <>
       {/* ✅ Consolidate now reuses ParcelClickHandler */}
-      <ParcelClickHandler activeTool="consolidate" onConsolidateSelect={handleParcelSelect} />
+      <ParcelClickHandler
+        activeTool="consolidate"
+        onConsolidateSelect={handleParcelSelect}
+      />
 
       <div id="consolidatePopup" className="visible">
         <div className="consolidate-header">
           <h3>Consolidate Tool</h3>
-          <button className="close-btn" onClick={clearAndClose}>Close</button>
+          <button className="close-btn" onClick={clearAndClose}>
+            Close
+          </button>
         </div>
 
         <div className="consolidate-instructions">
           <p>1. Click parcels on the map to select them.</p>
-          <p>2. Selected parcels will be highlighted in <b>blue</b> and listed below.</p>
+          <p>
+            2. Selected parcels will be highlighted in <b>blue</b> and listed
+            below.
+          </p>
           <p>3. A new PIN is suggested below but you can edit it.</p>
-          <p>4. Click <strong>Consolidate and Save</strong> to merge and store the result.</p>
+          <p>
+            4. Click <strong>Consolidate and Save</strong> to merge and store
+            the result.
+          </p>
         </div>
 
         {selected.length > 0 && (
@@ -171,7 +186,9 @@ const Consolidate = ({ onClose }) => {
           </div>
         )}
         {selected.length === 0 && (
-          <p style={{ color: "gray", fontSize: "12px" }}>No parcels selected yet.</p>
+          <p style={{ color: "gray", fontSize: "12px" }}>
+            No parcels selected yet.
+          </p>
         )}
 
         <ul className="consolidate-pin-list">

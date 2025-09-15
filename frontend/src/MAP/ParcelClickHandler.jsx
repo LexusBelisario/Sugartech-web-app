@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import API from "../api";
+import API from "../api_service";
 import { useSchema } from "./SchemaContext";
 
 const ParcelClickHandler = ({

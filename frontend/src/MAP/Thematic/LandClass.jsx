@@ -3,15 +3,15 @@ import React, { useEffect, useState, useRef } from "react";
 import { useMap } from "react-leaflet";
 import { useSchema } from "../SchemaContext";
 import Table_Column from "../LandLegend/Table_Column.jsx";
-import API from "../../api";
+import API from "../../api.js";
 
 const LandClass = () => {
-  const map = useMap();               // ✅ get map from react-leaflet
-  const { schema } = useSchema();     // ✅ schema from context
+  const map = useMap(); // ✅ get map from react-leaflet
+  const { schema } = useSchema(); // ✅ schema from context
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [selectedColumn, setSelectedColumn] = useState(null);
   const [geojsonData, setGeojsonData] = useState(null);
-  const isBusy = useRef(false);       // ✅ persistent flag
+  const isBusy = useRef(false); // ✅ persistent flag
   const [layer, setLayer] = useState(null);
 
   const generateColor = () => {
@@ -100,18 +100,22 @@ const LandClass = () => {
   const renderLayer = (geojson, columnName) => {
     console.log("🎨 Rendering LandClass by column:", columnName);
 
-    const columnValues = geojson.features.map(f => f.properties?.[columnName]);
+    const columnValues = geojson.features.map(
+      (f) => f.properties?.[columnName]
+    );
     const uniqueValues = Array.from(
-      new Set(columnValues.map(v => v?.toString().toUpperCase()).filter(v => v))
+      new Set(
+        columnValues.map((v) => v?.toString().toUpperCase()).filter((v) => v)
+      )
     );
 
     const colorMap = {};
-    uniqueValues.forEach(v => {
+    uniqueValues.forEach((v) => {
       colorMap[v] = generateColor();
     });
 
     const group = L.geoJSON(geojson, {
-      style: feature => {
+      style: (feature) => {
         const v = feature.properties?.[columnName]?.toString().toUpperCase();
         return {
           color: "#444",
@@ -130,7 +134,8 @@ const LandClass = () => {
     setLayer(group);
 
     if (window.addThematicLegend) {
-      window.addThematicLegend("landclass", (
+      window.addThematicLegend(
+        "landclass",
         <>
           <strong>Land Classification ({columnName}):</strong>
           <div className="legend-items">
@@ -145,7 +150,7 @@ const LandClass = () => {
             ))}
           </div>
         </>
-      ));
+      );
     }
   };
 

@@ -1,6 +1,6 @@
 // === Layer Arrays ===
 export const parcelLayers = [];
-import { ApiService } from "../api"; // ✅ use ApiService
+import API from "../api";
 window.parcelLayers = parcelLayers;
 
 // === Default style applied to parcels ===
@@ -21,10 +21,23 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
   if (window.setLoadingProgress) window.setLoadingProgress(true);
 
   const query = selectedSchemas.map(s => `schemas=${encodeURIComponent(s)}`).join("&");
-  const url = `/all-barangays?${query}`; // ✅ ApiService adds base + headers
+  const url = `${API}/all-barangays?${query}`; // ✅ Add API prefix manually
 
   try {
-    const data = await ApiService.get(url);
+    // ✅ Use fetch directly
+    const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
 
     const toggleBtn = document.getElementById("toggleToolbarBtn");
     if (toggleBtn) toggleBtn.style.display = "block";
@@ -64,12 +77,25 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
 
 // === Function to reload a single parcel table ===
 export async function loadGeoTable(map, schema, table) {
-  const url = `/single-table?schema=${encodeURIComponent(schema)}&table=${encodeURIComponent(table)}`;
+  const url = `${API}/single-table?schema=${encodeURIComponent(schema)}&table=${encodeURIComponent(table)}`;
 
   if (window.setLoadingProgress) window.setLoadingProgress(true);
 
   try {
-    const data = await ApiService.get(url);
+    // ✅ Use fetch directly
+    const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
 
     const toRemove = parcelLayers.filter(
       p =>

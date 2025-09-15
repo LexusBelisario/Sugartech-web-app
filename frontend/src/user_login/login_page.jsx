@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../api";
-// import MockLogo from "C:/Users/lexus/IDGI-MangoBased-WebApp/Frontend/src/assets/mock_logo.svg";
+import API from "../api_service";
+import WarningModal from "../components/modals/WarningModal"; // Import the modal
 
 function LoginPage() {
   const [username, setUsername] = useState("");
@@ -10,6 +10,15 @@ function LoginPage() {
   const [usernameFocused, setUsernameFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Add state for access control modal
+  const [accessModal, setAccessModal] = useState({
+    isVisible: false,
+    title: "",
+    message: "",
+    severity: "warning",
+    canProceed: false,
+  });
 
   const navigate = useNavigate();
 
@@ -25,13 +34,65 @@ function LoginPage() {
       });
 
       const data = await response.json();
+      console.log("Login response:", data); // Debug log
 
       if (response.ok) {
+        // Store token first
         localStorage.setItem("accessToken", data.access_token);
 
-        alert(`✅ ${data.message}`);
+        // Check if admin
+        if (data.user_type === "admin") {
+          // Redirect to admin page using React Router
+          navigate("/admin"); // Changed from window.location.href = "/admin-dashboard"
+          return;
+        }
 
-        navigate("/map");
+        // Regular user flow
+        if (
+          data.access_status === "pending_approval" ||
+          (data.access_message &&
+            data.access_message.includes("No provincial access"))
+        ) {
+          // Determine the type of access issue
+          if (
+            !data.access_message ||
+            data.access_message.includes("No provincial access assigned")
+          ) {
+            // No provincial access at all - complete denial
+            setAccessModal({
+              isVisible: true,
+              title: "Access Denied",
+              message:
+                "You are not allowed to access the map. Please await for the admin to give you access.",
+              severity: "error",
+              canProceed: false,
+            });
+          } else if (
+            data.access_message.includes("no municipal access assigned")
+          ) {
+            // Has provincial but no municipal access - limited access
+            setAccessModal({
+              isVisible: true,
+              title: "Limited Access",
+              message:
+                "You have provincial access but no municipal access assigned. You can view the map for viewing purposes only.",
+              severity: "warning",
+              canProceed: true,
+            });
+          } else {
+            // Other pending approval case
+            setAccessModal({
+              isVisible: true,
+              title: "Pending Approval",
+              message: data.access_message,
+              severity: "warning",
+              canProceed: false,
+            });
+          }
+        } else {
+          // Full access - proceed normally
+          navigate("/map");
+        }
       } else {
         alert(`❌ Login failed: ${data.detail}`);
       }
@@ -43,42 +104,107 @@ function LoginPage() {
     }
   };
 
+  const handleModalClose = () => {
+    setAccessModal({ ...accessModal, isVisible: false });
+
+    // Handle navigation based on access level
+    if (accessModal.canProceed) {
+      // User has provincial access only - can view map
+      navigate("/map");
+    } else {
+      // User has no access - logout and stay on login page
+      localStorage.removeItem("accessToken");
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#372b80] to-[#2a1f63] flex items-center justify-center px-4">
-      <div className="bg-white/[0.08] backdrop-blur-md rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.3)] border border-white/10 w-[500px] h-[600px] flex flex-col">
+    <div className="min-h-screen bg-[#F5F5F5] relative overflow-hidden flex items-center justify-center px-4">
+      {/* Philippine Map Background */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-[0.03]">
+        <img
+          src="https://www.nicepng.com/png/detail/102-1026494_philippine-map-clipart-png-vice-mayors-league-of.png"
+          alt="Philippine Map Background"
+          className="w-[90%] h-[90%] object-contain"
+        />
+      </div>
+
+      {/* Decorative Elements */}
+      <div className="absolute top-10 left-10 w-32 h-32 bg-gradient-to-br from-[#F2C300]/10 to-[#D4AF37]/5 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-10 right-10 w-40 h-40 bg-gradient-to-br from-[#0B4EA2]/10 to-[#702082]/5 rounded-full blur-3xl"></div>
+      <div className="absolute top-1/3 right-20 w-24 h-24 bg-gradient-to-br from-[#C51E2A]/10 to-[#7F0F1A]/5 rounded-full blur-2xl"></div>
+
+      {/* Login Card - Your existing code stays the same */}
+      <div className="relative bg-white rounded-3xl p-8 shadow-[0_20px_60px_rgba(34,34,34,0.08)] border border-[#222222]/5 w-[500px] min-h-[600px] flex flex-col backdrop-blur-sm">
+        {/* ... All your existing login form code stays exactly the same ... */}
+
+        {/* Header Section */}
         <div className="flex flex-col items-center justify-center mb-8">
-          <div className="w-20 h-20 mb-4 bg-white/10 rounded-full p-4 backdrop-blur-sm">
-            {/* <img
-              src={MockLogo}
-              alt="Mock Logo"
-              className="w-full h-full object-contain"
-            /> */}
+          {/* Logo Container with Philippine Flag Colors */}
+          <div className="relative mb-4">
+            <div className="w-20 h-20 bg-gradient-to-br from-[#F2C300] to-[#D4AF37] rounded-full p-[2px] shadow-lg">
+              <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
+                <div className="text-3xl font-bold bg-gradient-to-br from-[#0B4EA2] to-[#702082] text-transparent bg-clip-text">
+                  RP
+                </div>
+              </div>
+            </div>
+            {/* Three Stars */}
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2">
+              <svg
+                className="w-4 h-4 text-[#F2C300]"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            </div>
+            <div className="absolute top-1/2 -left-4 -translate-y-1/2">
+              <svg
+                className="w-4 h-4 text-[#F2C300]"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            </div>
+            <div className="absolute top-1/2 -right-4 -translate-y-1/2">
+              <svg
+                className="w-4 h-4 text-[#F2C300]"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            </div>
           </div>
-          <h1 className="text-white text-4xl font-bold tracking-wide">
+          <h1 className="text-[#222222] text-4xl font-bold tracking-wide">
             RPTGIS
           </h1>
-          <p className="text-white/60 text-sm mt-2">Welcome back</p>
+          <p className="text-[#222222]/60 text-sm mt-2">
+            Welcome to Real Property Tax GIS
+          </p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="flex-1 flex flex-col justify-center space-y-7 max-w-sm mx-auto w-full"
+          className="flex-1 flex flex-col justify-center space-y-6 max-w-sm mx-auto w-full"
         >
+          {/* Username Input */}
           <div className="relative group">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10">
                 <div
                   className={`w-12 h-full flex items-center justify-center border-r transition-colors duration-200 ${
                     usernameFocused || username
-                      ? "border-[#E5C206]/50"
-                      : "border-white/10"
+                      ? "border-[#F2C300]/50"
+                      : "border-[#222222]/10"
                   }`}
                 >
                   <svg
                     className={`w-5 h-5 transition-colors duration-200 ${
                       usernameFocused || username
-                        ? "text-[#E5C206]"
-                        : "text-white/40"
+                        ? "text-[#F2C300]"
+                        : "text-[#222222]/40"
                     }`}
                     fill="none"
                     stroke="currentColor"
@@ -99,10 +225,10 @@ function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 onFocus={() => setUsernameFocused(true)}
                 onBlur={() => setUsernameFocused(false)}
-                className={`w-full pl-14 pr-4 py-4 bg-white/5 backdrop-blur-sm border rounded-xl text-white placeholder-transparent focus:outline-none transition-all duration-300 ${
+                className={`w-full pl-14 pr-4 py-4 bg-[#F5F5F5] border rounded-xl text-[#222222] placeholder-transparent focus:outline-none transition-all duration-300 ${
                   usernameFocused || username
-                    ? "border-[#E5C206] bg-white/10 shadow-[0_0_20px_rgba(229,194,6,0.3)]"
-                    : "border-white/20 hover:border-white/30 hover:bg-white/[0.07]"
+                    ? "border-[#F2C300] bg-white shadow-[0_0_20px_rgba(242,195,0,0.2)]"
+                    : "border-[#222222]/10 hover:border-[#222222]/20"
                 }`}
                 placeholder="Username"
                 id="username"
@@ -111,8 +237,8 @@ function LoginPage() {
                 htmlFor="username"
                 className={`absolute left-14 transition-all duration-300 pointer-events-none ${
                   usernameFocused || username
-                    ? "top-0 -translate-y-1/2 text-xs text-[#E5C206] bg-[#372b80] px-2 font-medium"
-                    : "top-4 text-base text-white/60"
+                    ? "top-0 -translate-y-1/2 text-xs text-[#F2C300] bg-white px-2 font-medium"
+                    : "top-4 text-base text-[#222222]/60"
                 }`}
               >
                 Username
@@ -120,21 +246,22 @@ function LoginPage() {
             </div>
           </div>
 
+          {/* Password Input */}
           <div className="relative group">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10">
                 <div
                   className={`w-12 h-full flex items-center justify-center border-r transition-colors duration-200 ${
                     passwordFocused || password
-                      ? "border-[#E5C206]/50"
-                      : "border-white/10"
+                      ? "border-[#F2C300]/50"
+                      : "border-[#222222]/10"
                   }`}
                 >
                   <svg
                     className={`w-5 h-5 transition-colors duration-200 ${
                       passwordFocused || password
-                        ? "text-[#E5C206]"
-                        : "text-white/40"
+                        ? "text-[#F2C300]"
+                        : "text-[#222222]/40"
                     }`}
                     fill="none"
                     stroke="currentColor"
@@ -155,10 +282,10 @@ function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => setPasswordFocused(true)}
                 onBlur={() => setPasswordFocused(false)}
-                className={`w-full pl-14 pr-12 py-4 bg-white/5 backdrop-blur-sm border rounded-xl text-white placeholder-transparent focus:outline-none transition-all duration-300 ${
+                className={`w-full pl-14 pr-12 py-4 bg-[#F5F5F5] border rounded-xl text-[#222222] placeholder-transparent focus:outline-none transition-all duration-300 ${
                   passwordFocused || password
-                    ? "border-[#E5C206] bg-white/10 shadow-[0_0_20px_rgba(229,194,6,0.3)]"
-                    : "border-white/20 hover:border-white/30 hover:bg-white/[0.07]"
+                    ? "border-[#F2C300] bg-white shadow-[0_0_20px_rgba(242,195,0,0.2)]"
+                    : "border-[#222222]/10 hover:border-[#222222]/20"
                 }`}
                 placeholder="Password"
                 id="password"
@@ -167,8 +294,8 @@ function LoginPage() {
                 htmlFor="password"
                 className={`absolute left-14 transition-all duration-300 pointer-events-none ${
                   passwordFocused || password
-                    ? "top-0 -translate-y-1/2 text-xs text-[#E5C206] bg-[#372b80] px-2 font-medium"
-                    : "top-4 text-base text-white/60"
+                    ? "top-0 -translate-y-1/2 text-xs text-[#F2C300] bg-white px-2 font-medium"
+                    : "top-4 text-base text-[#222222]/60"
                 }`}
               >
                 Password
@@ -178,8 +305,8 @@ function LoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
                 className={`absolute inset-y-0 right-3 flex items-center transition-all duration-200 z-10 ${
                   passwordFocused || password
-                    ? "text-[#E5C206] hover:text-yellow-300"
-                    : "text-white/40 hover:text-white/60"
+                    ? "text-[#F2C300] hover:text-[#D4AF37]"
+                    : "text-[#222222]/40 hover:text-[#222222]/60"
                 }`}
               >
                 {showPassword ? (
@@ -221,42 +348,112 @@ function LoginPage() {
             </div>
           </div>
 
+          {/* Remember Me & Forgot Password */}
           <div className="flex items-center justify-between">
-            <label className="flex items-center text-white/60 text-sm cursor-pointer hover:text-white/80 transition-colors">
-              <input type="checkbox" className="mr-2 rounded border-white/20" />
+            <label className="flex items-center text-[#222222]/60 text-sm cursor-pointer hover:text-[#222222]/80 transition-colors">
+              <input
+                type="checkbox"
+                className="mr-2 rounded border-[#222222]/20 text-[#F2C300] focus:ring-[#F2C300] focus:ring-offset-0 focus:ring-2"
+              />
               Remember me
             </label>
             <a
               href="#"
-              className="text-sm text-white/60 hover:text-[#E5C206] transition-colors duration-200"
+              className="text-sm text-[#702082] hover:text-[#C51E2A] transition-colors duration-200 font-medium"
             >
               Forgot password?
             </a>
           </div>
 
+          {/* Login Button */}
           <div className="pt-2">
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full bg-gradient-to-r from-[#F2D25B] to-[#E5C206] hover:from-[#E5C206] hover:to-[#d4b305] text-[#2C2D86] text-lg font-bold py-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-[0_8px_30px_rgba(229,194,6,0.4)] ${
+              className={`w-full bg-gradient-to-r from-[#F2C300] to-[#D4AF37] hover:from-[#D4AF37] hover:to-[#F2C300] text-[#222222] text-lg font-bold py-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-[0_12px_30px_rgba(242,195,0,0.3)] relative overflow-hidden ${
                 isLoading ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
-              {isLoading ? "Connecting..." : "Login"}
+              {/* Button Shine Effect */}
+              <span className="absolute inset-0 -top-1/2 h-[200%] w-12 bg-white/20 transform -skew-x-12 -translate-x-full transition-transform duration-700 group-hover:translate-x-[250%]"></span>
+              <span className="relative">
+                {isLoading ? (
+                  <span className="flex items-center justify-center">
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-[#222222]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Connecting...
+                  </span>
+                ) : (
+                  "Login"
+                )}
+              </span>
             </button>
           </div>
         </form>
 
-        <div className="flex items-center justify-center gap-1 pt-6">
-          <span className="text-white/60 text-sm">Don't have an account?</span>
+        {/* Register Link */}
+        <div className="flex items-center justify-center gap-1 pt-6 border-t border-[#222222]/5">
+          <span className="text-[#222222]/60 text-sm">
+            Don't have an account?
+          </span>
           <a
             href="/register"
-            className="text-sm text-[#E5C206] hover:text-yellow-300 font-medium transition-colors duration-200"
+            className="text-sm text-[#0B4EA2] hover:text-[#702082] font-medium transition-colors duration-200 underline-offset-2 hover:underline"
           >
             Register
           </a>
         </div>
+
+        {/* Bottom Accent - Philippine Flag Colors */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#0B4EA2] via-[#C51E2A] to-[#F2C300] rounded-b-3xl"></div>
       </div>
+
+      {/* Additional Decorative Stars */}
+      <div className="absolute top-20 left-1/4 opacity-20">
+        <svg
+          className="w-8 h-8 text-[#F2C300]"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+      </div>
+      <div className="absolute bottom-20 right-1/4 opacity-20">
+        <svg
+          className="w-6 h-6 text-[#F2C300]"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+      </div>
+
+      {/* Access Control Warning Modal */}
+      <WarningModal
+        isVisible={accessModal.isVisible}
+        onClose={handleModalClose}
+        title={accessModal.title}
+        message={accessModal.message}
+        severity={accessModal.severity}
+        buttonText={accessModal.canProceed ? "Continue to Map" : "Ok"}
+      />
     </div>
   );
 }

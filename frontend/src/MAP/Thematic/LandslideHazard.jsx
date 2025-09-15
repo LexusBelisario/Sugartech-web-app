@@ -3,15 +3,15 @@ import React, { useEffect, useState, useRef } from "react";
 import { useMap } from "react-leaflet";
 import { useSchema } from "../SchemaContext";
 import Table_Column from "../LandLegend/Table_Column.jsx";
-import API from "../../api";
+import API from "../../api.js";
 
 const LandslideHazard = () => {
-  const map = useMap();               // ✅ get map from react-leaflet
-  const { schema } = useSchema();     // ✅ get schema from context
+  const map = useMap(); // ✅ get map from react-leaflet
+  const { schema } = useSchema(); // ✅ get schema from context
   const [selectedColumn, setSelectedColumn] = useState("rating");
   const [showColumnPopup, setShowColumnPopup] = useState(false);
   const [geojsonData, setGeojsonData] = useState(null);
-  const isBusy = useRef(false);       // ✅ persistent flag
+  const isBusy = useRef(false); // ✅ persistent flag
 
   // Color categories
   const smartColorMap = {
@@ -20,7 +20,7 @@ const LandslideHazard = () => {
     low: "#ffff00",
     none: "#008000",
     floodway: "#800080",
-    unknown: "#ccc"
+    unknown: "#ccc",
   };
 
   // Classification
@@ -84,7 +84,9 @@ const LandslideHazard = () => {
 
         const props = geojson.features?.[0]?.properties || {};
         if (!props.hasOwnProperty("rating")) {
-          console.warn("⚠️ LandslideHazard: no 'rating' column, showing picker");
+          console.warn(
+            "⚠️ LandslideHazard: no 'rating' column, showing picker"
+          );
           setShowColumnPopup(true);
           return;
         }
@@ -143,7 +145,8 @@ const LandslideHazard = () => {
     window.landslideLayerGroup = group;
 
     if (window.addThematicLegend) {
-      window.addThematicLegend("landslide", (
+      window.addThematicLegend(
+        "landslide",
         <>
           <strong>Landslide Hazard Legend:</strong>
           <div className="legend-items">
@@ -158,7 +161,7 @@ const LandslideHazard = () => {
             ))}
           </div>
         </>
-      ));
+      );
     }
   };
 

@@ -3,15 +3,15 @@ import React, { useEffect, useState, useRef } from "react";
 import { useMap } from "react-leaflet";
 import { useSchema } from "../SchemaContext";
 import Table_Column from "../LandLegend/Table_Column.jsx";
-import API from "../../api";
+import API from "../../api_service.js";
 
 const SlopeMap = () => {
-  const map = useMap();               // ✅ get map
-  const { schema } = useSchema();     // ✅ get schema from context
+  const map = useMap(); // ✅ get map
+  const { schema } = useSchema(); // ✅ get schema from context
   const [selectedColumn, setSelectedColumn] = useState("slope");
   const [showColumnPopup, setShowColumnPopup] = useState(false);
   const [geojsonData, setGeojsonData] = useState(null);
-  const isBusy = useRef(false);       // ✅ persistent
+  const isBusy = useRef(false); // ✅ persistent
 
   useEffect(() => {
     if (!schema) {
@@ -77,8 +77,8 @@ const SlopeMap = () => {
     console.log("🎨 Rendering SlopeMap by column:", column);
 
     const slopes = geojson.features
-      .map(f => Number((f.properties?.[column] || "").toString().trim()))
-      .filter(v => !isNaN(v));
+      .map((f) => Number((f.properties?.[column] || "").toString().trim()))
+      .filter((v) => !isNaN(v));
 
     if (slopes.length === 0) {
       console.warn("⚠️ No numeric slope values found");
@@ -91,28 +91,45 @@ const SlopeMap = () => {
 
     const getColor = (value) => {
       const r = Math.max(0, Math.min(1, (value - min) / (max - min)));
-      if (r >= 0.833) return "#ff69b4";   // Very steep
-      if (r >= 0.666) return "#800080";   // Extremely steep
-      if (r >= 0.5) return "#ff0000";     // Steep
-      if (r >= 0.333) return "#ffa500";   // Moderately steep
-      if (r >= 0.166) return "#ffff00";   // Gentle
-      if (r >= 0.083) return "#3cb44b";   // Nearly level
-      return "#8b4513";                   // Flat
+      if (r >= 0.833) return "#ff69b4"; // Very steep
+      if (r >= 0.666) return "#800080"; // Extremely steep
+      if (r >= 0.5) return "#ff0000"; // Steep
+      if (r >= 0.333) return "#ffa500"; // Moderately steep
+      if (r >= 0.166) return "#ffff00"; // Gentle
+      if (r >= 0.083) return "#3cb44b"; // Nearly level
+      return "#8b4513"; // Flat
     };
 
     const breaks = [
       { color: "#8b4513", label: `≤ ${(min + step).toFixed(1)}°` },
-      { color: "#3cb44b", label: `${(min + step).toFixed(1)}–${(min + 2 * step).toFixed(1)}°` },
-      { color: "#ffff00", label: `${(min + 2 * step).toFixed(1)}–${(min + 3 * step).toFixed(1)}°` },
-      { color: "#ffa500", label: `${(min + 3 * step).toFixed(1)}–${(min + 4 * step).toFixed(1)}°` },
-      { color: "#ff0000", label: `${(min + 4 * step).toFixed(1)}–${(min + 5 * step).toFixed(1)}°` },
-      { color: "#800080", label: `${(min + 5 * step).toFixed(1)}–${(min + 6 * step).toFixed(1)}°` },
+      {
+        color: "#3cb44b",
+        label: `${(min + step).toFixed(1)}–${(min + 2 * step).toFixed(1)}°`,
+      },
+      {
+        color: "#ffff00",
+        label: `${(min + 2 * step).toFixed(1)}–${(min + 3 * step).toFixed(1)}°`,
+      },
+      {
+        color: "#ffa500",
+        label: `${(min + 3 * step).toFixed(1)}–${(min + 4 * step).toFixed(1)}°`,
+      },
+      {
+        color: "#ff0000",
+        label: `${(min + 4 * step).toFixed(1)}–${(min + 5 * step).toFixed(1)}°`,
+      },
+      {
+        color: "#800080",
+        label: `${(min + 5 * step).toFixed(1)}–${(min + 6 * step).toFixed(1)}°`,
+      },
       { color: "#ff69b4", label: `≥ ${(min + 6 * step).toFixed(1)}°` },
     ];
 
     const group = L.geoJSON(geojson, {
       style: (feature) => {
-        const val = Number((feature.properties?.[column] || "").toString().trim());
+        const val = Number(
+          (feature.properties?.[column] || "").toString().trim()
+        );
         const color = !isNaN(val) ? getColor(val) : "#ccc";
         return {
           color,
@@ -135,19 +152,23 @@ const SlopeMap = () => {
     window.slopeLayerGroup = group;
 
     if (window.addThematicLegend) {
-      window.addThematicLegend("slope", (
+      window.addThematicLegend(
+        "slope",
         <>
           <strong>Slope Legend (°):</strong>
           <div className="legend-items">
             {breaks.map((b, i) => (
               <div key={i}>
-                <span className="legend-swatch" style={{ backgroundColor: b.color }}></span>
+                <span
+                  className="legend-swatch"
+                  style={{ backgroundColor: b.color }}
+                ></span>
                 {b.label}
               </div>
             ))}
           </div>
         </>
-      ));
+      );
     }
   };
 

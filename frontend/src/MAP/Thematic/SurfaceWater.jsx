@@ -3,15 +3,15 @@ import React, { useEffect, useState, useRef } from "react";
 import { useMap } from "react-leaflet";
 import { useSchema } from "../SchemaContext";
 import Table_Column from "../LandLegend/Table_Column.jsx";
-import API from "../../api";
+import API from "../../api_service.js";
 
 const SurfaceWater = () => {
-  const map = useMap();               // ✅ get map directly from react-leaflet
-  const { schema } = useSchema();     // ✅ get schema from context
+  const map = useMap(); // ✅ get map directly from react-leaflet
+  const { schema } = useSchema(); // ✅ get schema from context
   const [selectedColumn, setSelectedColumn] = useState("type");
   const [showColumnPopup, setShowColumnPopup] = useState(false);
   const [geojsonData, setGeojsonData] = useState(null);
-  const isBusy = useRef(false);       // ✅ persistent flag
+  const isBusy = useRef(false); // ✅ persistent flag
 
   // === Color generator
   const generateColor = (index, total) => {
@@ -64,7 +64,9 @@ const SurfaceWater = () => {
 
         const props = geojson.features?.[0]?.properties || {};
         if (!props.hasOwnProperty("type")) {
-          console.warn("⚠️ SurfaceWater: no 'type' column, showing column picker");
+          console.warn(
+            "⚠️ SurfaceWater: no 'type' column, showing column picker"
+          );
           setShowColumnPopup(true);
           return;
         }
@@ -85,7 +87,7 @@ const SurfaceWater = () => {
 
     const values = Array.from(
       new Set(
-        geojson.features.map(f =>
+        geojson.features.map((f) =>
           (f.properties?.[column] || "Unknown").toString().trim().toLowerCase()
         )
       )
@@ -98,7 +100,10 @@ const SurfaceWater = () => {
 
     const group = L.geoJSON(geojson, {
       style: (feature) => {
-        const val = (feature.properties?.[column] || "unknown").toString().trim().toLowerCase();
+        const val = (feature.properties?.[column] || "unknown")
+          .toString()
+          .trim()
+          .toLowerCase();
         return {
           color: colorMap[val],
           fillColor: colorMap[val],
@@ -119,7 +124,8 @@ const SurfaceWater = () => {
     window.surfaceWaterLayerGroup = group;
 
     if (window.addThematicLegend) {
-      window.addThematicLegend("surfacewater", (
+      window.addThematicLegend(
+        "surfacewater",
         <>
           <strong>Surface Water Legend:</strong>
           <div className="legend-items">
@@ -134,7 +140,7 @@ const SurfaceWater = () => {
             ))}
           </div>
         </>
-      ));
+      );
     }
   };
 

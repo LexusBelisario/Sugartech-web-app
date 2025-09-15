@@ -6,12 +6,12 @@ import Table_Column from "../LandLegend/Table_Column.jsx";
 import API from "../../api.js";
 
 const ElevationMap = ({ setRange }) => {
-  const map = useMap();               // ✅ get map directly
-  const { schema } = useSchema();     // ✅ get schema from context
+  const map = useMap(); // ✅ get map directly
+  const { schema } = useSchema(); // ✅ get schema from context
   const [selectedColumn, setSelectedColumn] = useState("elevation");
   const [showColumnPopup, setShowColumnPopup] = useState(false);
   const [geojsonData, setGeojsonData] = useState(null);
-  const isBusy = useRef(false);       // ✅ persistent flag
+  const isBusy = useRef(false); // ✅ persistent flag
 
   useEffect(() => {
     if (!schema) {
@@ -77,8 +77,8 @@ const ElevationMap = ({ setRange }) => {
     console.log("🎨 Rendering Elevation by column:", column);
 
     const elevations = geojson.features
-      .map(f => Number((f.properties?.[column] || "").toString().trim()))
-      .filter(v => !isNaN(v));
+      .map((f) => Number((f.properties?.[column] || "").toString().trim()))
+      .filter((v) => !isNaN(v));
 
     if (elevations.length === 0) {
       console.warn("⚠️ No numeric elevation values found");
@@ -103,17 +103,42 @@ const ElevationMap = ({ setRange }) => {
 
     const breaks = [
       { color: "#8b4513", label: `≤ ${(min + step).toFixed(1)} m` },
-      { color: "#3cb44b", label: `${(min + step).toFixed(1)}–${(min + 2 * step).toFixed(1)} m` },
-      { color: "#ffff00", label: `${(min + 2 * step).toFixed(1)}–${(min + 3 * step).toFixed(1)} m` },
-      { color: "#ffa500", label: `${(min + 3 * step).toFixed(1)}–${(min + 4 * step).toFixed(1)} m` },
-      { color: "#ff0000", label: `${(min + 4 * step).toFixed(1)}–${(min + 5 * step).toFixed(1)} m` },
-      { color: "#800080", label: `${(min + 5 * step).toFixed(1)}–${(min + 6 * step).toFixed(1)} m` },
+      {
+        color: "#3cb44b",
+        label: `${(min + step).toFixed(1)}–${(min + 2 * step).toFixed(1)} m`,
+      },
+      {
+        color: "#ffff00",
+        label: `${(min + 2 * step).toFixed(1)}–${(min + 3 * step).toFixed(
+          1
+        )} m`,
+      },
+      {
+        color: "#ffa500",
+        label: `${(min + 3 * step).toFixed(1)}–${(min + 4 * step).toFixed(
+          1
+        )} m`,
+      },
+      {
+        color: "#ff0000",
+        label: `${(min + 4 * step).toFixed(1)}–${(min + 5 * step).toFixed(
+          1
+        )} m`,
+      },
+      {
+        color: "#800080",
+        label: `${(min + 5 * step).toFixed(1)}–${(min + 6 * step).toFixed(
+          1
+        )} m`,
+      },
       { color: "#ff69b4", label: `≥ ${(min + 6 * step).toFixed(1)} m` },
     ];
 
     const group = L.geoJSON(geojson, {
       style: (feature) => {
-        const val = Number((feature.properties?.[column] || "").toString().trim());
+        const val = Number(
+          (feature.properties?.[column] || "").toString().trim()
+        );
         const color = !isNaN(val) ? getColor(val) : "#ccc";
         return {
           color,
@@ -135,19 +160,23 @@ const ElevationMap = ({ setRange }) => {
     window.elevationLayerGroup = group;
 
     if (window.addThematicLegend) {
-      window.addThematicLegend("elevation", (
+      window.addThematicLegend(
+        "elevation",
         <>
           <strong>Elevation Legend (m):</strong>
           <div className="legend-items">
             {breaks.map((b, i) => (
               <div key={i}>
-                <span className="legend-swatch" style={{ backgroundColor: b.color }}></span>
+                <span
+                  className="legend-swatch"
+                  style={{ backgroundColor: b.color }}
+                ></span>
                 {b.label}
               </div>
             ))}
           </div>
         </>
-      ));
+      );
     }
   };
 
