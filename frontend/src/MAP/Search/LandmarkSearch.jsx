@@ -46,9 +46,34 @@ const LandmarkSearch = ({ schema }) => {
   useEffect(() => {
     if (!schema) return;
 
-    fetch(`${API}/single-table?schema=${schema}&table=Landmarks`)
-      .then((res) => res.json())
-      .then((data) => {
+    const loadLandmarks = async () => {
+      try {
+        const url = `${API}/single-table?schema=${schema}&table=Landmarks`;
+
+        // ✅ ADD AUTH HEADERS
+        const token =
+          localStorage.getItem("access_token") ||
+          localStorage.getItem("accessToken");
+        const res = await fetch(url, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        });
+
+        // ✅ CHECK RESPONSE STATUS
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            console.error("❌ Authentication error");
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("accessToken");
+            window.location.href = "/login";
+            return;
+          }
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const data = await res.json();
         const feats = data?.features || [];
         setFeatures(feats);
 
@@ -60,13 +85,15 @@ const LandmarkSearch = ({ schema }) => {
         ].sort();
         setTypeOptions(uniqueTypes);
         setBarangayOptions(uniqueBarangays);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("Failed to load landmarks:", err);
         setFeatures([]);
         setTypeOptions([]);
         setBarangayOptions([]);
-      });
+      }
+    };
+
+    loadLandmarks();
   }, [schema]);
 
   // === Filter and render landmark search results ===

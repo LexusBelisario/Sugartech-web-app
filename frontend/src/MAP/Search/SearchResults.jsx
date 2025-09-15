@@ -1,5 +1,5 @@
 // SearchResults.jsx
-import API from "../../api_service";
+import API from "../../api.js"; // ✅ CHANGED from api_service to api.js
 import React from "react";
 
 // Displays the list of matched parcel PINs after a property search
@@ -12,7 +12,7 @@ const SearchResults = ({
   setSelectedPin,
 }) => {
   // Called when a user clicks on a result
-  const handleResultClick = (pin) => {
+  const handleResultClick = async (pin) => {
     // Find the matching parcel by its PIN
     const match = window.parcelLayers?.find(
       ({ feature }) => feature.properties.pin === pin
@@ -49,16 +49,41 @@ const SearchResults = ({
     // Optional: you can show a loader or disable clicks while this runs
     const schema = match.feature.properties.source_schema;
 
-    fetch(`${API}/parcel-info?schema=${schema}&pin=${pin}`)
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.status === "success" && json.data) {
-          window.populateParcelInfo(json.data);
-        } else {
-          console.warn("Parcel info not found for", pin);
+    try {
+      const url = `${API}/parcel-info?schema=${schema}&pin=${pin}`;
+
+      // ✅ ADD AUTH HEADERS
+      const token =
+        localStorage.getItem("access_token") ||
+        localStorage.getItem("accessToken");
+      const res = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
+
+      // ✅ CHECK RESPONSE STATUS
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          console.error("❌ Authentication error");
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("accessToken");
+          window.location.href = "/login";
+          return;
         }
-      })
-      .catch((err) => console.error("Error loading parcel info:", err));
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const json = await res.json();
+      if (json.status === "success" && json.data) {
+        window.populateParcelInfo(json.data);
+      } else {
+        console.warn("Parcel info not found for", pin);
+      }
+    } catch (err) {
+      console.error("Error loading parcel info:", err);
+    }
   };
 
   // === No input warning ===

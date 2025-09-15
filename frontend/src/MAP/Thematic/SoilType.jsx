@@ -1,17 +1,17 @@
 // src/components/Thematic/SoilType.jsx
 import React, { useEffect, useState, useRef } from "react";
-import { useMap } from "react-leaflet"; // ✅ get map directly
+import { useMap } from "react-leaflet";
 import Table_Column from "../LandLegend/Table_Column.jsx";
-import API from "../../api_service.js";
+import API from "../../api.js"; // ✅ CHANGED from api_service.js to api.js
 import { useSchema } from "../SchemaContext";
 
 const SoilType = () => {
-  const map = useMap(); // ✅ always available
+  const map = useMap();
   const { schema } = useSchema();
   const [selectedColumn, setSelectedColumn] = useState("type");
   const [showColumnPopup, setShowColumnPopup] = useState(false);
   const [geojsonData, setGeojsonData] = useState(null);
-  const isBusy = useRef(false); // ✅ persistent flag
+  const isBusy = useRef(false);
 
   const predefinedColors = [
     "#e6194b",
@@ -68,7 +68,30 @@ const SoilType = () => {
       const url = `${API}/single-table?schema=${schema}&table=SoilType`;
       try {
         console.log("🌐 Fetching:", url);
-        const res = await fetch(url);
+
+        // ✅ ADD AUTH HEADERS
+        const token =
+          localStorage.getItem("access_token") ||
+          localStorage.getItem("accessToken");
+        const res = await fetch(url, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        });
+
+        // ✅ CHECK RESPONSE STATUS
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            console.error("❌ Authentication error");
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("accessToken");
+            window.location.href = "/login";
+            return;
+          }
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
         const geojson = await res.json();
         setGeojsonData(geojson);
 
@@ -117,6 +140,13 @@ const SoilType = () => {
           fillOpacity: 0.5,
           weight: 1,
         };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.on("click", () => {
+          if (window.openRoadInfoOnly) {
+            window.openRoadInfoOnly(feature.properties);
+          }
+        });
       },
     });
 

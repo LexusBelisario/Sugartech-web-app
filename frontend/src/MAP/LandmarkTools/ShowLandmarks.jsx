@@ -41,12 +41,35 @@ const ShowLandmarks = ({
     }
 
     console.log(`🌐 Fetching landmarks for schema=${schema}`);
-    fetch(`${API}/landmarks/${schema}`)
-      .then((res) => {
+
+    // ✅ ADD AUTH HEADERS
+    const fetchLandmarks = async () => {
+      try {
+        const token =
+          localStorage.getItem("access_token") ||
+          localStorage.getItem("accessToken");
+        const res = await fetch(`${API}/landmarks/${schema}`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        });
+
         console.log("📡 Fetch response status:", res.status);
-        return res.json();
-      })
-      .then((data) => {
+
+        // ✅ CHECK RESPONSE STATUS
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            console.error("❌ Authentication error");
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("accessToken");
+            window.location.href = "/login";
+            return;
+          }
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const data = await res.json();
         console.log("📦 Landmarks fetched:", data);
 
         group.clearLayers();
@@ -106,11 +129,13 @@ const ShowLandmarks = ({
         }
 
         onVisibleChange?.(true);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("❌ Failed to load landmarks:", err);
         onVisibleChange?.(false);
-      });
+      }
+    };
+
+    fetchLandmarks();
 
     return () => {
       console.log("🧹 Cleaning up ShowLandmarks effect (schema:", schema, ")");
