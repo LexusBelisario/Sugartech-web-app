@@ -9,6 +9,37 @@ export const API_URL =
     ? "https://blgf-gis-webapp-nq0r.onrender.com"
     : "http://localhost:8000";
 
+// ✅ ADD THIS PART - Override fetch globally
+const originalFetch = window.fetch;
+
+window.fetch = function (...args) {
+  const [url, options = {}] = args;
+
+  // Add auth header to all /api calls
+  if (url.includes("/api/")) {
+    const token =
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("accessToken");
+    if (token) {
+      options.headers = {
+        ...options.headers,
+        Authorization: `Bearer ${token}`,
+      };
+    }
+  }
+
+  return originalFetch(url, options).then((response) => {
+    // Handle 401 globally
+    if (response.status === 401 && url.includes("/api/")) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("accessToken");
+      window.location.href = "/login";
+    }
+    return response;
+  });
+};
+// ✅ END OF ADDITION
+
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const token =
     localStorage.getItem("accessToken") || localStorage.getItem("access_token");

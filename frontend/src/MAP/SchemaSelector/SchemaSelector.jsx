@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ApiService } from "../../api_service";
+import { ApiService } from "../../api_service.js";
 import "./SchemaSelector.css";
 import { useSchema } from "../SchemaContext";
 

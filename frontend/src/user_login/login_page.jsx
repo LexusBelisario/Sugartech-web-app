@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api_service";
-import WarningModal from "../components/modals/WarningModal"; // Import the modal
+import WarningModal from "../components/modals/WarningModal";
 
 function LoginPage() {
   const [username, setUsername] = useState("");
@@ -43,7 +43,7 @@ function LoginPage() {
         // Check if admin
         if (data.user_type === "admin") {
           // Redirect to admin page using React Router
-          navigate("/admin"); // Changed from window.location.href = "/admin-dashboard"
+          navigate("/admin");
           return;
         }
 
@@ -67,6 +67,8 @@ function LoginPage() {
               severity: "error",
               canProceed: false,
             });
+            // IMPORTANT: Return here to prevent further execution
+            return;
           } else if (
             data.access_message.includes("no municipal access assigned")
           ) {
@@ -79,6 +81,8 @@ function LoginPage() {
               severity: "warning",
               canProceed: true,
             });
+            // IMPORTANT: Return here to prevent further execution
+            return;
           } else {
             // Other pending approval case
             setAccessModal({
@@ -88,6 +92,8 @@ function LoginPage() {
               severity: "warning",
               canProceed: false,
             });
+            // IMPORTANT: Return here to prevent further execution
+            return;
           }
         } else {
           // Full access - proceed normally
@@ -105,7 +111,7 @@ function LoginPage() {
   };
 
   const handleModalClose = () => {
-    setAccessModal({ ...accessModal, isVisible: false });
+    console.log("Modal closing, canProceed:", accessModal.canProceed); // Debug log
 
     // Handle navigation based on access level
     if (accessModal.canProceed) {
@@ -115,10 +121,21 @@ function LoginPage() {
       // User has no access - logout and stay on login page
       localStorage.removeItem("accessToken");
     }
+
+    // Reset modal state AFTER handling navigation
+    setAccessModal({
+      isVisible: false,
+      title: "",
+      message: "",
+      severity: "warning",
+      canProceed: false,
+    });
   };
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] relative overflow-hidden flex items-center justify-center px-4">
+      {/* ... rest of your JSX stays the same ... */}
+
       {/* Philippine Map Background */}
       <div className="absolute inset-0 flex items-center justify-center opacity-[0.03]">
         <img
@@ -133,10 +150,8 @@ function LoginPage() {
       <div className="absolute bottom-10 right-10 w-40 h-40 bg-gradient-to-br from-[#0B4EA2]/10 to-[#702082]/5 rounded-full blur-3xl"></div>
       <div className="absolute top-1/3 right-20 w-24 h-24 bg-gradient-to-br from-[#C51E2A]/10 to-[#7F0F1A]/5 rounded-full blur-2xl"></div>
 
-      {/* Login Card - Your existing code stays the same */}
+      {/* Login Card */}
       <div className="relative bg-white rounded-3xl p-8 shadow-[0_20px_60px_rgba(34,34,34,0.08)] border border-[#222222]/5 w-[500px] min-h-[600px] flex flex-col backdrop-blur-sm">
-        {/* ... All your existing login form code stays exactly the same ... */}
-
         {/* Header Section */}
         <div className="flex flex-col items-center justify-center mb-8">
           {/* Logo Container with Philippine Flag Colors */}
@@ -374,7 +389,6 @@ function LoginPage() {
                 isLoading ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
-              {/* Button Shine Effect */}
               <span className="absolute inset-0 -top-1/2 h-[200%] w-12 bg-white/20 transform -skew-x-12 -translate-x-full transition-transform duration-700 group-hover:translate-x-[250%]"></span>
               <span className="relative">
                 {isLoading ? (
@@ -421,7 +435,7 @@ function LoginPage() {
           </a>
         </div>
 
-        {/* Bottom Accent - Philippine Flag Colors */}
+        {/* Bottom Accent */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#0B4EA2] via-[#C51E2A] to-[#F2C300] rounded-b-3xl"></div>
       </div>
 
@@ -445,15 +459,17 @@ function LoginPage() {
         </svg>
       </div>
 
-      {/* Access Control Warning Modal */}
-      <WarningModal
-        isVisible={accessModal.isVisible}
-        onClose={handleModalClose}
-        title={accessModal.title}
-        message={accessModal.message}
-        severity={accessModal.severity}
-        buttonText={accessModal.canProceed ? "Continue to Map" : "Ok"}
-      />
+      {/* Access Control Warning Modal - Make sure it's outside of any relative containers */}
+      {accessModal.isVisible && (
+        <WarningModal
+          isVisible={accessModal.isVisible}
+          onClose={handleModalClose}
+          title={accessModal.title}
+          message={accessModal.message}
+          severity={accessModal.severity}
+          buttonText={accessModal.canProceed ? "Continue to Map" : "Ok"}
+        />
+      )}
     </div>
   );
 }
