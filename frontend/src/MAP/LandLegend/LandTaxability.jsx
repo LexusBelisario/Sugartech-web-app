@@ -2,22 +2,26 @@
 import React, { useEffect, useState } from "react";
 import L from "leaflet";
 import Table_Column from "./Table_Column.jsx";
-import API from "../../api";
+import API from "../../api.js";
 import { useSchema } from "../SchemaContext";
 import { useMap } from "react-leaflet";
 
 let taxabilityLayer = null;
 
 const LandTaxability = () => {
-  const map = useMap();             // ✅ get map from context
-  const { schema } = useSchema();   // ✅ get schema from context
+  const map = useMap(); // ✅ get map from context
+  const { schema } = useSchema(); // ✅ get schema from context
   const [column, setColumn] = useState("taxability");
   const [showSelector, setShowSelector] = useState(false);
 
   const generateColorMap = (features, key) => {
-    const categories = [...new Set(
-      features.map(f => f.properties[key]).filter(v => v !== null && v !== undefined && v !== "")
-    )];
+    const categories = [
+      ...new Set(
+        features
+          .map((f) => f.properties[key])
+          .filter((v) => v !== null && v !== undefined && v !== "")
+      ),
+    ];
     const total = categories.length || 1;
     const colorMap = {};
     categories.forEach((cat, i) => {
@@ -37,31 +41,37 @@ const LandTaxability = () => {
     const colorMap = generateColorMap(features, col);
 
     taxabilityLayer = L.geoJSON(features, {
-      style: feature => ({
+      style: (feature) => ({
         color: "#444",
         weight: 1,
         fillOpacity: 0.6,
-        fillColor: colorMap[feature.properties[col]] || "#cccccc"
+        fillColor: colorMap[feature.properties[col]] || "#cccccc",
       }),
       onEachFeature: (feature, layer) => {
-        layer.bindPopup(`<strong>${col}:</strong> ${feature.properties[col] ?? "N/A"}`);
-      }
+        layer.bindPopup(
+          `<strong>${col}:</strong> ${feature.properties[col] ?? "N/A"}`
+        );
+      },
     }).addTo(map);
 
     // ✅ fragment so wrapper gray shows
-    window.addLandInfoLegend?.("taxability", (
+    window.addLandInfoLegend?.(
+      "taxability",
       <>
         <strong>Land Taxability</strong>
         <div className="legend-items">
           {Object.entries(colorMap).map(([value, color]) => (
             <div key={value}>
-              <span className="legend-swatch" style={{ backgroundColor: color }}></span>
+              <span
+                className="legend-swatch"
+                style={{ backgroundColor: color }}
+              ></span>
               {value}
             </div>
           ))}
         </div>
       </>
-    ));
+    );
   };
 
   const fetchAndRender = (col) => {
@@ -77,18 +87,18 @@ const LandTaxability = () => {
         if (attrData.status !== "success" || !attrData.data) return;
 
         const attrMap = {};
-        attrData.data.forEach(attr => {
+        attrData.data.forEach((attr) => {
           attrMap[attr.pin] = attr;
         });
 
-        const mergedFeatures = geoData.features.map(f => ({
+        const mergedFeatures = geoData.features.map((f) => ({
           ...f,
-          properties: { ...f.properties, ...(attrMap[f.properties.pin] || {}) }
+          properties: { ...f.properties, ...(attrMap[f.properties.pin] || {}) },
         }));
 
         renderLayer(mergedFeatures, col);
       })
-      .catch(err => console.error("❌ Fetch error:", err));
+      .catch((err) => console.error("❌ Fetch error:", err));
   };
 
   useEffect(() => {
@@ -107,23 +117,30 @@ const LandTaxability = () => {
       const attrUrl = `${API}/attribute-table?schema=${schema}`;
 
       Promise.all([fetch(geoUrl), fetch(attrUrl)])
-        .then(([geoRes, attrRes]) => Promise.all([geoRes.json(), attrRes.json()]))
+        .then(([geoRes, attrRes]) =>
+          Promise.all([geoRes.json(), attrRes.json()])
+        )
         .then(([geoData, attrData]) => {
           if (!geoData.features?.length) return;
           if (attrData.status !== "success" || !attrData.data) return;
 
           const attrMap = {};
-          attrData.data.forEach(attr => {
+          attrData.data.forEach((attr) => {
             attrMap[attr.pin] = attr;
           });
 
-          const mergedFeatures = geoData.features.map(f => ({
+          const mergedFeatures = geoData.features.map((f) => ({
             ...f,
-            properties: { ...f.properties, ...(attrMap[f.properties.pin] || {}) }
+            properties: {
+              ...f.properties,
+              ...(attrMap[f.properties.pin] || {}),
+            },
           }));
 
           const props = mergedFeatures[0].properties;
-          const match = Object.keys(props).find(k => k.toLowerCase() === "taxability");
+          const match = Object.keys(props).find(
+            (k) => k.toLowerCase() === "taxability"
+          );
 
           if (match) {
             setColumn(match);
@@ -133,7 +150,7 @@ const LandTaxability = () => {
             setShowSelector(true);
           }
         })
-        .catch(err => console.error("❌ Fetch error (toggle):", err));
+        .catch((err) => console.error("❌ Fetch error (toggle):", err));
     };
 
     return () => {
@@ -158,7 +175,7 @@ const LandTaxability = () => {
       {showSelector && (
         <Table_Column
           schema={schema}
-          table="JoinedTable"  // ✅ use attribute table
+          table="JoinedTable" // ✅ use attribute table
           onApply={handleColumnApply}
           onClose={() => setShowSelector(false)}
         />

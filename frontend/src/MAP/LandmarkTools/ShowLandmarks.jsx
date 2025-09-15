@@ -1,9 +1,16 @@
 import React, { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
-import API from "../../api";
+import API from "../../api.js";
 
-const ShowLandmarks = ({ schema, visible, onClickFeature, hiddenLandmarks = [], onVisibleChange, refreshKey }) => {
+const ShowLandmarks = ({
+  schema,
+  visible,
+  onClickFeature,
+  hiddenLandmarks = [],
+  onVisibleChange,
+  refreshKey,
+}) => {
   const map = useMap();
 
   useEffect(() => {
@@ -52,7 +59,9 @@ const ShowLandmarks = ({ schema, visible, onClickFeature, hiddenLandmarks = [], 
 
           const isHidden = hiddenLandmarks.some(
             (item) =>
-              item.name === name && item.type === type && item.barangay === barangay
+              item.name === name &&
+              item.type === type &&
+              item.barangay === barangay
           );
           if (isHidden) {
             return;
@@ -127,7 +136,7 @@ function getIconPath(type) {
     "police station": "Police Station.svg",
     "recreational entities": "Recreational Entities.svg",
     "religious entities": "Religious Entities.svg",
-    "subdivision": "Subdivision.svg",
+    subdivision: "Subdivision.svg",
     "telecommunication entities": "Telecommunication Entities.svg",
     "transportation entities": "Transportation Entities.svg",
   };

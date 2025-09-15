@@ -1,23 +1,32 @@
 // src/components/Thematic/SoilType.jsx
 import React, { useEffect, useState, useRef } from "react";
-import { useMap } from "react-leaflet";        // ✅ get map directly
+import { useMap } from "react-leaflet"; // ✅ get map directly
 import Table_Column from "../LandLegend/Table_Column.jsx";
-import API from "../../api";
+import API from "../../api_service.js";
 import { useSchema } from "../SchemaContext";
 
 const SoilType = () => {
-  const map = useMap();                        // ✅ always available
+  const map = useMap(); // ✅ always available
   const { schema } = useSchema();
   const [selectedColumn, setSelectedColumn] = useState("type");
   const [showColumnPopup, setShowColumnPopup] = useState(false);
   const [geojsonData, setGeojsonData] = useState(null);
-  const isBusy = useRef(false);                // ✅ persistent flag
+  const isBusy = useRef(false); // ✅ persistent flag
 
   const predefinedColors = [
-    "#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231",
-    "#911eb4", "#46f0f0", "#f032e6", "#bcf60c", "#fabebe"
+    "#e6194b",
+    "#3cb44b",
+    "#ffe119",
+    "#4363d8",
+    "#f58231",
+    "#911eb4",
+    "#46f0f0",
+    "#f032e6",
+    "#bcf60c",
+    "#fabebe",
   ];
-  const generateColor = (index) => predefinedColors[index % predefinedColors.length];
+  const generateColor = (index) =>
+    predefinedColors[index % predefinedColors.length];
 
   useEffect(() => {
     if (!schema) {
@@ -49,7 +58,8 @@ const SoilType = () => {
         }
         window.soilTypeLayerGroup = null;
         updateButton(false);
-        if (window.removeThematicLegend) window.removeThematicLegend("soiltype");
+        if (window.removeThematicLegend)
+          window.removeThematicLegend("soiltype");
         isBusy.current = false;
         return;
       }
@@ -84,7 +94,7 @@ const SoilType = () => {
 
     const types = Array.from(
       new Set(
-        geojson.features.map(f =>
+        geojson.features.map((f) =>
           (f.properties?.[column] || "Unknown").toString().trim().toLowerCase()
         )
       )
@@ -97,21 +107,25 @@ const SoilType = () => {
 
     const group = L.geoJSON(geojson, {
       style: (feature) => {
-        const val = (feature.properties?.[column] || "unknown").toString().trim().toLowerCase();
+        const val = (feature.properties?.[column] || "unknown")
+          .toString()
+          .trim()
+          .toLowerCase();
         return {
           color: colorMap[val],
           fillColor: colorMap[val],
           fillOpacity: 0.5,
           weight: 1,
         };
-      }
+      },
     });
 
     group.addTo(map);
     window.soilTypeLayerGroup = group;
 
     if (window.addThematicLegend) {
-      window.addThematicLegend("soiltype", (
+      window.addThematicLegend(
+        "soiltype",
         <>
           <strong>Soil Type Legend:</strong>
           <div className="legend-items">
@@ -126,7 +140,7 @@ const SoilType = () => {
             ))}
           </div>
         </>
-      ));
+      );
     }
   };
 

@@ -24,7 +24,7 @@ const CLUP = () => {
   const hasZoneColumn = (features) => {
     if (!features || features.length === 0) return false;
     const props = features[0].properties || {};
-    return Object.keys(props).some(k => k.toLowerCase() === "zone");
+    return Object.keys(props).some((k) => k.toLowerCase() === "zone");
   };
 
   useEffect(() => {
@@ -74,7 +74,9 @@ const CLUP = () => {
         if (!columnToStyle) {
           if (hasZoneColumn(geojson.features)) {
             const props = geojson.features[0].properties;
-            columnToStyle = Object.keys(props).find(k => k.toLowerCase() === "zone");
+            columnToStyle = Object.keys(props).find(
+              (k) => k.toLowerCase() === "zone"
+            );
             console.log(`✅ Using default Zone column: ${columnToStyle}`);
           } else {
             console.log("⚠️ No 'Zone' column found, showing selector");
@@ -97,16 +99,18 @@ const CLUP = () => {
   const renderLayer = (geojson, columnName) => {
     console.log("🎨 Rendering LandUse by column:", columnName);
 
-    const values = geojson.features.map(f => f.properties?.[columnName]);
-    const unique = Array.from(new Set(values.map(v => v?.toString().toUpperCase()).filter(Boolean)));
+    const values = geojson.features.map((f) => f.properties?.[columnName]);
+    const unique = Array.from(
+      new Set(values.map((v) => v?.toString().toUpperCase()).filter(Boolean))
+    );
 
     const colorMap = {};
-    unique.forEach(v => {
+    unique.forEach((v) => {
       colorMap[v] = generateColor();
     });
 
     const group = L.geoJSON(geojson, {
-      style: feature => {
+      style: (feature) => {
         const val = feature.properties?.[columnName]?.toString().toUpperCase();
         return {
           color: "#444",
@@ -117,27 +121,33 @@ const CLUP = () => {
       },
       onEachFeature: (feature, layer) => {
         const val = feature.properties?.[columnName];
-        layer.bindPopup(`<strong>Land Use ${columnName}:</strong> ${val || "N/A"}`);
-      }
+        layer.bindPopup(
+          `<strong>Land Use ${columnName}:</strong> ${val || "N/A"}`
+        );
+      },
     });
 
     group.addTo(map);
     window.landUseLayerGroup = group;
 
     if (window.addThematicLegend) {
-      window.addThematicLegend("landuse", (
+      window.addThematicLegend(
+        "landuse",
         <>
           <strong>Land Use ({columnName}):</strong>
           <div className="legend-items">
             {unique.map((val, i) => (
               <div key={i}>
-                <span className="legend-swatch" style={{ backgroundColor: colorMap[val] }}></span>
+                <span
+                  className="legend-swatch"
+                  style={{ backgroundColor: colorMap[val] }}
+                ></span>
                 {val}
               </div>
             ))}
           </div>
         </>
-      ));
+      );
     }
   };
 

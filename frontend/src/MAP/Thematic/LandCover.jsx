@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useMap } from "react-leaflet";
 import { useSchema } from "../SchemaContext";
 import Table_Column from "../LandLegend/Table_Column.jsx";
-import API from "../../api";
+import API from "../../api.js";
 
 const LandCover = () => {
   const map = useMap();
@@ -15,10 +15,19 @@ const LandCover = () => {
 
   // ✅ Reuse same palette as SoilType
   const predefinedColors = [
-    "#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231",
-    "#911eb4", "#46f0f0", "#f032e6", "#bcf60c", "#fabebe"
+    "#e6194b",
+    "#3cb44b",
+    "#ffe119",
+    "#4363d8",
+    "#f58231",
+    "#911eb4",
+    "#46f0f0",
+    "#f032e6",
+    "#bcf60c",
+    "#fabebe",
   ];
-  const generateColor = (index) => predefinedColors[index % predefinedColors.length];
+  const generateColor = (index) =>
+    predefinedColors[index % predefinedColors.length];
 
   useEffect(() => {
     if (!schema) {
@@ -83,7 +92,7 @@ const LandCover = () => {
   const renderLayer = (geojson, column) => {
     console.log("🎨 Rendering LandCover by column:", column);
 
-    const rawValues = geojson.features.map(f =>
+    const rawValues = geojson.features.map((f) =>
       (f.properties?.[column] || "unknown").toString().trim().toLowerCase()
     );
     const unique = Array.from(new Set(rawValues)).sort();
@@ -95,7 +104,10 @@ const LandCover = () => {
 
     const group = L.geoJSON(geojson, {
       style: (feature) => {
-        const val = (feature.properties?.[column] || "unknown").toString().trim().toLowerCase();
+        const val = (feature.properties?.[column] || "unknown")
+          .toString()
+          .trim()
+          .toLowerCase();
         return {
           color: colorMap[val] || "#ccc",
           fillColor: colorMap[val] || "#ccc",
@@ -116,7 +128,8 @@ const LandCover = () => {
     window.landCoverLayerGroup = group;
 
     if (window.addThematicLegend) {
-      window.addThematicLegend("landcover", (
+      window.addThematicLegend(
+        "landcover",
         <>
           <strong>Land Cover Legend:</strong>
           <div className="legend-items">
@@ -131,7 +144,7 @@ const LandCover = () => {
             ))}
           </div>
         </>
-      ));
+      );
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
-import API from "../../api";
+import API from "../../api.js";
 import ShowLandmarks from "./ShowLandmarks.jsx";
 import RemoveLandmark from "./RemoveLandmark.jsx";
 import LandmarkInfotool from "./LandmarkInfotool.jsx";
@@ -111,7 +111,9 @@ const Landmarks = ({ activeTool, setActiveTool, setLandmarksVisible }) => {
 
       <LandmarkInfotool
         key={activeTool}
-        visible={activeTool === "landmarkInfo" || activeTool === "updateLandmark"}
+        visible={
+          activeTool === "landmarkInfo" || activeTool === "updateLandmark"
+        }
         data={selectedLandmark}
         schema={schema}
         startEditable={activeTool === "updateLandmark"}

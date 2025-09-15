@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Table_Column from "./Table_Column.jsx";
 import L from "leaflet";
-import API from "../../api";
+import API from "../../api.js";
 import { useSchema } from "../SchemaContext";
 import { useMap } from "react-leaflet";
 
@@ -15,7 +15,7 @@ const LandActualUse = () => {
   const [showSelector, setShowSelector] = useState(false);
 
   const generateColorMap = (features, key) => {
-    const categories = [...new Set(features.map(f => f.properties[key]))];
+    const categories = [...new Set(features.map((f) => f.properties[key]))];
     const total = categories.length || 1;
     const colorMap = {};
     categories.forEach((cat, i) => {
@@ -35,19 +35,20 @@ const LandActualUse = () => {
     const colorMap = generateColorMap(features, col);
 
     actualUseLayer = L.geoJSON(features, {
-      style: feature => ({
+      style: (feature) => ({
         color: "#444",
         weight: 1,
         fillOpacity: 0.6,
-        fillColor: colorMap[feature.properties[col]] || "#cccccc"
+        fillColor: colorMap[feature.properties[col]] || "#cccccc",
       }),
       onEachFeature: (feature, layer) => {
         layer.bindPopup(`<strong>${col}:</strong> ${feature.properties[col]}`);
-      }
+      },
     }).addTo(map);
 
     // ✅ No anonymous <div>, just fragment
-    window.addLandInfoLegend?.("actualuse", (
+    window.addLandInfoLegend?.(
+      "actualuse",
       <>
         <strong>Land Actual Use</strong>
         <div className="legend-items">
@@ -62,7 +63,7 @@ const LandActualUse = () => {
           ))}
         </div>
       </>
-    ));
+    );
   };
 
   const fetchAndRender = (col) => {
@@ -87,23 +88,28 @@ const LandActualUse = () => {
         }
 
         const attrMap = {};
-        attrData.data.forEach(attr => {
+        attrData.data.forEach((attr) => {
           attrMap[attr.pin] = attr;
         });
 
-        const mergedFeatures = geoData.features.map(f => ({
+        const mergedFeatures = geoData.features.map((f) => ({
           ...f,
-          properties: { ...f.properties, ...(attrMap[f.properties.pin] || {}) }
+          properties: { ...f.properties, ...(attrMap[f.properties.pin] || {}) },
         }));
 
         renderLayer(mergedFeatures, col);
       })
-      .catch(err => console.error("❌ Fetch error:", err));
+      .catch((err) => console.error("❌ Fetch error:", err));
   };
 
   useEffect(() => {
     if (!map || !schema) {
-      console.warn("⛔ LandActualUse not ready. map:", !!map, "schema:", schema);
+      console.warn(
+        "⛔ LandActualUse not ready. map:",
+        !!map,
+        "schema:",
+        schema
+      );
       return;
     }
 

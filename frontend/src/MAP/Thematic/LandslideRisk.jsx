@@ -3,15 +3,15 @@ import React, { useEffect, useState, useRef } from "react";
 import { useMap } from "react-leaflet";
 import { useSchema } from "../SchemaContext";
 import Table_Column from "../LandLegend/Table_Column.jsx";
-import API from "../../api";
+import API from "../../api.js";
 
 const LandslideRisk = () => {
-  const map = useMap();               // ✅ get map
-  const { schema } = useSchema();     // ✅ get schema from context
+  const map = useMap(); // ✅ get map
+  const { schema } = useSchema(); // ✅ get schema from context
   const [selectedColumn, setSelectedColumn] = useState("rating");
   const [showColumnPopup, setShowColumnPopup] = useState(false);
   const [geojsonData, setGeojsonData] = useState(null);
-  const isBusy = useRef(false);       // ✅ persistent
+  const isBusy = useRef(false); // ✅ persistent
 
   // === Color scheme
   const smartColorMap = {
@@ -20,7 +20,7 @@ const LandslideRisk = () => {
     low: "#ffff00",
     none: "#008000",
     floodway: "#800080",
-    unknown: "#ccc"
+    unknown: "#ccc",
   };
 
   // === Classify raw values
@@ -144,7 +144,8 @@ const LandslideRisk = () => {
     window.landslideRiskLayerGroup = group;
 
     if (window.addThematicLegend) {
-      window.addThematicLegend("landslide-risk", (
+      window.addThematicLegend(
+        "landslide-risk",
         <>
           <strong>Landslide Susceptibility Legend:</strong>
           <div className="legend-items">
@@ -159,7 +160,7 @@ const LandslideRisk = () => {
             ))}
           </div>
         </>
-      ));
+      );
     }
   };
 

@@ -7,7 +7,7 @@ import AddLine from "./AddLine";
 import AddPoints from "./AddPoints";
 import BearingDistance from "./BearingDistance";
 import "./subdivide.css";
-import API from "../../api";
+import API from "../../api_service";
 
 const Subdivide = ({ map, onClose }) => {
   const [activeTab, setActiveTab] = useState("line");
@@ -26,8 +26,6 @@ const Subdivide = ({ map, onClose }) => {
   const addLineRef = useRef(null);
   const addPointsRef = useRef(null);
   const bearingRef = useRef(null);
-
-
 
   useEffect(() => {
     if (!map) return;
@@ -125,71 +123,70 @@ const Subdivide = ({ map, onClose }) => {
     setSuggestedPins(newPins);
   }, [manualPoints, selectedParcel, locked, activeTab]);
 
-const resetAllSubdivide = () => {
-  if (addLineRef.current) {
-    addLineRef.current.clearDrawnLines();
-  }
+  const resetAllSubdivide = () => {
+    if (addLineRef.current) {
+      addLineRef.current.clearDrawnLines();
+    }
 
-  parcelLayers.forEach(({ layer }) =>
-    layer.setStyle({
-      color: "black",
-      weight: 1,
-      fillColor: "black",
-      fillOpacity: 0.1,
-    })
-  );
-  if (window.currentParcelLayer) window.currentParcelLayer = null;
+    parcelLayers.forEach(({ layer }) =>
+      layer.setStyle({
+        color: "black",
+        weight: 1,
+        fillColor: "black",
+        fillOpacity: 0.1,
+      })
+    );
+    if (window.currentParcelLayer) window.currentParcelLayer = null;
 
-  setLocked(false);
-  setSelectedParcel(null);
-  setLines([]);
-  setAllPoints([]);
-  pointMarkers.current.forEach((m) => m.remove());
-  pointMarkers.current = [];
-  setError("");
-  setSuggestedPins([]);
+    setLocked(false);
+    setSelectedParcel(null);
+    setLines([]);
+    setAllPoints([]);
+    pointMarkers.current.forEach((m) => m.remove());
+    pointMarkers.current = [];
+    setError("");
+    setSuggestedPins([]);
 
-  if (activeTab === "point" && addPointsRef.current) {
-    addPointsRef.current.clearManualPoints();
-  } else if (activeTab === "bearing") {
+    if (activeTab === "point" && addPointsRef.current) {
+      addPointsRef.current.clearManualPoints();
+    } else if (activeTab === "bearing") {
       if (bearingRef.current) {
-  bearingRef.current.clearBearingPoints();
-}
+        bearingRef.current.clearBearingPoints();
+      }
     }
   };
 
+  // === Submit subdivision ===
+  const handleSubdivide = async () => {
+    if (!selectedParcel || suggestedPins.length === 0) {
+      alert("Missing required input.");
+      return;
+    }
 
-// === Submit subdivision ===
-const handleSubdivide = async () => {
-  if (!selectedParcel || suggestedPins.length === 0) {
-    alert("Missing required input.");
-    return;
-  }
+    const split_lines =
+      activeTab === "point" || activeTab === "bearing" ? [manualPoints] : lines;
 
-  const split_lines =
-    activeTab === "point" || activeTab === "bearing" ? [manualPoints] : lines;
+    // Add logs here for debugging
+    console.log("▶️ Subdivide request");
+    console.log("Schema:", selectedParcel.properties.source_schema);
+    console.log("Table:", selectedParcel.properties.source_table);
+    console.log("PIN:", selectedParcel.properties.pin);
+    console.log("Split Lines:", split_lines);
+    console.log("Suggested PINs:", suggestedPins);
 
-  // Add logs here for debugging
-  console.log("▶️ Subdivide request");
-  console.log("Schema:", selectedParcel.properties.source_schema);
-  console.log("Table:", selectedParcel.properties.source_table);
-  console.log("PIN:", selectedParcel.properties.pin);
-  console.log("Split Lines:", split_lines);
-  console.log("Suggested PINs:", suggestedPins);
-
-  try {
-    const res = await fetch(`${API}/subdivide`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        pin: selectedParcel.properties.pin,
-        schema: selectedParcel.properties.source_schema,
-        table: selectedParcel.properties.source_table,
-        split_lines,
-        new_pins: suggestedPins,
-        original_properties: selectedParcel.properties
-      }),
-    });
+    try {
+      const res = await fetch(`${API}/subdivide`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pin: selectedParcel.properties.pin,
+          schema: selectedParcel.properties.source_schema,
+          table: selectedParcel.properties.source_table,
+          split_lines,
+          new_pins: suggestedPins,
+          original_properties: selectedParcel.properties,
+        }),
+      });
 
       const json = await res.json();
       if (json.status === "success") {
@@ -236,10 +233,9 @@ const handleSubdivide = async () => {
     }
 
     // Remove last line from state
-    setLines(prev => prev.slice(0, -1));
-    setAllPoints(prev => prev.slice(0, prev.length - lastPoints.length));
+    setLines((prev) => prev.slice(0, -1));
+    setAllPoints((prev) => prev.slice(0, prev.length - lastPoints.length));
   };
-
 
   const handleExportLinePoints = (format = "txt") => {
     if (allPoints.length === 0) return;
@@ -335,63 +331,62 @@ const handleSubdivide = async () => {
       </div>
 
       {activeTab === "line" && (
-      <AddLine
-        ref={addLineRef}
-        map={map}
-        drawing={drawing}
-        setDrawing={setDrawing}
-        activeTab={activeTab}
-        error={error}
-        selectedParcel={selectedParcel}
-        locked={locked}
-        tryStartDrawing={tryStartDrawing}
-        handleUndo={handleUndo}
-        handleSubdivide={handleSubdivide}
-        handleCancel={handleCancel}
-        lines={lines}
-        setLines={setLines}
-        renderParcelControls={renderParcelControls}
-        allPoints={allPoints}
-        setAllPoints={setAllPoints}
-        handleExportPoints={handleExportLinePoints}
-        pointMarkers={pointMarkers}
-        suggestedPins={suggestedPins}
-        setSuggestedPins={setSuggestedPins}
-      />
+        <AddLine
+          ref={addLineRef}
+          map={map}
+          drawing={drawing}
+          setDrawing={setDrawing}
+          activeTab={activeTab}
+          error={error}
+          selectedParcel={selectedParcel}
+          locked={locked}
+          tryStartDrawing={tryStartDrawing}
+          handleUndo={handleUndo}
+          handleSubdivide={handleSubdivide}
+          handleCancel={handleCancel}
+          lines={lines}
+          setLines={setLines}
+          renderParcelControls={renderParcelControls}
+          allPoints={allPoints}
+          setAllPoints={setAllPoints}
+          handleExportPoints={handleExportLinePoints}
+          pointMarkers={pointMarkers}
+          suggestedPins={suggestedPins}
+          setSuggestedPins={setSuggestedPins}
+        />
       )}
 
       {activeTab === "point" && (
-      <AddPoints
-        ref={addPointsRef}
-        map={map}
-        setLines={setLines}
-        manualPoints={manualPoints}
-        setManualPoints={setManualPoints}
-        locked={locked}
-        selectedParcel={selectedParcel}
-        renderParcelControls={renderParcelControls}
-        handleSubdivide={handleSubdivide}
-        handleCancel={handleCancel}
-        suggestedPins={suggestedPins}
-        setSuggestedPins={setSuggestedPins}
-      />
+        <AddPoints
+          ref={addPointsRef}
+          map={map}
+          setLines={setLines}
+          manualPoints={manualPoints}
+          setManualPoints={setManualPoints}
+          locked={locked}
+          selectedParcel={selectedParcel}
+          renderParcelControls={renderParcelControls}
+          handleSubdivide={handleSubdivide}
+          handleCancel={handleCancel}
+          suggestedPins={suggestedPins}
+          setSuggestedPins={setSuggestedPins}
+        />
       )}
 
-    {activeTab === "bearing" && (
-      <BearingDistance
-        ref={bearingRef}
-        map={map}
-        setLines={setLines}
-        manualPoints={manualPoints}
-        setManualPoints={setManualPoints}
-        renderParcelControls={renderParcelControls}
-        handleSubdivide={handleSubdivide}
-        selectedParcel={selectedParcel}
-        locked={locked}
-        setSuggestedPins={setSuggestedPins}   // ✅ This is the missing prop
-      />
-    )}
-
+      {activeTab === "bearing" && (
+        <BearingDistance
+          ref={bearingRef}
+          map={map}
+          setLines={setLines}
+          manualPoints={manualPoints}
+          setManualPoints={setManualPoints}
+          renderParcelControls={renderParcelControls}
+          handleSubdivide={handleSubdivide}
+          selectedParcel={selectedParcel}
+          locked={locked}
+          setSuggestedPins={setSuggestedPins} // ✅ This is the missing prop
+        />
+      )}
     </div>
   );
 };
