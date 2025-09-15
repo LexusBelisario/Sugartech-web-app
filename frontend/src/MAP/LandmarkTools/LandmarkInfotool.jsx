@@ -55,17 +55,34 @@ const LandmarkInfoTool = ({
     };
 
     try {
+      // ✅ ADD AUTH HEADERS
+      const token =
+        localStorage.getItem("access_token") ||
+        localStorage.getItem("accessToken");
       const res = await fetch(`${API}/landmarks/update-by-fields`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
         body: JSON.stringify(payload),
       });
-      const result = await res.json();
 
+      // ✅ CHECK RESPONSE STATUS
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          console.error("❌ Authentication error");
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("accessToken");
+          window.location.href = "/login";
+          return;
+        }
+        const result = await res.json();
         alert(`Update failed (${res.status}): ${JSON.stringify(result)}`);
         return;
       }
+
+      const result = await res.json();
 
       if (result.status === "success") {
         alert("Landmark updated successfully.");

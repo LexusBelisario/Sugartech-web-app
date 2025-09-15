@@ -7,7 +7,7 @@ import AddLine from "./AddLine";
 import AddPoints from "./AddPoints";
 import BearingDistance from "./BearingDistance";
 import "./subdivide.css";
-import API from "../../api_service";
+import API from "../../api.js";
 
 const Subdivide = ({ map, onClose }) => {
   const [activeTab, setActiveTab] = useState("line");

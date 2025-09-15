@@ -3,15 +3,15 @@ import React, { useEffect, useState, useRef } from "react";
 import { useMap } from "react-leaflet";
 import { useSchema } from "../SchemaContext";
 import Table_Column from "../LandLegend/Table_Column.jsx";
-import API from "../../api_service.js";
+import API from "../../api.js"; // ✅ CHANGED from api_service.js to api.js
 
 const SurfaceWater = () => {
-  const map = useMap(); // ✅ get map directly from react-leaflet
-  const { schema } = useSchema(); // ✅ get schema from context
+  const map = useMap();
+  const { schema } = useSchema();
   const [selectedColumn, setSelectedColumn] = useState("type");
   const [showColumnPopup, setShowColumnPopup] = useState(false);
   const [geojsonData, setGeojsonData] = useState(null);
-  const isBusy = useRef(false); // ✅ persistent flag
+  const isBusy = useRef(false);
 
   // === Color generator
   const generateColor = (index, total) => {
@@ -58,7 +58,30 @@ const SurfaceWater = () => {
         // === Turn ON
         const url = `${API}/single-table?schema=${schema}&table=SurfaceWater`;
         console.log("🌐 Fetching:", url);
-        const res = await fetch(url);
+
+        // ✅ ADD AUTH HEADERS
+        const token =
+          localStorage.getItem("access_token") ||
+          localStorage.getItem("accessToken");
+        const res = await fetch(url, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        });
+
+        // ✅ CHECK RESPONSE STATUS
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            console.error("❌ Authentication error");
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("accessToken");
+            window.location.href = "/login";
+            return;
+          }
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
         const geojson = await res.json();
         setGeojsonData(geojson);
 

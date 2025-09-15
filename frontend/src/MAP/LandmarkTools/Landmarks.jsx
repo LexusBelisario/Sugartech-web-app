@@ -50,7 +50,7 @@ const Landmarks = ({ activeTool, setActiveTool, setLandmarksVisible }) => {
     }
   };
 
-  const handleRemoveSelected = () => {
+  const handleRemoveSelected = async () => {
     const payload = {
       schema,
       ids: removalList.map((l) => l.id),
@@ -58,21 +58,40 @@ const Landmarks = ({ activeTool, setActiveTool, setLandmarksVisible }) => {
 
     if (!payload.ids.length) return;
 
-    fetch(`${API}/landmarks/remove`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("✅ Deletion result:", data);
-
-        setRemovalList([]);
-        setRefreshKey((k) => k + 1); // 🔄 trigger refresh of ShowLandmarks
-      })
-      .catch((err) => {
-        console.error("❌ Failed to remove landmarks:", err);
+    try {
+      // ✅ ADD AUTH HEADERS
+      const token =
+        localStorage.getItem("access_token") ||
+        localStorage.getItem("accessToken");
+      const res = await fetch(`${API}/landmarks/remove`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify(payload),
       });
+
+      // ✅ CHECK RESPONSE STATUS
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          console.error("❌ Authentication error");
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("accessToken");
+          window.location.href = "/login";
+          return;
+        }
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      console.log("✅ Deletion result:", data);
+
+      setRemovalList([]);
+      setRefreshKey((k) => k + 1); // 🔄 trigger refresh of ShowLandmarks
+    } catch (err) {
+      console.error("❌ Failed to remove landmarks:", err);
+    }
   };
 
   // === INFO TOOL ===

@@ -6,12 +6,12 @@ import Table_Column from "../LandLegend/Table_Column.jsx";
 import API from "../../api.js";
 
 const ElevationMap = ({ setRange }) => {
-  const map = useMap(); // ✅ get map directly
-  const { schema } = useSchema(); // ✅ get schema from context
+  const map = useMap();
+  const { schema } = useSchema();
   const [selectedColumn, setSelectedColumn] = useState("elevation");
   const [showColumnPopup, setShowColumnPopup] = useState(false);
   const [geojsonData, setGeojsonData] = useState(null);
-  const isBusy = useRef(false); // ✅ persistent flag
+  const isBusy = useRef(false);
 
   useEffect(() => {
     if (!schema) {
@@ -52,7 +52,30 @@ const ElevationMap = ({ setRange }) => {
         // === Turn ON
         const url = `${API}/single-table?schema=${schema}&table=ElevationMap`;
         console.log("🌐 Fetching:", url);
-        const res = await fetch(url);
+
+        // ✅ ADD AUTH HEADERS HERE!
+        const token =
+          localStorage.getItem("access_token") ||
+          localStorage.getItem("accessToken");
+        const res = await fetch(url, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        });
+
+        // ✅ CHECK RESPONSE STATUS
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            console.error("❌ Authentication error");
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("accessToken");
+            window.location.href = "/login";
+            return;
+          }
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
         const geojson = await res.json();
         setGeojsonData(geojson);
 
@@ -88,9 +111,8 @@ const ElevationMap = ({ setRange }) => {
     const min = Math.min(...elevations);
     const max = Math.max(...elevations);
     const step = (max - min) / 7;
-    if (setRange) setRange({ min, max }); // pass back to parent if needed
+    if (setRange) setRange({ min, max });
 
-    // ✅ FIX: match colors to legend breaks
     const getColor = (value) => {
       if (value <= min + step) return "#8b4513";
       if (value <= min + 2 * step) return "#3cb44b";

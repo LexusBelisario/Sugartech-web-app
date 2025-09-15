@@ -68,7 +68,30 @@ const LandCover = () => {
         // === Turn ON
         const url = `${API}/single-table?schema=${schema}&table=LandCover`;
         console.log("🌐 Fetching:", url);
-        const res = await fetch(url);
+
+        // ✅ ADD AUTH HEADERS
+        const token =
+          localStorage.getItem("access_token") ||
+          localStorage.getItem("accessToken");
+        const res = await fetch(url, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        });
+
+        // ✅ CHECK RESPONSE STATUS
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            console.error("❌ Authentication error");
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("accessToken");
+            window.location.href = "/login";
+            return;
+          }
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
         const geojson = await res.json();
         setGeojsonData(geojson);
 

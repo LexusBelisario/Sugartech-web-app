@@ -39,13 +39,39 @@ const PropertySearch = ({ schema }) => {
   useEffect(() => {
     const loadJoinedTable = async () => {
       try {
-        const res = await fetch(`${API}/attribute-table?schema=${schema}`);
+        const url = `${API}/attribute-table?schema=${schema}`;
+
+        // ✅ ADD AUTH HEADERS
+        const token =
+          localStorage.getItem("access_token") ||
+          localStorage.getItem("accessToken");
+        const res = await fetch(url, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        });
+
+        // ✅ CHECK RESPONSE STATUS
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            console.error("❌ Authentication error");
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("accessToken");
+            window.location.href = "/login";
+            return;
+          }
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
         const json = await res.json();
         if (json.status === "success") setAttributeData(json.data || []);
       } catch (err) {
         console.error("❌ Failed to load JoinedTable:", err);
+        setAttributeData([]);
       }
     };
+
     if (schema) loadJoinedTable();
   }, [schema]);
 

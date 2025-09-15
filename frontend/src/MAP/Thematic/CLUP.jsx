@@ -13,7 +13,6 @@ const CLUP = () => {
   const [geojsonData, setGeojsonData] = useState(null);
   const isBusy = useRef(false);
 
-  // Random pastel-ish color generator
   const generateColor = () => {
     const r = Math.floor(100 + Math.random() * 155);
     const g = Math.floor(100 + Math.random() * 155);
@@ -66,7 +65,30 @@ const CLUP = () => {
         // === Turn ON
         const url = `${API}/single-table?schema=${schema}&table=LandUse`;
         console.log("🌐 Fetching:", url);
-        const res = await fetch(url);
+
+        // ✅ ADD AUTHENTICATION HEADERS
+        const token =
+          localStorage.getItem("access_token") ||
+          localStorage.getItem("accessToken");
+        const res = await fetch(url, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        });
+
+        // ✅ CHECK RESPONSE STATUS
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            console.error("❌ Authentication error");
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("accessToken");
+            window.location.href = "/login";
+            return;
+          }
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
         const geojson = await res.json();
         setGeojsonData(geojson);
 
