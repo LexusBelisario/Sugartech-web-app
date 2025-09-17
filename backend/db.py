@@ -4,6 +4,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from typing import Optional, Dict
 import os
 from dotenv import load_dotenv
+import psycopg  # Add this import
+from psycopg.rows import dict_row  # Add this import
 
 load_dotenv()
 
@@ -82,10 +84,20 @@ def get_engine():
     """Legacy function - returns postgres engine"""
     return get_database_engine('postgres')
 
-def get_connection():
-    """Legacy connection method"""
-    engine = get_database_engine('postgres')
-    return engine.raw_connection()
+def get_connection(database_name: str = 'postgres'):
+    """
+    Legacy connection method - returns psycopg connection with dict_row factory
+    This ensures compatibility with consolidate.py
+    """
+    # Return a proper psycopg connection with dictionary rows
+    return psycopg.connect(
+        dbname=database_name,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=DB_PORT,
+        row_factory=dict_row  # This is crucial - returns dictionaries instead of tuples
+    )
 
 # Test auth database connection on startup
 try:
