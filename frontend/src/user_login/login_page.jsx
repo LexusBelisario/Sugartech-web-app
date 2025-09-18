@@ -1,4 +1,3 @@
-// Login.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api.js";
@@ -12,7 +11,6 @@ function LoginPage() {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Access warning/denial modal state
   const [accessModal, setAccessModal] = useState({
     isVisible: false,
     title: "",
@@ -23,25 +21,11 @@ function LoginPage() {
 
   const navigate = useNavigate();
 
-  // Helper: open warning modal (provincial yes, municipal none → can proceed to map)
-  const openMunicipalPendingModal = (message) => {
-    setAccessModal({
-      isVisible: true,
-      title: "Municipal access pending",
-      message:
-        message ||
-        "You have provincial access but no municipal access yet. You can still explore basemap and public layers while waiting for admin approval.",
-      severity: "warning",
-      canProceed: true,
-    });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // 1) Login
       const resp = await fetch(`${API}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -52,130 +36,31 @@ function LoginPage() {
       console.log("Login response:", data);
 
       if (!resp.ok) {
-        alert(`Login failed: ${data?.detail || "Invalid credentials"}`);
-        return;
-      }
-
-      // 2) Save token immediately (required for the list-schemas check)
-      const token = data?.access_token;
-      if (!token) {
-        alert("Login failed: missing token in response.");
-        return;
-      }
-      localStorage.setItem("accessToken", token);
-
-      // 3) Admin shortcut
-      if (data?.user_type === "admin") {
-        navigate("/admin");
-        return;
-      }
-
-      // 4) Old-style access gating (if your backend still returns these)
-      if (
-        data?.access_status === "pending_approval" ||
-        (data?.access_message &&
-          data.access_message.includes("No provincial access"))
-      ) {
-        // If message clearly states no provincial access, deny
-        if (
-          !data?.access_message ||
-          data.access_message.includes("No provincial access assigned")
-        ) {
+        if (resp.status === 403) {
+          // 🚫 Access denied by backend
           setAccessModal({
             isVisible: true,
             title: "Access Denied",
             message:
-              "You are not allowed to access the map. Please await for the admin to give you access.",
+              data?.detail ||
+              "You do not have municipal access yet. Please contact administrator.",
             severity: "error",
             canProceed: false,
           });
-          return;
-        }
-        // Else pending approval without municipal assignment
-        if (data.access_message.includes("no municipal access assigned")) {
-          openMunicipalPendingModal(
-            "You have provincial access but no municipal access assigned. You can view the map for viewing purposes only."
-          );
-          return;
-        }
-        // Generic pending approval
-        setAccessModal({
-          isVisible: true,
-          title: "Pending Approval",
-          message: data.access_message,
-          severity: "warning",
-          canProceed: false,
-        });
-        return;
-      }
-
-      // 5) New-style backend signals:
-      // 5a) Direct warning in login response
-      if (data?.warning) {
-        openMunicipalPendingModal(data.warning);
-        return;
-      }
-
-      // 5b) user_access object says provincial set but municipal missing
-      const ua = data?.user_access;
-      if (
-        ua &&
-        ua.provincial &&
-        (ua.municipal === null || ua.municipal === undefined)
-      ) {
-        openMunicipalPendingModal(
-          `You have provincial access (${ua.provincial}) but no municipal access yet. You can still explore basemap and public layers while waiting for admin approval.`
-        );
-        return;
-      }
-
-      // 6) Fallback: call /list-schemas with the token to verify access before navigating
-      try {
-        const checkResp = await fetch(`${API}/list-schemas`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const checkData = await checkResp.json();
-        console.log("Post-login list-schemas:", checkData);
-
-        if (checkResp.ok) {
-          // If backend provides a warning, show it now (still on login page)
-          if (checkData?.warning) {
-            openMunicipalPendingModal(checkData.warning);
-            return;
-          }
-          // If there is provincial but no schemas yet, show the same modal
-          const hasProv = !!checkData?.user_access?.provincial;
-          const noSchemas =
-            !checkData?.schemas || checkData.schemas.length === 0;
-          if (hasProv && noSchemas) {
-            openMunicipalPendingModal(
-              "You have provincial access but no municipal access yet. You can still explore basemap and public layers while waiting for admin approval."
-            );
-            return;
-          }
-          // Otherwise proceed
-          navigate("/map");
-          return;
         } else {
-          // If the access check fails (e.g., 403 pending), stay and show denial/pending
-          const detail = checkData?.detail || "Access check failed.";
-          setAccessModal({
-            isVisible: true,
-            title: "Access Issue",
-            message: detail,
-            severity: "warning",
-            canProceed: false,
-          });
-          return;
+          alert(`Login failed: ${data?.detail || "Invalid credentials"}`);
         }
-      } catch (err) {
-        // If the check call itself errors, proceed optimistically
-        navigate("/map");
         return;
+      }
+
+      // ✅ Success: save token
+      const token = data?.access_token;
+      localStorage.setItem("accessToken", token);
+
+      if (data?.user_type === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/map");
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -186,14 +71,6 @@ function LoginPage() {
   };
 
   const handleModalClose = () => {
-    // If canProceed, user can enter the map with limited view-only experience
-    if (accessModal.canProceed) {
-      navigate("/map");
-    } else {
-      // If not allowed, remove token and stay on login
-      localStorage.removeItem("accessToken");
-    }
-    // Reset modal state after action
     setAccessModal({
       isVisible: false,
       title: "",
@@ -204,7 +81,7 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] relative overflow-hidden flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center px-4">
       {/* Philippine Map Background */}
       <div className="absolute inset-0 flex items-center justify-center opacity-[0.03]">
         <img
@@ -525,7 +402,6 @@ function LoginPage() {
         </svg>
       </div>
 
-      {/* Access Control Warning Modal */}
       {accessModal.isVisible && (
         <WarningModal
           isVisible={accessModal.isVisible}
@@ -533,7 +409,7 @@ function LoginPage() {
           title={accessModal.title}
           message={accessModal.message}
           severity={accessModal.severity}
-          buttonText={accessModal.canProceed ? "Continue to Map" : "Ok"}
+          buttonText="Ok"
         />
       )}
     </div>

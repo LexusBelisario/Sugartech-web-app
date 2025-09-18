@@ -91,14 +91,9 @@ async def login(request: LoginRequest, auth_db: Session = Depends(get_auth_db)):
     admin = auth_db.query(Admin).filter(Admin.user_name == request.username).first()
     
     if admin:
-        # Admin login flow
         if not verify_password(request.password, admin.password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect password"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
         
-        # Create JWT token for admin
         token_data = {
             "user_id": admin.id,
             "username": admin.user_name,
@@ -117,44 +112,44 @@ async def login(request: LoginRequest, auth_db: Session = Depends(get_auth_db)):
             "user_type": "admin"
         }
     
-    # If not admin, check regular users table
+    # Regular user
     user = auth_db.query(User).filter(User.user_name == request.username).first()
-    
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
-    # Regular user login flow
     if not verify_password(request.password, user.password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
+    
+    # Check access
+    access_info = AccessControl.check_user_access(user)
+
+    # 🚫 Block login immediately if not approved
+    if access_info["status"] != "approved":
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=access_info["message"]
         )
     
-    # Check user access using AccessControl
-    access_info = AccessControl.check_user_access(user)
-    
-    # Create JWT token for regular user
+    # ✅ Approved → issue token
     token_data = {
         "user_id": user.id,
         "username": user.user_name,
         "user_type": "user",
         "provincial_access": user.provincial_access,
         "municipal_access": user.municipal_access,
-        "access_status": access_info['status']
+        "access_status": access_info["status"]
     }
     access_token = create_access_token(token_data)
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "message": "Login successful" if access_info['status'] == 'approved' else "Login successful but with limited access",
-        "access_status": access_info['status'],
-        "access_message": access_info['message'],
+        "message": "Login successful",
+        "access_status": access_info["status"],
+        "access_message": access_info["message"],
         "user_type": "user"
     }
+
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth_db)):

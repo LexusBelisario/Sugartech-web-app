@@ -5,35 +5,19 @@ from fastapi import HTTPException, status
 import re
 
 def _norm(s: Optional[str]) -> str:
-    """
-    Normalize a token for case/space-insensitive compares.
-    Lowercase, trim, and convert internal spaces to underscores.
-    """
     s = (s or "").strip().lower()
     s = re.sub(r"\s+", "_", s)
     return s
 
 def _split_tokens(raw: Optional[str]) -> List[str]:
-    """
-    Split a municipal_access string into tokens.
-    Supports comma/semicolon/pipe/newline separated values.
-    """
     if not raw:
         return []
     parts = re.split(r"[;,|\n]+", raw)
     return [p.strip() for p in parts if p and p.strip()]
 
 def _token_to_schema(token: str, default_province_norm: str) -> str:
-    """
-    Convert a token into a full schema name.
-    Accepts:
-      - "Calauan"                       -> "calauan_laguna" (using default province)
-      - "Calauan_Laguna"                -> "calauan_laguna"
-      - "Pagsanjan, Laguna"             -> "pagsanjan_laguna" (province from token)
-    """
     t = token.strip()
     if ", " in t:
-        # "Municipality, Province"
         parts = t.split(", ")
         if len(parts) == 2:
             muni_norm = _norm(parts[0])
@@ -50,6 +34,8 @@ class AccessControl:
         """
         Check user's access level and return status.
         """
+
+        # 🚫 Case 1: No provincial & no municipal
         if user.provincial_access is None and user.municipal_access is None:
             return {
                 "status": "pending_approval",
@@ -57,13 +43,15 @@ class AccessControl:
                 "allowed_schemas": []
             }
 
+        # 🚫 Case 2: Provincial access but no municipal access → BLOCK LOGIN
         if user.provincial_access and user.municipal_access is None:
             return {
-                "status": "approved",
-                "message": f"You have provincial access to {user.provincial_access}, but no municipal access assigned. You can view the map but cannot access specific schemas.",
+                "status": "pending_approval",   # changed from approved
+                "message": f"You have provincial access to {user.provincial_access}, but no municipal access assigned. Please contact the administrator to enable municipal access.",
                 "allowed_schemas": []
             }
 
+        # ✅ Case 3: Both provincial + municipal access
         return {
             "status": "approved",
             "message": "Access granted",
@@ -72,14 +60,6 @@ class AccessControl:
 
     @staticmethod
     def filter_schemas_by_access(all_schemas: List[str], user: User) -> List[str]:
-        """
-        Filter schemas based on user's access rights.
-        Accepts tokens in formats:
-          - Underscore: "calauan_laguna"
-          - Municipality only: "Calauan" (province inferred from user)
-          - Comma format: "Pagsanjan, Laguna"
-          - "All": every schema ending with _{province}
-        """
         if not user.provincial_access:
             return []
 
@@ -101,9 +81,6 @@ class AccessControl:
 
     @staticmethod
     def validate_schema_access(schema: str, user: User) -> bool:
-        """
-        Validate if user has access to a specific schema.
-        """
         if not user.provincial_access:
             return False
         if user.municipal_access is None:
@@ -123,9 +100,6 @@ class AccessControl:
 
     @staticmethod
     def get_access_description(user: User) -> str:
-        """
-        Human-readable description of user's access.
-        """
         if not user.provincial_access and not user.municipal_access:
             return "No access assigned"
 
@@ -140,12 +114,8 @@ class AccessControl:
 
         return "Invalid access configuration"
 
-    # Optional convenience (not used by view.py, but kept for completeness)
     @staticmethod
     def get_allowed_schemas(user: User) -> List[str]:
-        """
-        Returns normalized schema names or patterns based on user's access.
-        """
         if not user.provincial_access or not user.municipal_access:
             return []
         province_norm = _norm(user.provincial_access)
