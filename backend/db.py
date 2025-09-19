@@ -13,9 +13,9 @@ load_dotenv()
 Base = declarative_base()
 
 # Supabase connection details
-DB_HOST = 'aws-0-ap-southeast-1.pooler.supabase.com'
+DB_HOST = 'aws-1-ap-southeast-1.pooler.supabase.com'
 DB_PORT = '6543'
-DB_USER = 'postgres.vecpowfunddmucihdyif'
+DB_USER = 'postgres.ljmlswhybxcmwzdzuxhl'
 DB_PASSWORD = '#IGDIwebapp'
 
 # Auth database connection - pointing to credentials_login database

@@ -4,8 +4,6 @@ from fastapi.staticfiles import StaticFiles
 import os
 import uvicorn
 
-# Import routers
-# from db import router as db_router  # REMOVE THIS LINE - no more router in db.py
 from auth.routes import router as auth_router  # ADD THIS LINE
 from admin.routes import router as admin_router 
 from routes.view import router as view_router
@@ -17,14 +15,11 @@ from routes.TMCR import router as TMCR
 from routes.thematic import router as thematic_router
 from routes.tableinfo import router as tableinfo_router
 from routes.landmarks import router as landmark_router
-# from routes.uploader import router as uploader_router
 from routes.search import router as search_router
 from routes.GeoServerAccess import router as GeoServerAccess_router
 
-# Create FastAPI app
 app = FastAPI()
 
-# Allow CORS (all origins for now)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,7 +28,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register auth router
 app.include_router(auth_router, prefix="/api")
 app.include_router(admin_router)
 app.include_router(view_router, prefix="/api")
@@ -47,17 +41,13 @@ app.include_router(GeoServerAccess_router, prefix="/api")
 app.include_router(landmark_router, prefix="/api")
 app.include_router(thematic_router, prefix="/api")
 app.include_router(tableinfo_router, prefix="/api")
-# app.include_router(uploader_router, prefix="/api")
 
-# Simple health check endpoint
 @app.get("/health")
 def health():
     return {"message": "API is up"}
 
-# Serve React frontend last (must come after routers to avoid swallowing /api/*)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
-# Entry point (local: port 8000, Cloud Run: uses $PORT)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

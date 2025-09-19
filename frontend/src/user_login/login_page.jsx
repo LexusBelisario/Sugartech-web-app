@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../api.js";
+import { API_URL } from "../App";
 import WarningModal from "../components/modals/WarningModal";
 
 function LoginPage() {
@@ -26,7 +26,7 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      const resp = await fetch(`${API}/auth/login`, {
+      const resp = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -37,7 +37,6 @@ function LoginPage() {
 
       if (!resp.ok) {
         if (resp.status === 403) {
-          // 🚫 Access denied by backend
           setAccessModal({
             isVisible: true,
             title: "Access Denied",
@@ -53,7 +52,6 @@ function LoginPage() {
         return;
       }
 
-      // ✅ Success: save token
       const token = data?.access_token;
       localStorage.setItem("accessToken", token);
 

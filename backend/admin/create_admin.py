@@ -11,12 +11,12 @@ load_dotenv()
 
 # Admin details
 admin_data = {
-    "first_name": "Juan",
-    "last_name": "Dela Cruz",
-    "email": "juandelacruz@example.com",
+    "first_name": "John",
+    "last_name": "Lex",
+    "email": "johnlloyd@example.com",
     "contact_number": "09090909090",
-    "user_name": "juandelacruz",
-    "password": "12345678"  # Change this!
+    "user_name": "admin1",
+    "password": "#admin1"  # Change this!
 }
 
 # Try to resolve the host first
