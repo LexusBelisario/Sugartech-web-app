@@ -13,65 +13,68 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
   );
   const [errors, setErrors] = useState({});
   const [provinces, setProvinces] = useState([]);
+  const [municipalitiesByProvince, setMunicipalitiesByProvince] = useState({}); // Changed to object
   const [municipalities, setMunicipalities] = useState([]);
 
   const isEditMode = !!user;
 
   const [formData, setFormData] = useState({
     name: "",
+    firstName: "", // Add first name
+    lastName: "", // Add last name
     email: "",
     contactNo: "",
-    provinceAccess: "NULL",
-    municipalAccess: "NULL",
+    provinceAccess: "",
+    municipalAccess: "",
   });
 
-  // 🔹 Fetch provinces when modal opens
+  // 🔹 Fetch provinces and municipalities when modal opens
   useEffect(() => {
-    const fetchProvinces = async () => {
+    const fetchLocations = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/admin/locations/provinces`);
+        const token = localStorage.getItem("access_token");
+        const res = await fetch(`${API_URL}/api/admin/locations`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
         if (res.ok) {
           const data = await res.json();
-          setProvinces(data);
+          console.log("Locations data:", data); // Debug
+          setProvinces(data.provinces || []);
+          setMunicipalitiesByProvince(data.municipalities || {});
+        } else {
+          console.error("Failed to fetch locations:", res.status);
         }
       } catch (err) {
-        console.error("Error fetching provinces:", err);
+        console.error("Error fetching locations:", err);
       }
     };
-    fetchProvinces();
+    
+    if (isVisible) {
+      fetchLocations();
+    }
   }, [isVisible]);
 
-  // 🔹 Fetch municipalities when province changes
+  // 🔹 Update municipalities when province changes
   useEffect(() => {
-    if (!formData.provinceAccess || formData.provinceAccess === "NULL") {
+    if (formData.provinceAccess && municipalitiesByProvince[formData.provinceAccess]) {
+      setMunicipalities(municipalitiesByProvince[formData.provinceAccess]);
+    } else {
       setMunicipalities([]);
-      return;
     }
-    const fetchMunicipalities = async () => {
-      try {
-        const res = await fetch(
-          `${API_URL}/api/admin/locations/municipalities?province=${formData.provinceAccess}`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setMunicipalities(data);
-        }
-      } catch (err) {
-        console.error("Error fetching municipalities:", err);
-      }
-    };
-    fetchMunicipalities();
-  }, [formData.provinceAccess]);
+  }, [formData.provinceAccess, municipalitiesByProvince]);
 
   // 🔹 Populate form when editing
   useEffect(() => {
     if (user) {
       setFormData({
-        name: user.user_name || "",
+        name: user.user_name || user.username || "",
+        firstName: user.first_name || "",
+        lastName: user.last_name || "",
         email: user.email || "",
-        contactNo: user.contact_no || "",
-        provinceAccess: user.provincial_access || "NULL",
-        municipalAccess: user.municipal_access || "NULL",
+        contactNo: user.contact_number || user.contact_no || "",
+        provinceAccess: user.provincial_access || user.requested_provincial_access || "",
+        municipalAccess: user.municipal_access || user.requested_municipal_access || "",
       });
     }
   }, [user]);
@@ -81,22 +84,18 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
     setFormData({ ...formData, [name]: value });
 
     if (name === "provinceAccess") {
-      setFormData((prev) => ({ ...prev, municipalAccess: "NULL" }));
+      setFormData((prev) => ({ ...prev, municipalAccess: "" }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email format";
-    }
-    if (!formData.contactNo.trim()) {
-      newErrors.contactNo = "Contact number is required";
-    } else if (!/^09\d{9}$/.test(formData.contactNo)) {
-      newErrors.contactNo = "Invalid contact number format (09XXXXXXXXX)";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -106,11 +105,16 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
     e.preventDefault();
     if (validateForm()) {
       const confirmMessage = isEditMode
-        ? `Update ${formData.name}'s information?`
-        : `Add ${formData.name} as a new user?`;
+        ? `Update ${formData.firstName} ${formData.lastName}'s information?`
+        : `Add ${formData.firstName} ${formData.lastName} as a new user?`;
 
       if (window.confirm(confirmMessage)) {
-        onSave(formData);
+        // Pass the properly formatted data
+        onSave({
+          ...formData,
+          provinceAccess: formData.provinceAccess || null,
+          municipalAccess: formData.municipalAccess || null
+        });
         openSuccessModal();
       }
     }
@@ -166,29 +170,55 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
               <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
                 <User size={40} className="text-gray-500" />
               </div>
-              <button
-                type="button"
-                className="ml-4 px-4 py-2 bg-[#00519C] text-white rounded-lg hover:bg-blue-700"
-              >
-                Upload Avatar
-              </button>
             </div>
 
-            {/* Full Name */}
+            {/* Username (read-only for edit) */}
+            {isEditMode && (
+              <div className="mb-4">
+                <label className="block font-semibold text-gray-700">
+                  Username
+                </label>
+                <input
+                  value={formData.name}
+                  disabled
+                  className="w-full border-2 rounded-lg px-3 py-2 bg-gray-100 border-gray-300"
+                />
+              </div>
+            )}
+
+            {/* First Name */}
             <div className="mb-4">
               <label className="block font-semibold text-gray-700">
-                Full Name <span className="text-red-500">*</span>
+                First Name <span className="text-red-500">*</span>
               </label>
               <input
-                name="name"
-                value={formData.name}
+                name="firstName"
+                value={formData.firstName}
                 onChange={handleChange}
                 className={`w-full border-2 rounded-lg px-3 py-2 ${
-                  errors.name ? "border-red-500" : "border-gray-300"
+                  errors.firstName ? "border-red-500" : "border-gray-300"
                 }`}
               />
-              {errors.name && (
-                <p className="text-red-500 text-sm">{errors.name}</p>
+              {errors.firstName && (
+                <p className="text-red-500 text-sm">{errors.firstName}</p>
+              )}
+            </div>
+
+            {/* Last Name */}
+            <div className="mb-4">
+              <label className="block font-semibold text-gray-700">
+                Last Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                className={`w-full border-2 rounded-lg px-3 py-2 ${
+                  errors.lastName ? "border-red-500" : "border-gray-300"
+                }`}
+              />
+              {errors.lastName && (
+                <p className="text-red-500 text-sm">{errors.lastName}</p>
               )}
             </div>
 
@@ -199,6 +229,7 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
               </label>
               <input
                 name="email"
+                type="email"
                 value={formData.email}
                 onChange={handleChange}
                 className={`w-full border-2 rounded-lg px-3 py-2 ${
@@ -213,20 +244,15 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
             {/* Contact */}
             <div className="mb-4">
               <label className="block font-semibold text-gray-700">
-                Contact Number <span className="text-red-500">*</span>
+                Contact Number
               </label>
               <input
                 name="contactNo"
                 value={formData.contactNo}
                 onChange={handleChange}
-                className={`w-full border-2 rounded-lg px-3 py-2 ${
-                  errors.contactNo ? "border-red-500" : "border-gray-300"
-                }`}
+                className="w-full border-2 rounded-lg px-3 py-2 border-gray-300"
                 placeholder="09XXXXXXXXX"
               />
-              {errors.contactNo && (
-                <p className="text-red-500 text-sm">{errors.contactNo}</p>
-              )}
             </div>
 
             {/* Province */}
@@ -239,16 +265,16 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
                   name="provinceAccess"
                   value={formData.provinceAccess}
                   onChange={handleChange}
-                  className="w-full border-2 rounded-lg px-3 py-2"
+                  className="w-full border-2 rounded-lg px-3 py-2 appearance-none"
                 >
-                  <option value="NULL">Select Province</option>
+                  <option value="">No Access</option>
                   {provinces.map((p) => (
                     <option key={p} value={p}>
                       {p}
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
               </div>
             </div>
 
@@ -262,17 +288,17 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
                   name="municipalAccess"
                   value={formData.municipalAccess}
                   onChange={handleChange}
-                  className="w-full border-2 rounded-lg px-3 py-2"
-                  disabled={formData.provinceAccess === "NULL"}
+                  className="w-full border-2 rounded-lg px-3 py-2 appearance-none"
+                  disabled={!formData.provinceAccess}
                 >
-                  <option value="NULL">Select Municipality</option>
+                  <option value="">No Access</option>
                   {municipalities.map((m) => (
                     <option key={m} value={m}>
                       {m}
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
               </div>
             </div>
 
@@ -281,13 +307,13 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
               <button
                 type="button"
                 onClick={handleModalBack}
-                className="px-6 py-2 border rounded-lg mr-2"
+                className="px-6 py-2 border rounded-lg mr-2 hover:bg-gray-100"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 bg-[#00519C] text-white rounded-lg"
+                className="px-6 py-2 bg-[#00519C] text-white rounded-lg hover:bg-[#003d7a]"
               >
                 {isEditMode ? "Save Changes" : "Add User"}
               </button>

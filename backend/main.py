@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 import uvicorn
 
-from auth.routes import router as auth_router  # ADD THIS LINE
+from auth.routes import router as auth_router
 from admin.routes import router as admin_router 
 from routes.view import router as view_router
 from routes.edit import router as edit_router
@@ -20,16 +20,19 @@ from routes.GeoServerAccess import router as GeoServerAccess_router
 
 app = FastAPI()
 
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],  # Add this
 )
 
+# Include routers ONLY ONCE with proper prefixes
 app.include_router(auth_router, prefix="/api")
-app.include_router(admin_router)
+app.include_router(admin_router, prefix="/api")  # This gives you /api/admin/...
 app.include_router(view_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
 app.include_router(edit_router, prefix="/api")
