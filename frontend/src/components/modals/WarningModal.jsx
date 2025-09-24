@@ -1,5 +1,5 @@
 // components/WarningModal.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./css/warning_animation.css";
 import WarningAnimation from "./WarningAnimation.jsx";
 
@@ -11,55 +11,64 @@ const WarningModal = ({
   buttonText = "Ok",
   severity = "warning",
 }) => {
-  const [modalClasses, setModalClasses] = useState(
-    isVisible ? "pop-in" : "pop-out"
-  );
+  const [animate, setAnimate] = useState(false);
+
+  useEffect(() => {
+    if (isVisible) {
+      setTimeout(() => setAnimate(true), 20); // trigger animation
+    } else {
+      setAnimate(false);
+    }
+  }, [isVisible]);
 
   if (!isVisible) return null;
 
-  const handleModalBack = () => {
-    setModalClasses("pop-out");
-    setTimeout(() => onClose(), 450);
+  const handleClose = () => {
+    setAnimate(false);
+    setTimeout(() => onClose(), 300); // wait for animation
   };
 
-  // Different colors based on severity
   const buttonColor =
     severity === "error"
-      ? "bg-red-600 hover:bg-red-700"
-      : "bg-yellow-600 hover:bg-yellow-700";
+      ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+      : "bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700";
 
   return (
     <div
-      className={`fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50 ${
-        isVisible ? "opacity-100" : "opacity-0"
+      className={`fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm transition-opacity duration-300 ${
+        animate ? "opacity-100 bg-black/40" : "opacity-0 bg-black/0"
       }`}
-      onClick={handleModalBack}
+      onClick={handleClose}
     >
       <div
-        className={`${modalClasses} w-[28em] h-[22em] bg-white rounded-2xl`}
+        className={`transform transition-all duration-300 ${
+          animate
+            ? "scale-100 translate-y-0 opacity-100"
+            : "scale-90 translate-y-6 opacity-0"
+        } bg-white rounded-2xl shadow-2xl w-[28em] max-w-full mx-4`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center flex-col pt-8">
-          <div className="flex">
-            <WarningAnimation severity={severity} />
-          </div>
-          <div className="flex justify-center items-center pt-2">
-            <p className="font-bold text-2xl text-center mx-16">{title}</p>
-          </div>
-          <div className="pt-1">
-            <p className="font-medium text-base text-center mx-10 pt-1">
-              {message}
-            </p>
-          </div>
-          <div className="flex flex-row pt-7">
-            <button
-              type="submit"
-              onClick={handleModalBack}
-              className={`${buttonColor} font-semibold rounded-lg px-10 py-3 text-white text-base`}
-            >
-              {buttonText}
-            </button>
-          </div>
+        <div className="flex flex-col items-center px-6 py-8">
+          {/* Animated Icon */}
+          <WarningAnimation severity={severity} />
+
+          {/* Title */}
+          <h2 className="mt-4 text-2xl font-bold text-center text-gray-800">
+            {title}
+          </h2>
+
+          {/* Message */}
+          <p className="mt-2 text-base text-center text-gray-600 leading-relaxed">
+            {message}
+          </p>
+
+          {/* Button */}
+          <button
+            onClick={handleClose}
+            className={`${buttonColor} mt-8 px-10 py-3 rounded-lg text-white font-semibold shadow-md transition-transform duration-200 hover:scale-105 active:scale-95`}
+          >
+            {buttonText}
+          </button>
         </div>
       </div>
     </div>

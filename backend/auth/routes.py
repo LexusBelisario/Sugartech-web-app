@@ -9,7 +9,7 @@ import os
 import re
 
 from db import get_auth_db
-from auth.models import User, Credentials, Admin
+from auth.models import User, Credentials, Admin, UserRegistrationRequest
 from auth.access_control import AccessControl
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -22,6 +22,12 @@ class LoginRequest(BaseModel):
 class RegisterRequest(BaseModel):
     username: str
     password: str
+    first_name: str
+    last_name: str
+    email: str
+    contact_number: str = None
+    requested_provincial_access: str = None
+    requested_municipal_access: str = None
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -30,6 +36,8 @@ class TokenResponse(BaseModel):
     access_status: str
     access_message: str
     user_type: str
+
+
 
 # JWT settings
 SECRET_KEY = os.getenv("SECRET_KEY", "secret_ngani")
@@ -91,14 +99,9 @@ async def login(request: LoginRequest, auth_db: Session = Depends(get_auth_db)):
     admin = auth_db.query(Admin).filter(Admin.user_name == request.username).first()
     
     if admin:
-        # Admin login flow
         if not verify_password(request.password, admin.password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect password"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
         
-        # Create JWT token for admin
         token_data = {
             "user_id": admin.id,
             "username": admin.user_name,
@@ -117,44 +120,44 @@ async def login(request: LoginRequest, auth_db: Session = Depends(get_auth_db)):
             "user_type": "admin"
         }
     
-    # If not admin, check regular users table
+    # Regular user
     user = auth_db.query(User).filter(User.user_name == request.username).first()
-    
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
-    # Regular user login flow
     if not verify_password(request.password, user.password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
+    
+    # Check access
+    access_info = AccessControl.check_user_access(user)
+
+    # 🚫 Block login immediately if not approved
+    if access_info["status"] != "approved":
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=access_info["message"]
         )
     
-    # Check user access using AccessControl
-    access_info = AccessControl.check_user_access(user)
-    
-    # Create JWT token for regular user
+    # ✅ Approved → issue token
     token_data = {
         "user_id": user.id,
         "username": user.user_name,
         "user_type": "user",
         "provincial_access": user.provincial_access,
         "municipal_access": user.municipal_access,
-        "access_status": access_info['status']
+        "access_status": access_info["status"]
     }
     access_token = create_access_token(token_data)
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "message": "Login successful" if access_info['status'] == 'approved' else "Login successful but with limited access",
-        "access_status": access_info['status'],
-        "access_message": access_info['message'],
+        "message": "Login successful",
+        "access_status": access_info["status"],
+        "access_message": access_info["message"],
         "user_type": "user"
     }
+
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth_db)):
@@ -166,7 +169,7 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
             detail=error_message
         )
     
-    # Check if user already exists
+    # Check if username already exists in users table
     existing_user = auth_db.query(User).filter(User.user_name == request.username).first()
     if existing_user:
         raise HTTPException(
@@ -174,21 +177,95 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
             detail="Username already exists"
         )
     
-    # Create new user with hashed password
+    # Check if username already exists in pending registration requests
+    existing_request = auth_db.query(UserRegistrationRequest).filter(
+        UserRegistrationRequest.user_name == request.username,
+        UserRegistrationRequest.status == 'pending'
+    ).first()
+    if existing_request:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Registration request already pending for this username"
+        )
+    
+    # Check if email already exists
+    existing_email_user = auth_db.query(User).filter(User.email == request.email).first()
+    existing_email_request = auth_db.query(UserRegistrationRequest).filter(
+        UserRegistrationRequest.email == request.email,
+        UserRegistrationRequest.status == 'pending'
+    ).first()
+    
+    if existing_email_user or existing_email_request:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    
+    # Convert display format back to database format for storage
+    # "Metro Manila" -> "Metro_Manila" (preserve original case)
+    province_db_name = None
+    if request.requested_provincial_access:
+        # Handle special cases and general conversion
+        province_db_name = request.requested_provincial_access.replace(' ', '_')
+    
+    municipality_schema_name = None
+    if request.requested_municipal_access and request.requested_municipal_access != "All":
+        # "Paranaque Manila" -> "paranaque_manila" (lowercase for schemas)
+        municipality_schema_name = request.requested_municipal_access.replace(' ', '_').lower()
+    
+    # Create new registration request
     hashed_pw = hash_password(request.password)
-    new_user = User(
+    new_request = UserRegistrationRequest(
         user_name=request.username,
         password=hashed_pw,
-        provincial_access=None,  # Will need admin approval
-        municipal_access=None    # Will need admin approval
+        first_name=request.first_name,
+        last_name=request.last_name,
+        email=request.email,
+        contact_number=request.contact_number,
+        requested_provincial_access=province_db_name,
+        requested_municipal_access=municipality_schema_name,
+        status='pending'
     )
     
-    auth_db.add(new_user)
-    auth_db.commit()
-    auth_db.refresh(new_user)
+    try:
+        auth_db.add(new_request)
+        auth_db.commit()
+        auth_db.refresh(new_request)
+        
+        return {
+            "message": "Registration request submitted successfully. Please wait for admin approval.",
+            "request_id": new_request.id,
+            "status": "pending",
+            "username": new_request.user_name
+        }
+        
+    except Exception as e:
+        auth_db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to submit registration request: {str(e)}"
+        )
+
+@router.get("/registration-status/{username}")
+async def check_registration_status(
+    username: str,
+    auth_db: Session = Depends(get_auth_db)
+):
+    """Check registration request status for a username"""
+    reg_request = auth_db.query(UserRegistrationRequest).filter(
+        UserRegistrationRequest.user_name == username
+    ).order_by(UserRegistrationRequest.request_date.desc()).first()
+    
+    if not reg_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No registration request found for this username"
+        )
     
     return {
-        "message": "User registered successfully. Please contact admin for access approval.",
-        "username": new_user.user_name,
-        "status": "pending_approval"
+        "username": reg_request.user_name,
+        "status": reg_request.status,
+        "request_date": reg_request.request_date.isoformat() if reg_request.request_date else None,
+        "review_date": reg_request.review_date.isoformat() if reg_request.review_date else None,
+        "remarks": reg_request.remarks if reg_request.status != 'pending' else None
     }

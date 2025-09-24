@@ -21,6 +21,7 @@
     "leaflet-textpath": "^1.2.3",
     "lucide-react": "^0.543.0",
     "react": "^19.0.0",
+    "react-data-table-component": "^7.7.0",
     "react-dom": "^19.0.0",
     "react-icons": "^5.5.0",
     "react-leaflet": "^5.0.0",

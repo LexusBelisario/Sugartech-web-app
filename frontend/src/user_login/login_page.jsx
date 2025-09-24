@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../api_service";
+import { API_URL } from "../App";
 import WarningModal from "../components/modals/WarningModal";
 
 function LoginPage() {
@@ -11,7 +11,6 @@ function LoginPage() {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Add state for access control modal
   const [accessModal, setAccessModal] = useState({
     isVisible: false,
     title: "",
@@ -27,102 +26,49 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API}/auth/login`, {
+      const resp = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await response.json();
-      console.log("Login response:", data); // Debug log
+      const data = await resp.json();
+      console.log("Login response:", data);
 
-      if (response.ok) {
-        // Store token first
-        localStorage.setItem("accessToken", data.access_token);
-
-        // Check if admin
-        if (data.user_type === "admin") {
-          // Redirect to admin page using React Router
-          navigate("/admin");
-          return;
-        }
-
-        // Regular user flow
-        if (
-          data.access_status === "pending_approval" ||
-          (data.access_message &&
-            data.access_message.includes("No provincial access"))
-        ) {
-          // Determine the type of access issue
-          if (
-            !data.access_message ||
-            data.access_message.includes("No provincial access assigned")
-          ) {
-            // No provincial access at all - complete denial
-            setAccessModal({
-              isVisible: true,
-              title: "Access Denied",
-              message:
-                "You are not allowed to access the map. Please await for the admin to give you access.",
-              severity: "error",
-              canProceed: false,
-            });
-            // IMPORTANT: Return here to prevent further execution
-            return;
-          } else if (
-            data.access_message.includes("no municipal access assigned")
-          ) {
-            // Has provincial but no municipal access - limited access
-            setAccessModal({
-              isVisible: true,
-              title: "Limited Access",
-              message:
-                "You have provincial access but no municipal access assigned. You can view the map for viewing purposes only.",
-              severity: "warning",
-              canProceed: true,
-            });
-            // IMPORTANT: Return here to prevent further execution
-            return;
-          } else {
-            // Other pending approval case
-            setAccessModal({
-              isVisible: true,
-              title: "Pending Approval",
-              message: data.access_message,
-              severity: "warning",
-              canProceed: false,
-            });
-            // IMPORTANT: Return here to prevent further execution
-            return;
-          }
+      if (!resp.ok) {
+        if (resp.status === 403) {
+          setAccessModal({
+            isVisible: true,
+            title: "Access Denied",
+            message:
+              data?.detail ||
+              "You do not have municipal access yet. Please contact administrator.",
+            severity: "error",
+            canProceed: false,
+          });
         } else {
-          // Full access - proceed normally
-          navigate("/map");
+          alert(`Login failed: ${data?.detail || "Invalid credentials"}`);
         }
+        return;
+      }
+
+      const token = data?.access_token;
+      localStorage.setItem("accessToken", token);
+
+      if (data?.user_type === "admin") {
+        navigate("/admin");
       } else {
-        alert(`❌ Login failed: ${data.detail}`);
+        navigate("/map");
       }
     } catch (error) {
       console.error("Login error:", error);
-      alert("❌ Login failed. Please try again.");
+      alert("Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleModalClose = () => {
-    console.log("Modal closing, canProceed:", accessModal.canProceed); // Debug log
-
-    // Handle navigation based on access level
-    if (accessModal.canProceed) {
-      // User has provincial access only - can view map
-      navigate("/map");
-    } else {
-      // User has no access - logout and stay on login page
-      localStorage.removeItem("accessToken");
-    }
-
-    // Reset modal state AFTER handling navigation
     setAccessModal({
       isVisible: false,
       title: "",
@@ -133,9 +79,7 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] relative overflow-hidden flex items-center justify-center px-4">
-      {/* ... rest of your JSX stays the same ... */}
-
+    <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center px-4">
       {/* Philippine Map Background */}
       <div className="absolute inset-0 flex items-center justify-center opacity-[0.03]">
         <img
@@ -154,7 +98,6 @@ function LoginPage() {
       <div className="relative bg-white rounded-3xl p-8 shadow-[0_20px_60px_rgba(34,34,34,0.08)] border border-[#222222]/5 w-[500px] min-h-[600px] flex flex-col backdrop-blur-sm">
         {/* Header Section */}
         <div className="flex flex-col items-center justify-center mb-8">
-          {/* Logo Container with Philippine Flag Colors */}
           <div className="relative mb-4">
             <div className="w-20 h-20 bg-gradient-to-br from-[#F2C300] to-[#D4AF37] rounded-full p-[2px] shadow-lg">
               <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
@@ -163,7 +106,6 @@ function LoginPage() {
                 </div>
               </div>
             </div>
-            {/* Three Stars */}
             <div className="absolute -top-2 left-1/2 -translate-x-1/2">
               <svg
                 className="w-4 h-4 text-[#F2C300]"
@@ -204,7 +146,7 @@ function LoginPage() {
           onSubmit={handleSubmit}
           className="flex-1 flex flex-col justify-center space-y-6 max-w-sm mx-auto w-full"
         >
-          {/* Username Input */}
+          {/* Username */}
           <div className="relative group">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10">
@@ -261,7 +203,7 @@ function LoginPage() {
             </div>
           </div>
 
-          {/* Password Input */}
+          {/* Password */}
           <div className="relative group">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none z-10">
@@ -363,7 +305,7 @@ function LoginPage() {
             </div>
           </div>
 
-          {/* Remember Me & Forgot Password */}
+          {/* Remember / Forgot */}
           <div className="flex items-center justify-between">
             <label className="flex items-center text-[#222222]/60 text-sm cursor-pointer hover:text-[#222222]/80 transition-colors">
               <input
@@ -380,7 +322,7 @@ function LoginPage() {
             </a>
           </div>
 
-          {/* Login Button */}
+          {/* Submit */}
           <div className="pt-2">
             <button
               type="submit"
@@ -422,7 +364,7 @@ function LoginPage() {
           </div>
         </form>
 
-        {/* Register Link */}
+        {/* Register */}
         <div className="flex items-center justify-center gap-1 pt-6 border-t border-[#222222]/5">
           <span className="text-[#222222]/60 text-sm">
             Don't have an account?
@@ -435,11 +377,10 @@ function LoginPage() {
           </a>
         </div>
 
-        {/* Bottom Accent */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#0B4EA2] via-[#C51E2A] to-[#F2C300] rounded-b-3xl"></div>
       </div>
 
-      {/* Additional Decorative Stars */}
+      {/* Stars */}
       <div className="absolute top-20 left-1/4 opacity-20">
         <svg
           className="w-8 h-8 text-[#F2C300]"
@@ -459,7 +400,6 @@ function LoginPage() {
         </svg>
       </div>
 
-      {/* Access Control Warning Modal - Make sure it's outside of any relative containers */}
       {accessModal.isVisible && (
         <WarningModal
           isVisible={accessModal.isVisible}
@@ -467,7 +407,7 @@ function LoginPage() {
           title={accessModal.title}
           message={accessModal.message}
           severity={accessModal.severity}
-          buttonText={accessModal.canProceed ? "Continue to Map" : "Ok"}
+          buttonText="Ok"
         />
       )}
     </div>

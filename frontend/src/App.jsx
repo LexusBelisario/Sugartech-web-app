@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Map from "./MAP/Map.jsx";
 import LoginPage from "./user_login/login_page.jsx";
+import RegisterPage from "./user_login/register_page.jsx"; // ✅ added
 import Admin from "./ADMIN/admin.jsx";
 
 export const API_URL =
@@ -9,17 +10,13 @@ export const API_URL =
     ? "https://blgf-gis-webapp-nq0r.onrender.com"
     : "http://localhost:8000";
 
-// ✅ ADD THIS PART - Override fetch globally
+// ✅ Override fetch globally
 const originalFetch = window.fetch;
-
 window.fetch = function (...args) {
   const [url, options = {}] = args;
 
-  // Add auth header to all /api calls
   if (url.includes("/api/")) {
-    const token =
-      localStorage.getItem("access_token") ||
-      localStorage.getItem("accessToken");
+    const token = localStorage.getItem("accessToken");
     if (token) {
       options.headers = {
         ...options.headers,
@@ -29,31 +26,26 @@ window.fetch = function (...args) {
   }
 
   return originalFetch(url, options).then((response) => {
-    // Handle 401 globally
     if (response.status === 401 && url.includes("/api/")) {
-      localStorage.removeItem("access_token");
       localStorage.removeItem("accessToken");
       window.location.href = "/login";
     }
     return response;
   });
 };
-// ✅ END OF ADDITION
 
+// ✅ Protected routes
 const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const token =
-    localStorage.getItem("accessToken") || localStorage.getItem("access_token");
+  const token = localStorage.getItem("accessToken");
 
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
-  // If adminOnly, check if user is admin by decoding the token
   if (adminOnly) {
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
       if (payload.user_type !== "admin") {
-        // Not an admin, redirect to map
         return <Navigate to="/map" replace />;
       }
     } catch (e) {
@@ -69,21 +61,18 @@ const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const token =
-      localStorage.getItem("accessToken") ||
-      localStorage.getItem("access_token");
+    const token = localStorage.getItem("accessToken");
     setIsAuthenticated(!!token);
   }, []);
 
   return (
     <Routes>
-      {/* Root route - redirects to login */}
+      {/* Root route */}
       <Route path="/" element={<Navigate to="/login" replace />} />
-
-      {/* Public routes */}
+      {/* Public */}
       <Route path="/login" element={<LoginPage />} />
-
-      {/* Protected routes */}
+      <Route path="/register" element={<RegisterPage />} /> {/* ✅ added */}
+      {/* User Map */}
       <Route
         path="/map"
         element={
@@ -92,8 +81,7 @@ const App = () => {
           </ProtectedRoute>
         }
       />
-
-      {/* Admin only route - Added /* to allow nested routes */}
+      {/* Admin */}
       <Route
         path="/admin/*"
         element={

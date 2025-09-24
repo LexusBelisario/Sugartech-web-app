@@ -1,12 +1,21 @@
-from fastapi import APIRouter, Request
-from db import get_connection
+from fastapi import APIRouter, Request, Depends, HTTPException
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 from datetime import datetime
 import json
+from psycopg2.extras import RealDictCursor
+
+from auth.dependencies import get_user_main_db, get_current_user
+from auth.models import User
 
 router = APIRouter()
 
 @router.post("/merge-parcels-postgis")
-async def merge_parcels_postgis(request: Request):
+async def merge_parcels_postgis(
+    request: Request,
+    db: Session = Depends(get_user_main_db),
+    current_user: User = Depends(get_current_user)
+):
     data = await request.json()
 
     schema = data.get("schema")
@@ -23,8 +32,11 @@ async def merge_parcels_postgis(request: Request):
     attr_table = f'"{schema}"."JoinedTable"'
 
     try:
-        conn = get_connection()
-        with conn.cursor() as cur:
+        # Get raw psycopg2 connection from SQLAlchemy session
+        conn = db.connection().connection
+        
+        # Create cursor with RealDictCursor for dictionary results
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
             # STEP 1: Detect actual column names in table
             cur.execute("""
                 SELECT column_name FROM information_schema.columns
@@ -77,12 +89,12 @@ async def merge_parcels_postgis(request: Request):
                 INSERT INTO {full_table} ({columns}, geom)
                 VALUES ({placeholders}, ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326))
             ''', values + [merged_geom])
+            
             # Insert new parcel into JoinedTable with only pin (no inherited attributes)
             cur.execute(f'''
                 INSERT INTO {attr_table} ("pin")
                 VALUES (%s)
             ''', (new_pin,))
-
 
             # STEP 5: Log the new parcel
             new_transaction_date = datetime.now()
@@ -138,13 +150,11 @@ async def merge_parcels_postgis(request: Request):
                 ''', log_values)
 
                 # Delete old parcel
-               # Delete old parcel from geometry table
                 cur.execute(f'DELETE FROM {full_table} WHERE pin = %s', (pin,))
-                # Delete old parcel from JoinedTable
                 cur.execute(f'DELETE FROM {attr_table} WHERE pin = %s', (pin,))
 
-
             conn.commit()
+            print(f"✅ Consolidation successful for user {current_user.user_name}: New PIN {new_pin}")
             return {"status": "success", "new_pin": new_pin}
 
     except Exception as e:
@@ -152,5 +162,5 @@ async def merge_parcels_postgis(request: Request):
             conn.rollback()
         except:
             pass
-        print("❌ Consolidation error:", str(e))
+        print(f"❌ Consolidation error for user {current_user.user_name}: {str(e)}")
         return {"status": "error", "message": str(e)}

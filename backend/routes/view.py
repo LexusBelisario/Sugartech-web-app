@@ -156,6 +156,11 @@ def list_schemas(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_user_main_db)
 ):
+    # Log user info
+    print(f"User: {current_user.user_name}")
+    print(f"Provincial Access: {current_user.provincial_access}")
+    print(f"Municipal Access: {current_user.municipal_access}")
+    
     # Check if user has approved access
     access_info = AccessControl.check_user_access(current_user)
     
@@ -166,42 +171,33 @@ def list_schemas(
         )
     
     try:
-        # Verify database connection
-        result = db.execute(text("SELECT current_database()"))
-        current_db = result.scalar()
-        
-        print(f"=== SCHEMA LISTING FOR USER {current_user.user_name} ===")
-        print(f"Connected to database: {current_db}")
-        print(f"Expected database: {current_user.provincial_access}")
-        
-        # Get all schemas from the CURRENT database (not postgres)
         result = db.execute(text("""
             SELECT schema_name
             FROM information_schema.schemata
             WHERE schema_name NOT IN (
                 'information_schema', 'pg_catalog', 'pg_toast', 'public',
-                'auth', 'storage', 'vault', 'graphql', 'graphql_public', 
-                'realtime', 'extensions', 'pgbouncer'
+                'credentials_login', 'auth', 'storage', 'vault',
+                'graphql', 'graphql_public', 'realtime', 'extensions',
+                'pgbouncer', 'postgres', 'credentials_users_schema'
             )
             AND schema_name NOT LIKE 'pg_%'
+            AND schema_name NOT LIKE '%credential%'
             ORDER BY schema_name
         """))
         
         all_schemas = [row[0] for row in result]
-        print(f"All schemas in {current_db}: {all_schemas}")
+        print(f"All available schemas: {all_schemas}")
         
-        # Filter schemas based on user's municipal access using your existing logic
+        # Filter schemas based on user access
         allowed_schemas = AccessControl.filter_schemas_by_access(all_schemas, current_user)
-        print(f"Allowed schemas after filtering: {allowed_schemas}")
+        print(f"Allowed schemas for user: {allowed_schemas}")
         
         # Get access description
         access_description = AccessControl.get_access_description(current_user)
         
         return {
             "schemas": allowed_schemas,
-            "total_available": len(all_schemas),
             "total_accessible": len(allowed_schemas),
-            "current_database": current_db,
             "user_access": {
                 "provincial": current_user.provincial_access,
                 "municipal": current_user.municipal_access,
@@ -211,7 +207,6 @@ def list_schemas(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error in list_schemas: {e}")
         raise HTTPException(status_code=500, detail=f"Schema listing error: {e}")
 
 

@@ -1,184 +1,125 @@
-# Updated access_control.py
-from typing import List, Optional, Dict
+# access_control.py
+from typing import List, Optional, Dict, Set
 from auth.models import User
 from fastapi import HTTPException, status
+import re
+
+def _norm(s: Optional[str]) -> str:
+    s = (s or "").strip().lower()
+    s = re.sub(r"\s+", "_", s)
+    return s
+
+def _split_tokens(raw: Optional[str]) -> List[str]:
+    if not raw:
+        return []
+    parts = re.split(r"[;,|\n]+", raw)
+    return [p.strip() for p in parts if p and p.strip()]
+
+def _token_to_schema(token: str, default_province_norm: str) -> str:
+    t = token.strip()
+    if ", " in t:
+        parts = t.split(", ")
+        if len(parts) == 2:
+            muni_norm = _norm(parts[0])
+            prov_norm = _norm(parts[1])
+            return f"{muni_norm}_{prov_norm}"
+    t_norm = _norm(t)
+    if "_" in t_norm:
+        return t_norm
+    return f"{t_norm}_{default_province_norm}"
 
 class AccessControl:
     @staticmethod
     def check_user_access(user: User) -> Dict:
         """
-        Check user's access level and return status
+        Check user's access level and return status.
         """
-        # Case 1: Both NULL - need admin approval
+
+        # 🚫 Case 1: No provincial & no municipal
         if user.provincial_access is None and user.municipal_access is None:
             return {
-                'status': 'pending_approval',
-                'message': 'Your account needs admin approval. Please contact the administrator to assign your provincial and municipal access.',
-                'allowed_schemas': []
+                "status": "pending_approval",
+                "message": "Your account needs admin approval. Please contact the administrator to assign your provincial and municipal access.",
+                "allowed_schemas": []
             }
-        
-        # Case 2: Provincial exists but municipal is NULL - limited access (can view map but no schemas)
+
+        # 🚫 Case 2: Provincial access but no municipal access → BLOCK LOGIN
         if user.provincial_access and user.municipal_access is None:
             return {
-                'status': 'approved',
-                'message': f'You have provincial access to {user.provincial_access}, but no municipal access assigned. You can view the map but cannot access specific schemas.',
-                'allowed_schemas': []
+                "status": "pending_approval",   # changed from approved
+                "message": f"You have provincial access to {user.provincial_access}, but no municipal access assigned. Please contact the administrator to enable municipal access.",
+                "allowed_schemas": []
             }
-        
-        # Case 3: Both have values - full access
+
+        # ✅ Case 3: Both provincial + municipal access
         return {
-            'status': 'approved',
-            'message': 'Access granted',
-            'allowed_schemas': []  # This will be populated by filter_schemas_by_access
+            "status": "approved",
+            "message": "Access granted",
+            "allowed_schemas": []
         }
-    
-    @staticmethod
-    def get_allowed_schemas(user: User) -> List[str]:
-        """
-        Get list of allowed schemas based on user's access
-        This returns patterns or specific schema names
-        """
-        if not user.provincial_access or not user.municipal_access:
-            return []
-        
-        allowed_schemas = []
-        
-        # If municipal_access is "All", return pattern for all municipalities in province
-        if user.municipal_access.upper() == "ALL":
-            # Pattern: all schemas ending with _provincename
-            province_lower = user.provincial_access.lower()
-            allowed_schemas.append(f"*_{province_lower}")
-        else:
-            # Specific municipal access - return exact schema name
-            allowed_schemas.append(user.municipal_access)
-        
-        return allowed_schemas
-    
+
     @staticmethod
     def filter_schemas_by_access(all_schemas: List[str], user: User) -> List[str]:
-        """
-        Filter schemas based on user's access rights
-        Handles both formats:
-        - underscore format: calauan_laguna
-        - comma format: Pagsanjan, Laguna
-        """
         if not user.provincial_access:
             return []
-        
-        # If municipal_access is NULL, return empty list (can see map but no schemas)
+
+        all_map = {s.lower(): s for s in all_schemas}
+        province_norm = _norm(user.provincial_access)
+
         if user.municipal_access is None:
             return []
-        
-        # Case 1: "All" municipal access - return all schemas for the province
-        if user.municipal_access.upper() == "ALL":
-            province = user.provincial_access
-            province_lower = province.lower()
-            
-            filtered_schemas = []
-            for schema in all_schemas:
-                schema_lower = schema.lower()
-                
-                # Check for underscore format (e.g., calauan_laguna)
-                if schema_lower.endswith(f"_{province_lower}"):
-                    filtered_schemas.append(schema)
-                    print(f"  ✓ Matched underscore format: {schema}")
-                
-                # Check for comma format (e.g., Pagsanjan, Laguna)
-                elif ", " in schema:
-                    parts = schema.split(", ")
-                    if len(parts) == 2 and parts[1].lower() == province_lower:
-                        filtered_schemas.append(schema)
-                        print(f"  ✓ Matched comma format: {schema}")
-            
-            print(f"User {user.user_name} with 'All' access to {user.provincial_access} can access: {filtered_schemas}")
-            return filtered_schemas
-        
-        # Case 2: Specific municipal access
-        else:
-            municipal_lower = user.municipal_access.lower()
-            province_lower = user.provincial_access.lower()
-            
-            matched_schemas = []
-            
-            for schema in all_schemas:
-                schema_lower = schema.lower()
-                
-                # Check underscore format
-                if schema_lower == f"{municipal_lower}_{province_lower}":
-                    matched_schemas.append(schema)
-                
-                # Check comma format
-                elif ", " in schema:
-                    parts = schema.split(", ")
-                    if len(parts) == 2:
-                        if parts[0].lower() == municipal_lower and parts[1].lower() == province_lower:
-                            matched_schemas.append(schema)
-            
-            return matched_schemas
+
+        if user.municipal_access.strip().lower() == "all":
+            out = [orig for lower, orig in all_map.items() if lower.endswith(f"_{province_norm}")]
+            return sorted(out)
+
+        tokens = _split_tokens(user.municipal_access)
+        wanted: Set[str] = set(_token_to_schema(t, province_norm) for t in tokens)
+
+        matched = [all_map[name] for name in wanted if name in all_map]
+        return sorted(matched)
 
     @staticmethod
     def validate_schema_access(schema: str, user: User) -> bool:
-        """
-        Validate if user has access to a specific schema
-        Handles both formats:
-        - underscore format: calauan_laguna
-        - comma format: Pagsanjan, Laguna
-        """
         if not user.provincial_access:
             return False
-        
         if user.municipal_access is None:
             return False
-        
-        province = user.provincial_access
-        province_lower = province.lower()
-        schema_lower = schema.lower()
-        
-        # If user has "All" access for the province
-        if user.municipal_access.upper() == "ALL":
-            # Check underscore format
-            if schema_lower.endswith(f"_{province_lower}"):
+
+        province_norm = _norm(user.provincial_access)
+        schema_norm = _norm(schema)
+
+        if user.municipal_access.strip().lower() == "all":
+            return schema_norm.endswith(f"_{province_norm}")
+
+        tokens = _split_tokens(user.municipal_access)
+        for t in tokens:
+            if schema_norm == _token_to_schema(t, province_norm):
                 return True
-            
-            # Check comma format
-            if ", " in schema:
-                parts = schema.split(", ")
-                if len(parts) == 2 and parts[1].lower() == province_lower:
-                    return True
-            
-            return False
-        
-        # If user has specific municipal access
-        else:
-            municipal_lower = user.municipal_access.lower()
-            
-            # Check underscore format
-            if schema_lower == f"{municipal_lower}_{province_lower}":
-                return True
-            
-            # Check comma format
-            if ", " in schema:
-                parts = schema.split(", ")
-                if len(parts) == 2:
-                    if parts[0].lower() == municipal_lower and parts[1].lower() == province_lower:
-                        return True
-            
-            return False
-    
+        return False
+
     @staticmethod
     def get_access_description(user: User) -> str:
-        """
-        Get human-readable description of user's access
-        """
         if not user.provincial_access and not user.municipal_access:
             return "No access assigned"
-        
+
         if user.provincial_access and user.municipal_access is None:
             return f"Provincial access to {user.provincial_access} only (no municipal access)"
-        
-        if user.municipal_access and user.municipal_access.upper() == "ALL":
+
+        if user.municipal_access and user.municipal_access.strip().lower() == "all":
             return f"Full access to all municipalities in {user.provincial_access}"
-        elif user.municipal_access:
+
+        if user.municipal_access:
             return f"Access limited to {user.municipal_access}"
-        
+
         return "Invalid access configuration"
+
+    @staticmethod
+    def get_allowed_schemas(user: User) -> List[str]:
+        if not user.provincial_access or not user.municipal_access:
+            return []
+        province_norm = _norm(user.provincial_access)
+        if user.municipal_access.strip().lower() == "all":
+            return [f"*_{province_norm}"]
+        tokens = _split_tokens(user.municipal_access)
+        return [_token_to_schema(t, province_norm) for t in tokens]
