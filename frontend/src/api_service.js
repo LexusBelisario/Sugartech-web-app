@@ -1,5 +1,5 @@
 // frontend/src/api.js
-import { API_URL } from './App';
+import { API_URL } from './config.js';
 
 // Use relative path for local development, full URL for production
 const API_BASE = process.env.NODE_ENV === 'development' ? "/api" : `${API_URL}/api`;
