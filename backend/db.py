@@ -1,18 +1,21 @@
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, or_
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.ext.declarative import declarative_base
-from typing import Optional, Dict
+from typing import Dict
 import os
 from dotenv import load_dotenv
-import psycopg  # Add this import
-from psycopg.rows import dict_row  # Add this import
+import psycopg
+from psycopg.rows import dict_row
+
+# Import models for credentials lookup
+from auth.models import Credentials
 
 load_dotenv()
 
 # Base for main DB models
 Base = declarative_base()
 
-# Supabase connection details
+# Supabase connection details (auth DB only)
 DB_HOST = 'aws-1-ap-southeast-1.pooler.supabase.com'
 DB_PORT = '6543'
 DB_USER = 'postgres.ljmlswhybxcmwzdzuxhl'
@@ -21,7 +24,7 @@ DB_PASSWORD = '#IGDIwebapp'
 # Auth database connection - pointing to credentials_login database
 AUTH_DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/credentials_login"
 
-auth_engine = create_engine(AUTH_DB_URL)
+auth_engine = create_engine(AUTH_DB_URL, pool_pre_ping=True)
 AuthSessionLocal = sessionmaker(bind=auth_engine)
 
 # Cache for database engines
@@ -35,40 +38,61 @@ def get_auth_db():
     finally:
         db.close()
 
-def get_database_engine(database_name: str):
-    """Get or create engine for a specific database"""
-    if not database_name:
-        raise ValueError("No database name provided")
-    
-    # Create engine if not cached
-    if database_name not in _db_engines:
-        db_url = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{database_name}"
-        _db_engines[database_name] = create_engine(db_url, pool_pre_ping=True)
-        print(f"✅ Created engine for database: {database_name}")
-    
-    return _db_engines[database_name]
+def get_database_engine_from_credentials(creds: Credentials):
+    """Create or get cached engine for given credentials row"""
+    key = f"{creds.host}:{creds.port}/{creds.dbname}"
+    if key not in _db_engines:
+        db_url = f"postgresql://{creds.user}:{creds.password}@{creds.host}:{creds.port}/{creds.dbname}"
+        _db_engines[key] = create_engine(db_url, pool_pre_ping=True)
+        print(f"✅ Created engine for {key}")
+    return _db_engines[key]
 
 def get_user_database_session(provincial_access: str) -> Session:
-    """Get database session based on user's provincial access"""
+    """
+    Get database session based on user's provincial access (using credentials table).
+    Can match by dbname, host, or id (if numeric).
+    """
     if not provincial_access:
         raise ValueError("User has no provincial access assigned")
-    
-    # Use provincial_access as database name directly
-    # e.g., "Laguna" -> connects to Laguna database
-    # e.g., "Paranaque" -> connects to Paranaque database
-    database_name = provincial_access.strip()
-    
-    engine = get_database_engine(database_name)
-    SessionLocal = sessionmaker(bind=engine)
-    return SessionLocal()
+
+    auth_db = AuthSessionLocal()
+    try:
+        # Build query with multiple matching options
+        filters = [
+            Credentials.dbname == provincial_access,
+            Credentials.host == provincial_access
+        ]
+        if provincial_access.isdigit():
+            filters.append(Credentials.id == int(provincial_access))
+
+        creds = auth_db.query(Credentials).filter(or_(*filters)).first()
+
+        if not creds:
+            raise ValueError(
+                f"No credentials found for provincial_access: {provincial_access}"
+            )
+
+        # Step 2: Create/get engine for that DB
+        engine = get_database_engine_from_credentials(creds)
+
+        # Step 3: Return SQLAlchemy session
+        SessionLocal = sessionmaker(bind=engine)
+        return SessionLocal()
+    finally:
+        auth_db.close()
 
 # Legacy functions (kept for backward compatibility but should be phased out)
 def get_main_db_connection():
-    """
-    Legacy function - returns postgres database connection
-    Should be replaced with get_user_database_session
-    """
-    engine = get_database_engine('postgres')
+    """Legacy function - returns postgres database connection"""
+    creds = Credentials(
+        id=0,
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname="postgres",
+        user=DB_USER,
+        password=DB_PASSWORD
+    )
+    engine = get_database_engine_from_credentials(creds)
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
     try:
@@ -78,25 +102,32 @@ def get_main_db_connection():
 
 def get_main_engine():
     """Legacy function - returns postgres engine"""
-    return get_database_engine('postgres')
+    creds = Credentials(
+        id=0,
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname="postgres",
+        user=DB_USER,
+        password=DB_PASSWORD
+    )
+    return get_database_engine_from_credentials(creds)
 
 def get_engine():
-    """Legacy function - returns postgres engine"""
-    return get_database_engine('postgres')
+    """Legacy function - alias for postgres engine"""
+    return get_main_engine()
 
 def get_connection(database_name: str = 'postgres'):
     """
     Legacy connection method - returns psycopg connection with dict_row factory
     This ensures compatibility with consolidate.py
     """
-    # Return a proper psycopg connection with dictionary rows
     return psycopg.connect(
         dbname=database_name,
         user=DB_USER,
         password=DB_PASSWORD,
         host=DB_HOST,
         port=DB_PORT,
-        row_factory=dict_row  # This is crucial - returns dictionaries instead of tuples
+        row_factory=dict_row
     )
 
 # Test auth database connection on startup

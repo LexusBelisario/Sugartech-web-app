@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_URL } from "../config";
+import { API_URL } from "../App";
 import { FiUser, FiMail, FiLock, FiPhone, FiEye, FiEyeOff } from "react-icons/fi";
 
 function RegisterPage() {
@@ -11,7 +11,7 @@ function RegisterPage() {
     lastName: "",
     email: "",
     password: "",
-    confirmPassword: "",  // NEW
+    confirmPassword: "",
     contactNo: "",
     tentativeProvince: "",
     tentativeMunicipal: "",
@@ -19,42 +19,37 @@ function RegisterPage() {
   const [provinces, setProvinces] = useState([]);
   const [municipalitiesByProvince, setMunicipalitiesByProvince] = useState({});
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);  // NEW
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);  // NEW
-  const [passwordError, setPasswordError] = useState("");  // NEW
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
-useEffect(() => {
-  const fetchLocations = async () => {
-    try {
-      // Use the admin locations endpoint (no auth required)
-      const res = await fetch(`${API_URL}/api/admin/locations`);
-      console.log("Fetching locations from:", `${API_URL}/api/admin/locations`);
-      
-      if (res.ok) {
-        const data = await res.json();
-        console.log("Locations data:", data);
-        setProvinces(data.provinces || []);
-        setMunicipalitiesByProvince(data.municipalities || {});
-      } else {
-        console.error("Failed to fetch locations:", res.status, res.statusText);
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/admin/locations`);
+        if (res.ok) {
+          const data = await res.json();
+          // Expecting: provinces = [{ code, name }], municipalities = { provinceCode: [{ code, name }] }
+          setProvinces(data.provinces || []);
+          setMunicipalitiesByProvince(data.municipalities || {});
+        } else {
+          console.error("Failed to fetch locations:", res.status, res.statusText);
+        }
+      } catch (err) {
+        console.error("Failed to load locations:", err);
       }
-    } catch (err) {
-      console.error("Failed to load locations:", err);
-    }
-  };
-  fetchLocations();
-}, []);
+    };
+    fetchLocations();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
 
-    // Reset municipal if province changes
     if (name === "tentativeProvince") {
       setFormData((prev) => ({ ...prev, tentativeMunicipal: "" }));
     }
 
-    // Check password match
     if (name === "confirmPassword" || name === "password") {
       if (name === "confirmPassword") {
         setPasswordError(value !== formData.password ? "Passwords do not match" : "");
@@ -64,48 +59,52 @@ useEffect(() => {
     }
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-  // Debug log to see what we're sending
-  const requestData = {
-    username: formData.username,
-    first_name: formData.firstName,
-    last_name: formData.lastName,
-    email: formData.email,
-    password: formData.password,
-    contact_number: formData.contactNo,
-    requested_provincial_access: formData.tentativeProvince,
-    requested_municipal_access: formData.tentativeMunicipal,
-  };
-  
-  console.log("Sending registration data:", requestData);
+    const provinceObj = provinces.find((p) => p.code === formData.tentativeProvince);
+    const municipalObj =
+      municipalitiesByProvince[formData.tentativeProvince]?.find(
+        (m) => m.code === formData.tentativeMunicipal
+      );
 
-  try {
-    const res = await fetch(`${API_URL}/api/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestData),
-    });
+    const requestData = {
+      username: formData.username,
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      email: formData.email,
+      password: formData.password,
+      contact_number: formData.contactNo,
+      requested_provincial_access: provinceObj?.name || "",
+      requested_municipal_access: municipalObj?.name || "",
+      requested_provincial_code: provinceObj?.code || "",
+      requested_municipal_code: municipalObj?.code || "",
+    };
 
-    const data = await res.json();
-    console.log("Registration response:", data);
-    
-    if (!res.ok) {
-      alert(data?.detail || "Registration failed");
-      return;
+    try {
+      const res = await fetch(`${API_URL}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestData),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data?.detail || "Registration failed");
+        return;
+      }
+
+      alert("Registration request submitted! Please wait for admin approval.");
+      navigate("/login");
+    } catch (err) {
+      console.error("Registration error:", err);
+      alert("Failed to register. Try again later.");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    alert("Registration request submitted! Please wait for admin approval.");
-    navigate("/login");
-  } catch (err) {
-    console.error("Registration error:", err);
-    alert("Failed to register. Try again later.");
-  } finally {
-    setLoading(false);
-  }
-};
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
       <div className="w-full max-w-lg bg-white shadow-lg rounded-xl p-8 max-h-[90vh] overflow-y-auto">
@@ -115,9 +114,7 @@ const handleSubmit = async (e) => {
         <form className="space-y-4" onSubmit={handleSubmit}>
           {/* Username */}
           <div>
-            <label className="text-sm font-semibold text-gray-700">
-              Username
-            </label>
+            <label className="text-sm font-semibold text-gray-700">Username</label>
             <div className="flex items-center border rounded-lg px-3">
               <FiUser className="text-gray-400 mr-2" />
               <input
@@ -133,9 +130,7 @@ const handleSubmit = async (e) => {
 
           {/* First Name */}
           <div>
-            <label className="text-sm font-semibold text-gray-700">
-              First Name
-            </label>
+            <label className="text-sm font-semibold text-gray-700">First Name</label>
             <div className="flex items-center border rounded-lg px-3">
               <FiUser className="text-gray-400 mr-2" />
               <input
@@ -151,9 +146,7 @@ const handleSubmit = async (e) => {
 
           {/* Last Name */}
           <div>
-            <label className="text-sm font-semibold text-gray-700">
-              Last Name
-            </label>
+            <label className="text-sm font-semibold text-gray-700">Last Name</label>
             <div className="flex items-center border rounded-lg px-3">
               <FiUser className="text-gray-400 mr-2" />
               <input
@@ -183,11 +176,9 @@ const handleSubmit = async (e) => {
             </div>
           </div>
 
-          {/* Password - UPDATED */}
+          {/* Password */}
           <div>
-            <label className="text-sm font-semibold text-gray-700">
-              Password
-            </label>
+            <label className="text-sm font-semibold text-gray-700">Password</label>
             <div className="flex items-center border rounded-lg px-3">
               <FiLock className="text-gray-400 mr-2" />
               <input
@@ -206,17 +197,16 @@ const handleSubmit = async (e) => {
                 {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Must be at least 8 characters with uppercase, lowercase, number, and special character
-            </p>
           </div>
 
-          {/* Confirm Password - NEW */}
+          {/* Confirm Password */}
           <div>
-            <label className="text-sm font-semibold text-gray-700">
-              Confirm Password
-            </label>
-            <div className={`flex items-center border rounded-lg px-3 ${passwordError ? 'border-red-500' : ''}`}>
+            <label className="text-sm font-semibold text-gray-700">Confirm Password</label>
+            <div
+              className={`flex items-center border rounded-lg px-3 ${
+                passwordError ? "border-red-500" : ""
+              }`}
+            >
               <FiLock className="text-gray-400 mr-2" />
               <input
                 type={showConfirmPassword ? "text" : "password"}
@@ -234,16 +224,12 @@ const handleSubmit = async (e) => {
                 {showConfirmPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
               </button>
             </div>
-            {passwordError && (
-              <p className="text-xs text-red-500 mt-1">{passwordError}</p>
-            )}
+            {passwordError && <p className="text-xs text-red-500 mt-1">{passwordError}</p>}
           </div>
 
-          {/* Contact No. */}
+          {/* Contact No */}
           <div>
-            <label className="text-sm font-semibold text-gray-700">
-              Contact Number
-            </label>
+            <label className="text-sm font-semibold text-gray-700">Contact Number</label>
             <div className="flex items-center border rounded-lg px-3">
               <FiPhone className="text-gray-400 mr-2" />
               <input
@@ -257,11 +243,9 @@ const handleSubmit = async (e) => {
             </div>
           </div>
 
-          {/* Requested Province */}
+          {/* Province Dropdown */}
           <div>
-            <label className="text-sm font-semibold text-gray-700">
-              Requested Province Access
-            </label>
+            <label className="text-sm font-semibold text-gray-700">Requested Province Access</label>
             <select
               name="tentativeProvince"
               value={formData.tentativeProvince}
@@ -270,18 +254,16 @@ const handleSubmit = async (e) => {
             >
               <option value="">Select Province</option>
               {provinces.map((p) => (
-                <option key={p} value={p}>
-                  {p}
+                <option key={p.code} value={p.code}>
+                  {p.name}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Requested Municipality */}
+          {/* Municipality Dropdown */}
           <div>
-            <label className="text-sm font-semibold text-gray-700">
-              Requested Municipality Access
-            </label>
+            <label className="text-sm font-semibold text-gray-700">Requested Municipality Access</label>
             <select
               name="tentativeMunicipal"
               value={formData.tentativeMunicipal}
@@ -290,13 +272,11 @@ const handleSubmit = async (e) => {
               disabled={!formData.tentativeProvince}
             >
               <option value="">Select Municipality</option>
-              {municipalitiesByProvince[formData.tentativeProvince]?.map(
-                (m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                )
-              )}
+              {municipalitiesByProvince[formData.tentativeProvince]?.map((m) => (
+                <option key={m.code} value={m.code}>
+                  {m.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -305,22 +285,12 @@ const handleSubmit = async (e) => {
             disabled={loading || passwordError}
             className={`w-full font-bold py-3 rounded-lg transition ${
               loading || passwordError
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-[#00519C] hover:bg-blue-700 text-white'
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-[#00519C] hover:bg-blue-700 text-white"
             }`}
           >
             {loading ? "Submitting..." : "Submit Registration Request"}
           </button>
-
-          <p className="text-center text-sm text-gray-600 mt-4">
-            Already have an account?{" "}
-            <span
-              className="text-[#00519C] font-semibold cursor-pointer hover:underline"
-              onClick={() => navigate("/login")}
-            >
-              Login
-            </span>
-          </p>
         </form>
       </div>
     </div>

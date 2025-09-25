@@ -384,86 +384,46 @@ async def get_admin_statistics(
 
 @router.get("/locations")
 async def get_available_locations(
-    db: Session = Depends(get_auth_db)  # Remove current_admin dependency
+    db: Session = Depends(get_auth_db)
 ):
-    """Get list of available provinces and municipalities"""
-    
-    # Get database connection credentials
-    creds = db.query(Credentials).first()
-    if not creds:
-        return {"provinces": [], "municipalities": {}}
-    
-    provinces = []
-    municipalities = {}
-    
+    """Get provinces and their municipalities grouped by PSGC codes"""
     try:
-        # Connect to postgres to get all databases
-        postgres_url = f"postgresql://{creds.user}:{creds.password}@{creds.host}:{creds.port}/postgres"
-        engine = create_engine(postgres_url, poolclass=NullPool)
-        
-        with engine.connect() as conn:
-            databases_query = text("""
-                SELECT datname 
-                FROM pg_database 
-                WHERE datistemplate = false 
-                AND datname NOT IN ('postgres', 'credentials_login', 'template0', 'template1')
-                AND datname NOT LIKE 'pg_%'
-                ORDER BY datname;
-            """)
-            
-            result = conn.execute(databases_query)
-            province_databases = [row[0] for row in result.fetchall()]
-        
-        engine.dispose()
-        
-        for province_db in province_databases:
-            display_province = province_db.replace('_', ' ').title()
-            provinces.append(display_province)
-            
-            province_url = f"postgresql://{creds.user}:{creds.password}@{creds.host}:{creds.port}/{province_db}"
-            prov_engine = create_engine(province_url, poolclass=NullPool)
-            
-            try:
-                with prov_engine.connect() as prov_conn:
-                    schemas_query = text("""
-                        SELECT schema_name 
-                        FROM information_schema.schemata 
-                        WHERE schema_name NOT IN ('pg_catalog', 'information_schema', 'public', 'pg_toast')
-                        AND schema_name NOT LIKE 'pg_%'
-                        ORDER BY schema_name;
-                    """)
-                    
-                    schemas_result = prov_conn.execute(schemas_query)
-                    municipality_schemas = [row[0] for row in schemas_result.fetchall()]
-                    
-                    formatted_municipalities = ["All"]
-                    for muni in municipality_schemas:
-                        display_muni = muni.replace('_', ' ').title()
-                        formatted_municipalities.append(display_muni)
-                    
-                    municipalities[display_province] = formatted_municipalities
-                    
-            except Exception as e:
-                print(f"Error accessing {province_db}: {str(e)}")
-                municipalities[display_province] = ["All"]
-            finally:
-                prov_engine.dispose()
-                
-    except Exception as e:
-        print(f"Error fetching locations: {str(e)}")
-        # Return sample data if database connection fails
+        # Provinces
+        provinces_query = db.execute(text("""
+            SELECT DISTINCT province_code, province_name
+            FROM credentials_users_schema.psa_table
+            ORDER BY province_name;
+        """))
+        provinces = [{"code": row[0], "name": row[1]} for row in provinces_query.fetchall()]
+
+        # Municipalities tied to provinces
+        municipalities_query = db.execute(text("""
+            SELECT province_code, municipal_code, municipal_name
+            FROM credentials_users_schema.psa_table
+            ORDER BY municipal_name;
+        """))
+        municipalities_by_province = {}
+        for prov_code, muni_code, muni_name in municipalities_query.fetchall():
+            if prov_code not in municipalities_by_province:
+                municipalities_by_province[prov_code] = []
+            municipalities_by_province[prov_code].append({
+                "code": muni_code,
+                "name": muni_name
+            })
+
         return {
-            "provinces": ["Laguna", "Metro Manila"],
-            "municipalities": {
-                "Laguna": ["All", "Calauan Laguna", "Pagsanjan Laguna"],
-                "Metro Manila": ["All", "Paranaque Manila"]
-            }
+            "provinces": provinces,
+            "municipalities": municipalities_by_province
         }
-    
-    return {
-        "provinces": provinces,
-        "municipalities": municipalities
-    }
+
+    except Exception as e:
+        print(f"Error fetching PSGC locations: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching PSGC locations: {str(e)}"
+        )
+
+
 
 @router.get("/statistics")
 async def get_admin_statistics(
@@ -535,7 +495,7 @@ async def get_registration_requests(
     current_admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_auth_db)
 ):
-    """Get registration requests based on status"""
+    """Get registration requests based on status, including availability check"""
     query = db.query(UserRegistrationRequest)
     
     if status != 'all':
@@ -554,6 +514,9 @@ async def get_registration_requests(
                 "contact_number": req.contact_number,
                 "requested_provincial_access": req.requested_provincial_access,
                 "requested_municipal_access": req.requested_municipal_access,
+                "requested_provincial_code": req.requested_provincial_code,   
+                "requested_municipal_code": req.requested_municipal_code,     
+                "is_available": req.is_available,                             
                 "status": req.status,
                 "request_date": req.request_date.isoformat() if req.request_date else None,
                 "reviewed_by": req.reviewed_by,
@@ -563,6 +526,7 @@ async def get_registration_requests(
         ],
         "total": len(requests)
     }
+
 
 # Review (approve/reject) registration request
 @router.post("/review-registration")

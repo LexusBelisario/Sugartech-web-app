@@ -188,7 +188,6 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
             detail="Registration request already pending for this username"
         )
     
-    # Check if email already exists
     existing_email_user = auth_db.query(User).filter(User.email == request.email).first()
     existing_email_request = auth_db.query(UserRegistrationRequest).filter(
         UserRegistrationRequest.email == request.email,
@@ -201,8 +200,6 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
             detail="Email already registered"
         )
     
-    # Convert display format back to database format for storage
-    # "Metro Manila" -> "Metro_Manila" (preserve original case)
     province_db_name = None
     if request.requested_provincial_access:
         # Handle special cases and general conversion
@@ -210,7 +207,6 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
     
     municipality_schema_name = None
     if request.requested_municipal_access and request.requested_municipal_access != "All":
-        # "Paranaque Manila" -> "paranaque_manila" (lowercase for schemas)
         municipality_schema_name = request.requested_municipal_access.replace(' ', '_').lower()
     
     # Create new registration request
