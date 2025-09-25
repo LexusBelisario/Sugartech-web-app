@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "../css_files/animation.css";
 import { ArrowLeft, User, ChevronDown } from "lucide-react";
 import SuccessModal from "./sucess_modal";
-import { API_URL } from "../../../App";
+import { API_URL } from "../../../config";
 
 const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
   if (!isVisible) return null;

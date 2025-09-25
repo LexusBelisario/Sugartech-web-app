@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import DataTable from 'react-data-table-component';
 import { Search, Edit2, Check, X, Clock, AlertCircle } from "lucide-react";
 import UserModal from "../components/modals/AddUserModal";
-import { API_URL } from "../../App";
+import { API_URL } from "../../config";
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);

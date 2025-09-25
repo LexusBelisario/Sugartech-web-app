@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FiLogOut, FiUser, FiChevronDown, FiBell } from "react-icons/fi";
-import { API_URL } from "../../App";
+import { API_URL } from "../../config";
 
 const AdminHeader = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);

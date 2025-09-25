@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_URL } from "../App";
+import { API_URL } from "../config";
 import WarningModal from "../components/modals/WarningModal";
 
 function LoginPage() {

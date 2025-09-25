@@ -2,70 +2,131 @@ import { useEffect, useState } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "./LeafletWMTS"; // ✅ bring in WMTS helper
 import "./BaseMapSelector.css";
 
 function BaseMapSelector() {
   const map = useMap();
   const [panelOpen, setPanelOpen] = useState(false);
-  const [activeLayers, setActiveLayers] = useState({
-    osm: false,
-    google: true, // ✅ Google Maps on by default
-    satellite: false,
-    geoserver: false,
-  });
+  const [activeBase, setActiveBase] = useState("google"); // ✅ Google preselected
+  const [aerialOn, setAerialOn] = useState(false);
 
   useEffect(() => {
     if (!map) return;
 
+    // --- Base layers ---
     const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "© OpenStreetMap contributors",
+      minZoom: 0,
+      maxZoom: 25,
     });
 
     const google = L.tileLayer("http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
       subdomains: ["mt0", "mt1", "mt2", "mt3"],
       attribution: "© Google Maps",
+      minZoom: 0,
+      maxZoom: 25,
     });
 
     const satellite = L.tileLayer("http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", {
       subdomains: ["mt0", "mt1", "mt2", "mt3"],
       attribution: "© Google Satellite",
+      minZoom: 0,
+      maxZoom: 25,
     });
 
-    const geoserver = L.tileLayer.wms(
-      "http://localhost:8080/geoserver/Calauan_Aerial_Photos/wms",
+    // --- GeoServer WMTS layers ---
+    const geoserver_kanluran = L.tileLayer.wmts(
+      "http://3.111.145.107/geoserver/gwc/service/wmts",
       {
-        layers: "Calauan_Aerial_Photos:Calauan_Orthophotos",
+        layer: "CL_OP:01_Kanluran",
+        tilematrixSet: "EPSG:900913",
         format: "image/png",
-        transparent: true,
-        version: "1.1.0",
-        attribution: "GeoServer - Calauan Orthophotos",
+        style: "",
+        maxZoom: 24,
       }
     );
 
-    window._basemapLayers = { osm, google, satellite, geoserver };
+    const geoserver_silangan = L.tileLayer.wmts(
+      "http://3.111.145.107/geoserver/gwc/service/wmts",
+      {
+        layer: "CL_OP:02_Silangan",
+        tilematrixSet: "EPSG:900913",
+        format: "image/png",
+        style: "",
+        maxZoom: 24,
+      }
+    );
 
-    // ✅ add Google Maps by default
+
+    const geoserver_masiit = L.tileLayer.wmts(
+      "http://3.111.145.107/geoserver/gwc/service/wmts",
+      {
+        layer: "CL_OP:12_Masiit",
+        tilematrixSet: "EPSG:900913",
+        format: "image/png",
+        style: "",
+        maxZoom: 24,
+      }
+    );
+
+
+    // Store globally
+    window._basemapLayers = {
+      osm,
+      google,
+      satellite,
+      geoserver: [geoserver_kanluran, geoserver_silangan, geoserver_masiit],
+    };
+
+    // ✅ Start with Google Maps
     google.addTo(map);
 
     return () => {
       Object.values(window._basemapLayers).forEach((layer) => {
-        if (map.hasLayer(layer)) map.removeLayer(layer);
+        if (Array.isArray(layer)) {
+          layer.forEach((l) => map.removeLayer(l));
+        } else if (map.hasLayer(layer)) {
+          map.removeLayer(layer);
+        }
       });
       delete window._basemapLayers;
     };
   }, [map]);
 
-  const toggleLayer = (key) => {
+  const switchBase = (key) => {
     if (!map || !window._basemapLayers) return;
 
-    const newState = { ...activeLayers, [key]: !activeLayers[key] };
-    setActiveLayers(newState);
-
-    if (!activeLayers[key]) {
-      window._basemapLayers[key].addTo(map);
-    } else {
-      map.removeLayer(window._basemapLayers[key]);
+    // Remove current base
+    if (activeBase && window._basemapLayers[activeBase]) {
+      const currentLayer = window._basemapLayers[activeBase];
+      if (Array.isArray(currentLayer)) {
+        currentLayer.forEach((l) => map.removeLayer(l));
+      } else {
+        map.removeLayer(currentLayer);
+      }
     }
+
+    // Add new base
+    const newLayer = window._basemapLayers[key];
+    if (Array.isArray(newLayer)) {
+      newLayer.forEach((l) => l.addTo(map));
+    } else {
+      newLayer.addTo(map);
+    }
+
+    setActiveBase(key);
+  };
+
+  const toggleAerial = () => {
+    if (!map || !window._basemapLayers) return;
+
+    if (aerialOn) {
+      window._basemapLayers.geoserver.forEach((layer) => map.removeLayer(layer));
+    } else {
+      window._basemapLayers.geoserver.forEach((layer) => layer.addTo(map));
+    }
+    setAerialOn(!aerialOn);
   };
 
   useEffect(() => {
@@ -77,7 +138,6 @@ function BaseMapSelector() {
         const button = L.DomUtil.create("button", "basemap-toggle-button", container);
         button.innerHTML = "🗺️";
 
-        // ✅ Prevent this button from triggering map interactions
         L.DomEvent.disableClickPropagation(button);
         L.DomEvent.disableScrollPropagation(button);
         button.ondblclick = (e) => {
@@ -105,31 +165,34 @@ function BaseMapSelector() {
   return (
     panelOpen && (
       <div className="basemap-panel">
-        <h4>Select Basemaps</h4>
+        <h4>Select Basemap</h4>
         <div>
           <input
             id="layer-osm"
-            type="checkbox"
-            checked={activeLayers.osm}
-            onChange={() => toggleLayer("osm")}
+            type="radio"
+            name="basemap"
+            checked={activeBase === "osm"}
+            onChange={() => switchBase("osm")}
           />
           <label htmlFor="layer-osm"> OpenStreetMap</label>
         </div>
         <div>
           <input
             id="layer-google"
-            type="checkbox"
-            checked={activeLayers.google}
-            onChange={() => toggleLayer("google")}
+            type="radio"
+            name="basemap"
+            checked={activeBase === "google"}
+            onChange={() => switchBase("google")}
           />
           <label htmlFor="layer-google"> Google Maps</label>
         </div>
         <div>
           <input
             id="layer-satellite"
-            type="checkbox"
-            checked={activeLayers.satellite}
-            onChange={() => toggleLayer("satellite")}
+            type="radio"
+            name="basemap"
+            checked={activeBase === "satellite"}
+            onChange={() => switchBase("satellite")}
           />
           <label htmlFor="layer-satellite"> Google Satellite</label>
         </div>
@@ -137,10 +200,10 @@ function BaseMapSelector() {
           <input
             id="layer-geoserver"
             type="checkbox"
-            checked={activeLayers.geoserver}
-            onChange={() => toggleLayer("geoserver")}
+            checked={aerialOn}
+            onChange={toggleAerial}
           />
-          <label htmlFor="layer-geoserver"> Calauan Orthophotos</label>
+          <label htmlFor="layer-geoserver"> Aerial Photo</label>
         </div>
       </div>
     )

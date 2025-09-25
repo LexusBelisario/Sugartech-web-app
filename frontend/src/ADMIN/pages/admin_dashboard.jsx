@@ -16,7 +16,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { API_URL } from "../../App";
+import { API_URL } from "../../config";
 import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
