@@ -27,6 +27,9 @@ class User(AuthBase):
     contact_number = Column(String, nullable=True)
     provincial_access = Column(String, nullable=True)
     municipal_access = Column(String, nullable=True)
+    # ✅ NEW: PSGC codes stored for traceability
+    provincial_code = Column(String, nullable=True)
+    municipal_code = Column(String, nullable=True)
 
 class UserRegistrationRequest(AuthBase):
     __tablename__ = "user_registration_requests"
@@ -41,14 +44,14 @@ class UserRegistrationRequest(AuthBase):
     contact_number = Column(String, nullable=True)
     requested_provincial_access = Column(String, nullable=True)
     requested_municipal_access = Column(String, nullable=True)
-    requested_provincial_code = Column(String, nullable=True)   # NEW
-    requested_municipal_code = Column(String, nullable=True)    # NEW
+    requested_provincial_code = Column(String, nullable=True)   # ✅ new
+    requested_municipal_code = Column(String, nullable=True)    # ✅ new
     status = Column(String, default='pending') 
     request_date = Column(DateTime, server_default=func.now())
     reviewed_by = Column(String, nullable=True)
     review_date = Column(DateTime, nullable=True)
     remarks = Column(String, nullable=True)
-    is_available = Column(Boolean, default=False)               # NEW
+    is_available = Column(Boolean, default=False)               # ✅ new
 
 class Admin(AuthBase):
     __tablename__ = "admin_login"
@@ -73,7 +76,3 @@ class PSACode(AuthBase):
     province_name = Column(String, nullable=False)
     municipal_code = Column(String, nullable=False)
     municipal_name = Column(String, nullable=False)
-
-
-
-# test
