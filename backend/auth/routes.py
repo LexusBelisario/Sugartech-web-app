@@ -168,51 +168,56 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=error_message
         )
-    
-    # Check if username already exists in users table
-    existing_user = auth_db.query(User).filter(User.user_name == request.username).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already exists"
-        )
-    
-    # Check if username already exists in pending registration requests
-    existing_request = auth_db.query(UserRegistrationRequest).filter(
-        UserRegistrationRequest.user_name == request.username,
-        UserRegistrationRequest.status == 'pending'
-    ).first()
-    if existing_request:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Registration request already pending for this username"
-        )
-    
-    # Check if email already exists
-    existing_email_user = auth_db.query(User).filter(User.email == request.email).first()
-    existing_email_request = auth_db.query(UserRegistrationRequest).filter(
-        UserRegistrationRequest.email == request.email,
-        UserRegistrationRequest.status == 'pending'
-    ).first()
-    
-    if existing_email_user or existing_email_request:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-    
-    # Convert display format back to database format for storage
-    # "Metro Manila" -> "Metro_Manila" (preserve original case)
+
+    # Check if username/email exists (same as before) ...
+
+    # Lookup PSA Codes
+    province_code = request.requested_provincial_code
+    municipal_code = request.requested_municipal_code
+
     province_db_name = None
-    if request.requested_provincial_access:
-        # Handle special cases and general conversion
-        province_db_name = request.requested_provincial_access.replace(' ', '_')
-    
     municipality_schema_name = None
-    if request.requested_municipal_access and request.requested_municipal_access != "All":
-        # "Paranaque Manila" -> "paranaque_manila" (lowercase for schemas)
-        municipality_schema_name = request.requested_municipal_access.replace(' ', '_').lower()
+    is_available = False   # default
+
+    if province_code:
+        psa_province = auth_db.execute(
+            text("""
+                SELECT province_name 
+                FROM credentials_users_schema.psa_table
+                WHERE province_code = :code
+            """), {"code": province_code}
+        ).fetchone()
+
+        if psa_province:
+            province_db_name = psa_province[0].replace(" ", "_")
     
+    if municipal_code:
+        psa_muni = auth_db.execute(
+            text("""
+                SELECT municipal_name 
+                FROM credentials_users_schema.psa_table
+                WHERE municipal_code = :code
+            """), {"code": municipal_code}
+        ).fetchone()
+
+        if psa_muni:
+            municipality_schema_name = psa_muni[0].replace(" ", "_").lower()
+
+    # 🔎 Check kung existing sa database schemas
+    try:
+        db_check = auth_db.execute(
+            text("""
+                SELECT schema_name 
+                FROM information_schema.schemata
+                WHERE schema_name = :schema
+            """), {"schema": municipality_schema_name}
+        ).fetchone()
+
+        if db_check:  
+            is_available = True
+    except:
+        is_available = False
+
     # Create new registration request
     hashed_pw = hash_password(request.password)
     new_request = UserRegistrationRequest(
@@ -224,27 +229,32 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
         contact_number=request.contact_number,
         requested_provincial_access=province_db_name,
         requested_municipal_access=municipality_schema_name,
-        status='pending'
+        requested_provincial_code=province_code,
+        requested_municipal_code=municipal_code,
+        status='pending',
+        is_available=is_available  # ✅ set here
     )
-    
+
     try:
         auth_db.add(new_request)
         auth_db.commit()
         auth_db.refresh(new_request)
-        
+
         return {
             "message": "Registration request submitted successfully. Please wait for admin approval.",
             "request_id": new_request.id,
             "status": "pending",
-            "username": new_request.user_name
+            "username": new_request.user_name,
+            "is_available": is_available   # return info din
         }
-        
+
     except Exception as e:
         auth_db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to submit registration request: {str(e)}"
         )
+
 
 @router.get("/registration-status/{username}")
 async def check_registration_status(

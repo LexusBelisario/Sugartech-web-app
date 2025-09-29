@@ -1,7 +1,15 @@
-// frontend/src/config.js
-export const API_URL =
-  process.env.NODE_ENV === "production"
-    ? "http://3.111.145.107:8000"   // VM production backend
-    : "http://localhost:8000";      // Local dev backend
+// config.js - Fully dynamic, no hardcoding!
+export const API_URL = (() => {
+  const { protocol, hostname, port } = window.location;
+  
+  // If localhost, use localhost backend
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:8000';
+  }
+  
+  // For production, use same hostname but port 8000
+  const baseUrl = `${protocol}//${hostname}`;
+  return `${baseUrl}:8000`;
+})();
 
 export const API_BASE = `${API_URL}/api`;
