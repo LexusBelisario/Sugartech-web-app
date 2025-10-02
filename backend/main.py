@@ -17,6 +17,8 @@ from routes.tableinfo import router as tableinfo_router
 from routes.landmarks import router as landmark_router
 from routes.search import router as search_router
 from routes.GeoServerAccess import router as GeoServerAccess_router
+from routes import municipal as municipal_router
+
 
 app = FastAPI()
 
@@ -44,6 +46,7 @@ app.include_router(GeoServerAccess_router, prefix="/api")
 app.include_router(landmark_router, prefix="/api")
 app.include_router(thematic_router, prefix="/api")
 app.include_router(tableinfo_router, prefix="/api")
+app.include_router(municipal_router.router, prefix="/api")
 
 @app.get("/health")
 def health():
