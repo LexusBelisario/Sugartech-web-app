@@ -43,7 +43,7 @@ class AccessControl:
 
         # Special case: "ALL" → allow all municipalities under this province
         if user.municipal_access.strip().lower() == "all":
-            return sorted([s for s in all_schemas if s.startswith(user.provincial_access)])
+            return sorted(all_schemas)
 
         # Otherwise, check exact PSGC match
         wanted = {user.municipal_access}
@@ -58,11 +58,11 @@ class AccessControl:
         if not user.provincial_access or not user.municipal_access:
             return False
 
-        # "ALL" → check province prefix
+        # "ALL" → allow any schema
         if user.municipal_access.strip().lower() == "all":
-            return schema.startswith(user.provincial_access)
+            return True
 
-        return schema == user.municipal_access
+        return schema == user.municipal_access 
 
     @staticmethod
     def get_access_description(user: User) -> str:
@@ -81,15 +81,19 @@ class AccessControl:
         return "Invalid access configuration"
 
     @staticmethod
-    def get_allowed_schemas(user: User) -> List[str]:
+    def get_allowed_schemas(user: User, all_schemas: List[str] = None) -> List[str]:
         """
         Return a list of schemas this user is allowed to access.
+        If municipal_access is "ALL", return all available schemas (if provided).
         """
         if not user.provincial_access or not user.municipal_access:
             return []
 
         if user.municipal_access.strip().lower() == "all":
-            # Wildcard notation → will be expanded later
-            return [f"{user.provincial_access}*"]
+            # If we already have the list of schemas, return them directly
+            if all_schemas is not None:
+                return sorted(all_schemas)
+            # Otherwise return wildcard marker
+            return ["*"]
 
         return [user.municipal_access]
