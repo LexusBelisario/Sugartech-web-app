@@ -15,7 +15,7 @@ load_dotenv()
 # Base for main DB models
 Base = declarative_base()
 
-# Supabase connection details (auth DB only) NEED IMMODULARIZED
+# Supabase connection details (auth DB only)
 DB_HOST = 'aws-1-ap-southeast-1.pooler.supabase.com'
 DB_PORT = '6543'
 DB_USER = 'postgres.ljmlswhybxcmwzdzuxhl'
@@ -30,6 +30,7 @@ AuthSessionLocal = sessionmaker(bind=auth_engine)
 # Cache for database engines
 _db_engines: Dict[str, any] = {}
 
+
 def get_auth_db():
     """Get session for auth database (credentials_login)"""
     db = AuthSessionLocal()
@@ -37,6 +38,7 @@ def get_auth_db():
         yield db
     finally:
         db.close()
+
 
 def get_database_engine_from_credentials(creds: Credentials):
     """Create or get cached engine for given credentials row"""
@@ -47,28 +49,26 @@ def get_database_engine_from_credentials(creds: Credentials):
         print(f"✅ Created engine for {key}")
     return _db_engines[key]
 
+
 def get_user_database_session(provincial_access: str) -> Session:
     """
-    Get database session based on user's provincial access (using credentials table).
-    Can match by dbname, host, or id (if numeric).
+    Get database session based on user's provincial access.
+    provincial_access will be a PSA code only (e.g. "PH04034"),
+    but the actual DB is named like "PH04034_Laguna".
     """
     if not provincial_access:
         raise ValueError("User has no provincial access assigned")
 
     auth_db = AuthSessionLocal()
     try:
-        # Build query with multiple matching options
-        filters = [
-            Credentials.dbname == provincial_access
-        ]
-        if provincial_access.isdigit():
-            filters.append(Credentials.id == int(provincial_access))
-
-        creds = auth_db.query(Credentials).filter(or_(*filters)).first()
+        # Match dbname by prefix (PSA code)
+        creds = auth_db.query(Credentials).filter(
+            Credentials.dbname.like(f"{provincial_access}%")
+        ).first()
 
         if not creds:
             raise ValueError(
-                f"No credentials found for provincial_access: {provincial_access}"
+                f"No credentials found for provincial_access (PSA code): {provincial_access}"
             )
 
         # Step 2: Create/get engine for that DB
@@ -79,6 +79,7 @@ def get_user_database_session(provincial_access: str) -> Session:
         return SessionLocal()
     finally:
         auth_db.close()
+
 
 # Legacy functions (kept for backward compatibility but should be phased out)
 def get_main_db_connection():
@@ -99,6 +100,7 @@ def get_main_db_connection():
     finally:
         db.close()
 
+
 def get_main_engine():
     """Legacy function - returns postgres engine"""
     creds = Credentials(
@@ -111,9 +113,11 @@ def get_main_engine():
     )
     return get_database_engine_from_credentials(creds)
 
+
 def get_engine():
     """Legacy function - alias for postgres engine"""
     return get_main_engine()
+
 
 def get_connection(database_name: str = 'postgres'):
     """
@@ -128,6 +132,7 @@ def get_connection(database_name: str = 'postgres'):
         port=DB_PORT,
         row_factory=dict_row
     )
+
 
 # Test auth database connection on startup
 try:

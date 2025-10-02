@@ -35,9 +35,13 @@ class RegistrationReviewRequest(BaseModel):
     request_id: int
     action: str  # 'approve' or 'reject'
     remarks: Optional[str] = None
-    # For approval, admin can modify access levels
     provincial_access: Optional[str] = None
     municipal_access: Optional[str] = None
+
+def strip_suffix(code: str | None) -> str | None:    #nirereturn lang dto ung PSA Code lang example, PH0403406_% (ang ireread lang nya us ung PSA Code)
+    if not code: 
+        return code
+    return code.split("_")[0]
 
 # Admin dashboard endpoint
 @router.get("/dashboard")
@@ -57,42 +61,39 @@ async def admin_dashboard(
         "timestamp": datetime.utcnow().isoformat()
     }
 
-# Get all users
 @router.get("/users", response_model=List[UserResponse])
-async def get_all_users(
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_auth_db)
-):
-    """Get all registered users"""
+async def get_all_users(current_admin: Admin = Depends(get_current_admin), db: Session = Depends(get_auth_db)):
     users = db.query(User).all()
-    return users
+    return [
+        {
+            "id": u.id,
+            "user_name": u.user_name,
+            "provincial_access": strip_suffix(u.provincial_access),
+            "municipal_access": strip_suffix(u.municipal_access)
+        }
+        for u in users
+    ]
 
-# Get users pending approval
 @router.get("/users/pending")
-async def get_pending_users(
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_auth_db)
-):
-    """Get users with NULL provincial or municipal access"""
+async def get_pending_users(current_admin: Admin = Depends(get_current_admin), db: Session = Depends(get_auth_db)):
     users = db.query(User).filter(
-        (User.provincial_access.is_(None)) | 
+        (User.provincial_access.is_(None)) |
         (User.municipal_access.is_(None))
     ).all()
-    
     return {
         "pending_users": [
             {
-                "id": user.id,
-                "username": user.user_name,
-                "provincial_access": user.provincial_access,
-                "municipal_access": user.municipal_access,
-                "status": "No access" if user.provincial_access is None else "Partial access"
-            } for user in users
+                "id": u.id,
+                "username": u.user_name,
+                "provincial_access": strip_suffix(u.provincial_access),
+                "municipal_access": strip_suffix(u.municipal_access),
+                "status": "No access" if u.provincial_access is None else "Partial access"
+            }
+            for u in users
         ],
         "total_pending": len(users)
     }
 
-# Update user access
 @router.put("/users/{user_id}/access")
 async def update_user_access(
     user_id: int,
@@ -104,16 +105,13 @@ async def update_user_access(
     user = db.query(User).filter(User.id == user_id).first()
     
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise HTTPException(status_code=404, detail="User not found")
     
-    # Update access
+    # ✅ Always strip suffix before saving
     if user_update.provincial_access is not None:
-        user.provincial_access = user_update.provincial_access
+        user.provincial_access = strip_suffix(user_update.provincial_access)
     if user_update.municipal_access is not None:
-        user.municipal_access = user_update.municipal_access
+        user.municipal_access = strip_suffix(user_update.municipal_access)
     
     db.commit()
     db.refresh(user)
@@ -130,6 +128,7 @@ async def update_user_access(
         "timestamp": datetime.utcnow().isoformat()
     }
 
+
 @router.put("/users/{user_id}")
 async def update_user(
     user_id: int,
@@ -141,10 +140,7 @@ async def update_user(
     user = db.query(User).filter(User.id == user_id).first()
     
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
+        raise HTTPException(status_code=404, detail="User not found")
     
     # Update user fields
     if "first_name" in user_data:
@@ -155,10 +151,12 @@ async def update_user(
         user.email = user_data["email"]
     if "contact_number" in user_data:
         user.contact_number = user_data["contact_number"]
+
+    # ✅ Normalize PSA codes before saving
     if "provincial_access" in user_data:
-        user.provincial_access = user_data["provincial_access"]
+        user.provincial_access = strip_suffix(user_data["provincial_access"])
     if "municipal_access" in user_data:
-        user.municipal_access = user_data["municipal_access"]
+        user.municipal_access = strip_suffix(user_data["municipal_access"])
     
     try:
         db.commit()
@@ -181,32 +179,21 @@ async def update_user(
         }
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update user: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to update user: {str(e)}")
 
 
-# Delete user
 @router.delete("/users/{user_id}")
-async def delete_user(
-    user_id: int,
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_auth_db)
-):
-    """Delete a user account"""
+async def delete_user(user_id: int,
+                      current_admin: Admin = Depends(get_current_admin),
+                      db: Session = Depends(get_auth_db)):
     user = db.query(User).filter(User.id == user_id).first()
-    
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
+        raise HTTPException(status_code=404, detail="User not found")
+
     username = user.user_name
     db.delete(user)
     db.commit()
-    
+
     return {
         "message": f"User '{username}' deleted successfully",
         "deleted_by": current_admin.user_name,
@@ -494,39 +481,35 @@ async def get_admin_statistics(
         )
 
 @router.get("/registration-requests")
-async def get_registration_requests(
-    status: str = "pending",  # can be 'pending', 'approved', 'rejected', or 'all'
-    current_admin: Admin = Depends(get_current_admin),
-    db: Session = Depends(get_auth_db)
-):
-    """Get registration requests based on status, including availability check"""
+async def get_registration_requests(status: str = "pending",
+                                    current_admin: Admin = Depends(get_current_admin),
+                                    db: Session = Depends(get_auth_db)):
     query = db.query(UserRegistrationRequest)
-    
     if status != 'all':
         query = query.filter(UserRegistrationRequest.status == status)
-    
+
     requests = query.order_by(UserRegistrationRequest.request_date.desc()).all()
-    
     return {
         "requests": [
             {
-                "id": req.id,
-                "username": req.user_name,
-                "first_name": req.first_name,
-                "last_name": req.last_name,
-                "email": req.email,
-                "contact_number": req.contact_number,
-                "requested_provincial_access": req.requested_provincial_access,
-                "requested_municipal_access": req.requested_municipal_access,
-                "requested_provincial_code": req.requested_provincial_code,   
-                "requested_municipal_code": req.requested_municipal_code,     
-                "is_available": req.is_available,                             
-                "status": req.status,
-                "request_date": req.request_date.isoformat() if req.request_date else None,
-                "reviewed_by": req.reviewed_by,
-                "review_date": req.review_date.isoformat() if req.review_date else None,
-                "remarks": req.remarks
-            } for req in requests
+                "id": r.id,
+                "username": r.user_name,
+                "first_name": r.first_name,
+                "last_name": r.last_name,
+                "email": r.email,
+                "contact_number": r.contact_number,
+                "requested_provincial_access": strip_suffix(r.requested_provincial_access),
+                "requested_municipal_access": strip_suffix(r.requested_municipal_access),
+                "requested_provincial_code": strip_suffix(r.requested_provincial_code),
+                "requested_municipal_code": strip_suffix(r.requested_municipal_code),
+                "is_available": r.is_available,
+                "status": r.status,
+                "request_date": r.request_date.isoformat() if r.request_date else None,
+                "reviewed_by": r.reviewed_by,
+                "review_date": r.review_date.isoformat() if r.review_date else None,
+                "remarks": r.remarks
+            }
+            for r in requests
         ],
         "total": len(requests)
     }
@@ -546,14 +529,11 @@ async def review_registration(
         ).first()
         
         if not reg_request:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Registration request not found"
-            )
+            raise HTTPException(status_code=404, detail="Registration request not found")
         
         if reg_request.status != 'pending':
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=400,
                 detail=f"Request already {reg_request.status}"
             )
         
@@ -563,51 +543,52 @@ async def review_registration(
         reg_request.remarks = review.remarks
         
         if review.action == 'approve':
-            # 🚫 Do not allow approval if LGU is not available
+            # 🚫 Cannot approve if LGU not available
             if not reg_request.is_available:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Cannot approve request: selected province/municipality not available in database"
+                    status_code=400,
+                    detail="Cannot approve request: selected province/municipality not available"
                 )
             
-            # ✅ Check if username or email already exists
+            # ✅ Check duplicates
             existing_user = db.query(User).filter(
                 (User.user_name == reg_request.user_name) | 
                 (User.email == reg_request.email)
             ).first()
-            
             if existing_user:
                 raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Username or email already exists in users table"
+                    status_code=409,
+                    detail="Username or email already exists"
                 )
             
-            # 🆕 Create new user in users_table
+            # 🆕 Create new user with stripped PSA codes
             new_user = User(
                 user_name=reg_request.user_name,
-                password=reg_request.password,  # Already hashed
+                password=reg_request.password,  # already hashed
                 first_name=reg_request.first_name,
                 last_name=reg_request.last_name,
                 email=reg_request.email,
                 contact_number=reg_request.contact_number,
-                provincial_access=review.provincial_access or reg_request.requested_provincial_access,
-                municipal_access=review.municipal_access or reg_request.requested_municipal_access
+                provincial_access=strip_suffix(review.provincial_access or reg_request.requested_provincial_access),
+                municipal_access=strip_suffix(review.municipal_access or reg_request.requested_municipal_access)
             )
             
             db.add(new_user)
             reg_request.status = 'approved'
             db.commit()
+            db.refresh(new_user)
             
             return {
                 "message": f"Registration approved for user {reg_request.user_name}",
                 "user_id": new_user.id,
+                "provincial_access": new_user.provincial_access,
+                "municipal_access": new_user.municipal_access,
                 "status": "success",
                 "approved_by": current_admin.user_name,
                 "timestamp": datetime.utcnow().isoformat()
             }
         
         elif review.action == 'reject':
-            # ❌ Mark request as rejected
             reg_request.status = 'rejected'
             db.commit()
             
@@ -619,20 +600,14 @@ async def review_registration(
             }
         
         else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid action. Use 'approve' or 'reject'"
-            )
-            
+            raise HTTPException(status_code=400, detail="Invalid action. Use 'approve' or 'reject'")
+    
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error in review_registration: {str(e)}")
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error processing registration: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error processing registration: {str(e)}")
+
 
 
 @router.put("/registration-requests/{request_id}")
