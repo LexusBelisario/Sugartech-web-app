@@ -164,20 +164,21 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
 
     is_available = False
 
-    # 🔎 Check if province DB exists
+    # 🔎 Check if province DB exists (match prefix)
     if province_code:
         try:
             db_exists = auth_db.execute(
-                text("SELECT 1 FROM pg_database WHERE datname = :dbname"),
-                {"dbname": province_code}
+                text("SELECT datname FROM pg_database WHERE datname LIKE :dbname"),
+                {"dbname": f"{province_code}%"}
             ).fetchone()
+
             if db_exists:
-                # 🔎 Now check schema inside that DB
+                # 🔎 Now check schema inside that DB (match prefix)
                 prov_session = get_user_database_session(province_code)
                 try:
                     schema_exists = prov_session.execute(
-                        text("SELECT schema_name FROM information_schema.schemata WHERE schema_name = :schema"),
-                        {"schema": municipal_code}
+                        text("SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE :schema"),
+                        {"schema": f"{municipal_code}%"}
                     ).fetchone()
 
                     if schema_exists:
@@ -197,9 +198,9 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
             last_name=request.last_name,
             email=request.email,
             contact_number=request.contact_number,
-            requested_provincial_access=province_code,   # store code directly
-            requested_municipal_access=municipal_code,   # store code directly
-            requested_provincial_code=province_code,     # redundant but good for clarity
+            requested_provincial_access=province_code,   # only store PSA code
+            requested_municipal_access=municipal_code,   # only store PSA code
+            requested_provincial_code=province_code,
             requested_municipal_code=municipal_code,
             status="pending",
             is_available=is_available
@@ -240,7 +241,6 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to submit registration request: {str(e)}"
-
         )
 
 @router.get("/registration-status/{username}")
