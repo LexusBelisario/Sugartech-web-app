@@ -59,51 +59,52 @@ function RegisterPage() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-    const provinceObj = provinces.find((p) => p.code === formData.tentativeProvince);
-    const municipalObj =
-      municipalitiesByProvince[formData.tentativeProvince]?.find(
-        (m) => m.code === formData.tentativeMunicipal
-      );
+  const provinceObj = provinces.find((p) => p.code === formData.tentativeProvince);
+  const municipalObj =
+    municipalitiesByProvince[formData.tentativeProvince]?.find(
+      (m) => m.code === formData.tentativeMunicipal
+    );
 
     const requestData = {
-      username: formData.username,
-      first_name: formData.firstName,
-      last_name: formData.lastName,
-      email: formData.email,
-      password: formData.password,
-      contact_number: formData.contactNo,
-      requested_provincial_access: provinceObj?.name || "",
-      requested_municipal_access: municipalObj?.name || "",
-      requested_provincial_code: provinceObj?.code || "",
-      requested_municipal_code: municipalObj?.code || "",
-    };
-
-    try {
-      const res = await fetch(`${API_URL}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestData),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data?.detail || "Registration failed");
-        return;
-      }
-
-      alert("Registration request submitted! Please wait for admin approval.");
-      navigate("/login");
-    } catch (err) {
-      console.error("Registration error:", err);
-      alert("Failed to register. Try again later.");
-    } finally {
-      setLoading(false);
-    }
+    username: formData.username,
+    first_name: formData.firstName,
+    last_name: formData.lastName,
+    email: formData.email,
+    password: formData.password,
+    contact_number: formData.contactNo,
+    requested_provincial_access: provinceObj?.code || "",  // PSA code = database
+    requested_municipal_access: municipalObj?.code || "",  // PSA code = schema
+    requested_provincial_code: provinceObj?.code || "",
+    requested_municipal_code: municipalObj?.code || "",
   };
+
+  try {
+    const res = await fetch(`${API_URL}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestData),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data?.detail || "Registration failed");
+      return;
+    }
+
+    alert("Registration request submitted! Please wait for admin approval.");
+    navigate("/login");
+  } catch (err) {
+    console.error("Registration error:", err);
+    alert("Failed to register. Try again later.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">

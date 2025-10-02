@@ -15,7 +15,7 @@ load_dotenv()
 # Base for main DB models
 Base = declarative_base()
 
-# Supabase connection details (auth DB only)
+# Supabase connection details (auth DB only) NEED IMMODULARIZED
 DB_HOST = 'aws-1-ap-southeast-1.pooler.supabase.com'
 DB_PORT = '6543'
 DB_USER = 'postgres.ljmlswhybxcmwzdzuxhl'
@@ -59,8 +59,7 @@ def get_user_database_session(provincial_access: str) -> Session:
     try:
         # Build query with multiple matching options
         filters = [
-            Credentials.dbname == provincial_access,
-            Credentials.host == provincial_access
+            Credentials.dbname == provincial_access
         ]
         if provincial_access.isdigit():
             filters.append(Credentials.id == int(provincial_access))
