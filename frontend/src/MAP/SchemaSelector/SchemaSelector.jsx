@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { ApiService } from "../../api_service.js";
 import "./SchemaSelector.css";
 import { useSchema } from "../SchemaContext";
+import { useMap } from "react-leaflet";   // ✅ import Leaflet map hook
 
 const SchemaSelector = () => {
   const [schemas, setSchemas] = useState([]);
@@ -12,6 +13,7 @@ const SchemaSelector = () => {
   const [error, setError] = useState(null);
   const containerRef = useRef(null);
   const { setSchema } = useSchema();
+  const map = useMap();   // ✅ get Leaflet map instance
 
   useEffect(() => {
     // 🔑 Prevent Leaflet map zoom/pan when interacting with selector
@@ -40,7 +42,6 @@ const SchemaSelector = () => {
           setSchemas(data.schemas);
           setUserAccess(data.user_access);
 
-          // If user has access but no schemas (municipal_access is NULL)
           if (
             data.schemas.length === 0 &&
             data.user_access?.provincial_access
@@ -48,10 +49,7 @@ const SchemaSelector = () => {
             setError(
               `You have access to ${data.user_access.provincial_access} but no municipal access assigned.`
             );
-          }
-
-          // If user only has access to one schema, auto-select it
-          else if (data.schemas.length === 1) {
+          } else if (data.schemas.length === 1) {
             const singleSchema = data.schemas[0];
             setSelectedSchema(singleSchema);
             setSchema(singleSchema);
@@ -60,7 +58,6 @@ const SchemaSelector = () => {
       } catch (err) {
         console.error("❌ Failed to load schemas:", err);
 
-        // Handle 403 forbidden (pending approval)
         if (err.response?.status === 403) {
           setError(
             err.response?.data?.detail || "Access pending admin approval"
@@ -83,6 +80,30 @@ const SchemaSelector = () => {
     setSchema(schema);
   };
 
+  // ✅ Zoom effect: runs whenever a schema is selected
+  useEffect(() => {
+    if (!selectedSchema) return;
+
+    const fetchCentroidAndZoom = async () => {
+      try {
+        const res = await ApiService.get(
+          `/municipal-centroid?schema=${selectedSchema}`
+        );
+        if (res?.status === "success") {
+          const { x, y } = res;
+          console.log(`📍 Zooming to centroid of ${selectedSchema}: [${y}, ${x}]`);
+          map.flyTo([y, x], 13); // zoom level 13, adjust if needed
+        } else {
+          console.warn("⚠️ Centroid not found:", res);
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch centroid:", err);
+      }
+    };
+
+    fetchCentroidAndZoom();
+  }, [selectedSchema, map]);
+
   const getButtonTitle = () => {
     if (error) return "No access";
     if (loading) return "Loading...";
@@ -91,13 +112,10 @@ const SchemaSelector = () => {
   };
 
   const formatSchemaName = (schema) => {
-    // Handle comma format (already formatted)
     if (schema.includes(", ")) {
       return schema;
     }
 
-    // Convert underscore format to comma format
-    // e.g., "calauan_laguna" -> "Calauan, Laguna"
     const parts = schema.split("_");
     if (parts.length >= 2) {
       const municipality = parts.slice(0, -1).join(" ");
@@ -108,6 +126,7 @@ const SchemaSelector = () => {
     }
     return schema;
   };
+
   return (
     <div className="schema-selector-container" ref={containerRef}>
       <button
@@ -136,7 +155,6 @@ const SchemaSelector = () => {
             </button>
           </div>
 
-          {/* Show user access info */}
           {userAccess && (
             <div className="user-access-info">
               <small>
@@ -145,7 +163,6 @@ const SchemaSelector = () => {
             </div>
           )}
 
-          {/* Show schemas list or message */}
           {schemas.length > 0 ? (
             <ul className="schema-list">
               {schemas.map((schema) => (
@@ -170,7 +187,6 @@ const SchemaSelector = () => {
             </div>
           )}
 
-          {/* Show current selection */}
           {selectedSchema && (
             <div className="current-selection">
               <small>
