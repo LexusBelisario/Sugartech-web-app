@@ -1,6 +1,5 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 from auth.models import User
-from fastapi import HTTPException, status
 
 
 class AccessControl:
@@ -44,9 +43,9 @@ class AccessControl:
 
         # Special case: "ALL" → allow all municipalities under this province
         if user.municipal_access.strip().lower() == "all":
-            return sorted(all_schemas)
+            return sorted([s for s in all_schemas if s.startswith(user.provincial_access)])
 
-        # Otherwise, check by prefix (e.g. "PH0403406" → matches "PH0403406_Calauan")
+        # Otherwise, check by prefix (municipal code matches schema prefix)
         wanted_prefix = user.municipal_access
         matched = [s for s in all_schemas if s.startswith(wanted_prefix)]
         return sorted(matched)
@@ -62,7 +61,7 @@ class AccessControl:
 
         # "ALL" → allow any schema under this province
         if user.municipal_access.strip().lower() == "all":
-            return True
+            return schema.startswith(user.provincial_access)
 
         # Prefix-based match
         return schema.startswith(user.municipal_access)
@@ -87,20 +86,20 @@ class AccessControl:
         return "Invalid access configuration"
 
     @staticmethod
-    def get_allowed_schemas(user: User, all_schemas: List[str] = None) -> List[str]:
+    def get_allowed_schemas(user: User, all_schemas: Optional[List[str]] = None) -> List[str]:
         """
         Return a list of schemas this user is allowed to access.
-        If municipal_access is "ALL", return all available schemas (if provided).
+        If municipal_access is "ALL", return all available schemas under that province.
         """
         if not user.provincial_access or not user.municipal_access:
             return []
 
         if user.municipal_access.strip().lower() == "all":
             if all_schemas is not None:
-                return sorted(all_schemas)
+                return sorted([s for s in all_schemas if s.startswith(user.provincial_access)])
             return ["*"]  # wildcard marker
 
-        # Return only schemas starting with the PSA code
+        # Return only schemas starting with the municipal PSA code
         if all_schemas is not None:
             return sorted([s for s in all_schemas if s.startswith(user.municipal_access)])
 

@@ -1,13 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../css_files/animation.css";
 import { ArrowLeft } from "lucide-react";
 
 const RejectModal = ({ isVisible, onClose, onConfirm }) => {
-  const [modalClasses, setModalClasses] = useState(
-    isVisible ? "slide-in" : "slide-out"
-  );
+  const [modalClasses, setModalClasses] = useState("slide-out");
   const [selectedReason, setSelectedReason] = useState("");
   const [customReason, setCustomReason] = useState("");
+
+  useEffect(() => {
+    if (isVisible) {
+      setModalClasses("slide-in");
+    } else {
+      setModalClasses("slide-out");
+    }
+  }, [isVisible]);
 
   if (!isVisible) return null;
 
@@ -20,24 +26,23 @@ const RejectModal = ({ isVisible, onClose, onConfirm }) => {
 
   const handleModalBack = () => {
     setModalClasses("slide-out");
-    setTimeout(() => onClose(), 490);
+    setTimeout(() => {
+      setSelectedReason("");
+      setCustomReason("");
+      onClose();
+    }, 490);
   };
 
   const handleConfirm = () => {
     const reason = customReason.trim() || selectedReason;
-    if (!reason) {
-      alert("Please select or enter a reason before rejecting.");
-      return;
-    }
+    if (!reason) return;
     onConfirm(reason);
     handleModalBack();
   };
 
   return (
     <div
-      className={`fixed inset-0 bg-black bg-opacity-25 flex justify-end z-50 ${
-        isVisible ? "opacity-100" : "opacity-0"
-      }`}
+      className={`fixed inset-0 bg-black bg-opacity-25 flex justify-end z-50`}
       onClick={handleModalBack}
     >
       <div
@@ -62,7 +67,7 @@ const RejectModal = ({ isVisible, onClose, onConfirm }) => {
         <select
           value={selectedReason}
           onChange={(e) => setSelectedReason(e.target.value)}
-          className="w-full border-2 rounded-lg px-3 py-2 mb-4"
+          className="w-full border-2 rounded-lg px-3 py-2 mb-4 focus:ring-2 focus:ring-[#00519C] focus:border-[#00519C] outline-none"
         >
           <option value="">-- Choose a reason --</option>
           {rejectionReasons.map((r, i) => (
@@ -80,7 +85,7 @@ const RejectModal = ({ isVisible, onClose, onConfirm }) => {
           value={customReason}
           onChange={(e) => setCustomReason(e.target.value)}
           rows={3}
-          className="w-full border-2 rounded-lg px-3 py-2 mb-4"
+          className="w-full border-2 rounded-lg px-3 py-2 mb-4 focus:ring-2 focus:ring-[#00519C] focus:border-[#00519C] outline-none"
           placeholder="Type custom reason here..."
         />
 
@@ -94,7 +99,12 @@ const RejectModal = ({ isVisible, onClose, onConfirm }) => {
           </button>
           <button
             onClick={handleConfirm}
-            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            disabled={!selectedReason && !customReason.trim()}
+            className={`px-6 py-2 rounded-lg text-white ${
+              !selectedReason && !customReason.trim()
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-red-600 hover:bg-red-700"
+            }`}
           >
             Confirm Reject
           </button>

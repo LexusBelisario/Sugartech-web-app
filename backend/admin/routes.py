@@ -39,8 +39,10 @@ class RegistrationReviewRequest(BaseModel):
     municipal_access: Optional[str] = None
 
 def strip_suffix(code: str | None) -> str | None:    #nirereturn lang dto ung PSA Code lang example, PH0403406_% (ang ireread lang nya us ung PSA Code)
-    if not code: 
+    if not code:
         return code
+    if code.strip().lower() == "all":
+        return "ALL"
     return code.split("_")[0]
 
 # Admin dashboard endpoint
@@ -61,13 +63,21 @@ async def admin_dashboard(
         "timestamp": datetime.utcnow().isoformat()
     }
 
-@router.get("/users", response_model=List[UserResponse])
-async def get_all_users(current_admin: Admin = Depends(get_current_admin), db: Session = Depends(get_auth_db)):
+@router.get("/users")
+async def get_all_users(
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_auth_db)
+):
     users = db.query(User).all()
     return [
         {
             "id": u.id,
             "user_name": u.user_name,
+            "first_name": u.first_name,
+            "last_name": u.last_name,
+            "full_name": f"{u.first_name or ''} {u.last_name or ''}".strip() or None,
+            "email": u.email,
+            "contact_number": u.contact_number,
             "provincial_access": strip_suffix(u.provincial_access),
             "municipal_access": strip_suffix(u.municipal_access)
         }
@@ -246,12 +256,20 @@ async def get_all_users_and_requests(
                 "last_name": user.last_name,
                 "email": user.email,
                 "contact_number": user.contact_number,
-                "provincial_access": user.provincial_access,
-                "municipal_access": user.municipal_access,
-                "has_full_access": bool(user.provincial_access and user.municipal_access),
+                "provincial_access": strip_suffix(user.provincial_access),
+                "municipal_access": strip_suffix(user.municipal_access),
+                "has_full_access": (
+                    user.municipal_access and user.municipal_access.strip().lower() == "all"
+                ),
+                "access_description": (
+                    "All municipalities under this province"
+                    if user.municipal_access and user.municipal_access.strip().lower() == "all"
+                    else strip_suffix(user.municipal_access)
+                ),
                 "status": "active"
             } for user in all_users
         ],
+
         "rejected_requests": [
             {
                 "id": req.id,
