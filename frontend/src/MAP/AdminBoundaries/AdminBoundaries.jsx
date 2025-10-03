@@ -11,8 +11,8 @@ function AdminBoundaries() {
     if (!map) return;
 
     // --- Define boundary layers (no minZoom here) ---
-    const municipalBoundary = L.tileLayer.wms("http://104.199.142.35:8080/geoserver/MapBoundaries/wms", {
-      layers: "MapBoundaries:ph_municipalmap",
+const municipalBoundary = L.tileLayer.wms("http://104.199.142.35:8080/geoserver/MapBoundaries/wms", {
+      layers: "MapBoundaries:PH_MunicipalMap",
       format: "image/png",
       transparent: true,
       version: "1.1.1",
