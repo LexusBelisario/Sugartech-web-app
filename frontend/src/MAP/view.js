@@ -16,12 +16,15 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
   const url = `${API}/all-barangays?${query}`;
 
   try {
-    const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+    const token =
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("accessToken");
+
     const response = await fetch(url, {
       headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-      }
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
     });
 
     if (!response.ok) {
@@ -37,12 +40,26 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
     parcelLayers.forEach(({ layer }) => map.removeLayer(layer));
     parcelLayers.length = 0;
 
-    // add new parcels (unstyled, no click handlers)
-    L.geoJSON(data, {
+    // create new layer but don't zoom automatically
+    const newLayer = L.geoJSON(data, {
       onEachFeature: (feature, layer) => {
         parcelLayers.push({ feature, layer });
+      },
+    });
+
+    newLayer.addTo(map);
+
+    // ✅ only zoom to bounds if schemas were explicitly provided
+    if (selectedSchemas && selectedSchemas.length > 0) {
+      try {
+        const bounds = newLayer.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds);
+        }
+      } catch (err) {
+        console.warn("⚠️ Could not fit bounds:", err);
       }
-    }).addTo(map);
+    }
 
     // 🔔 notify AdminBoundaries that parcels are ready
     if (window.onParcelsLoaded) {
@@ -58,17 +75,21 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
 
 // === Function to reload a single parcel table ===
 export async function loadGeoTable(map, schema, table) {
-  const url = `${API}/single-table?schema=${encodeURIComponent(schema)}&table=${encodeURIComponent(table)}`;
+  const url = `${API}/single-table?schema=${encodeURIComponent(
+    schema
+  )}&table=${encodeURIComponent(table)}`;
 
   if (window.setLoadingProgress) window.setLoadingProgress(true);
 
   try {
-    const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+    const token =
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("accessToken");
     const response = await fetch(url, {
       headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-      }
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
     });
 
     if (!response.ok) {
@@ -77,13 +98,15 @@ export async function loadGeoTable(map, schema, table) {
 
     const data = await response.json();
 
+    
+
     const toRemove = parcelLayers.filter(
-      p =>
+      (p) =>
         p.feature.properties.source_table === table &&
         p.feature.properties.source_schema === schema
     );
 
-    toRemove.forEach(p => map.removeLayer(p.layer));
+    toRemove.forEach((p) => map.removeLayer(p.layer));
     for (let i = parcelLayers.length - 1; i >= 0; i--) {
       const f = parcelLayers[i].feature.properties;
       if (f.source_table === table && f.source_schema === schema) {
@@ -91,12 +114,24 @@ export async function loadGeoTable(map, schema, table) {
       }
     }
 
-    // add new parcels (unstyled, no click handlers)
-    L.geoJSON(data, {
+    // create new layer but don't zoom automatically
+    const newLayer = L.geoJSON(data, {
       onEachFeature: (feature, layer) => {
         parcelLayers.push({ feature, layer });
+      },
+    });
+
+    newLayer.addTo(map);
+
+    // ✅ zoom to updated table bounds
+    try {
+      const bounds = newLayer.getBounds();
+      if (bounds.isValid()) {
+        map.fitBounds(bounds);
       }
-    }).addTo(map);
+    } catch (err) {
+      console.warn("⚠️ Could not fit bounds:", err);
+    }
 
     // 🔔 notify AdminBoundaries that parcels are ready
     if (window.onParcelsLoaded) {

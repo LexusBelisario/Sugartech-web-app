@@ -92,7 +92,7 @@ const SchemaSelector = () => {
         if (res?.status === "success") {
           const { x, y } = res;
           console.log(`📍 Zooming to centroid of ${selectedSchema}: [${y}, ${x}]`);
-          map.flyTo([y, x], 12.5); // zoom level 13, adjust if needed
+          map.flyTo([y, x], 13); // zoom level 13, adjust if needed
         } else {
           console.warn("⚠️ Centroid not found:", res);
         }

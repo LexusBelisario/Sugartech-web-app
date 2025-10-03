@@ -9,6 +9,7 @@ function BaseMapSelector() {
   const map = useMap();
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeBase, setActiveBase] = useState("google");
+  const [orthoOn, setOrthoOn] = useState(false);
 
   useEffect(() => {
     if (!map) return;
@@ -77,7 +78,7 @@ function BaseMapSelector() {
     };
 
     // default layer
-    google.addTo(map);
+    google.addTo(map).bringToBack();
 
     return () => {
       Object.values(window._basemapLayers).forEach((layer) => {
@@ -95,7 +96,7 @@ function BaseMapSelector() {
   const switchBase = (key) => {
     if (!map || !window._basemapLayers) return;
 
-    // remove current
+    // remove current base (not orthophotos)
     if (activeBase && window._basemapLayers[activeBase]) {
       const currentLayer = window._basemapLayers[activeBase];
       if (Array.isArray(currentLayer)) {
@@ -105,14 +106,28 @@ function BaseMapSelector() {
       }
     }
 
-    // add new
+    // add new base
     const newLayer = window._basemapLayers[key];
     if (Array.isArray(newLayer)) {
-      newLayer.forEach((l) => l.addTo(map));
+      newLayer.forEach((l) => l.addTo(map).bringToBack());
     } else {
-      newLayer.addTo(map);
+      newLayer.addTo(map).bringToBack();
     }
     setActiveBase(key);
+  };
+
+  const toggleOrtho = () => {
+    if (!map || !window._basemapLayers) return;
+
+    if (orthoOn) {
+      // turn off
+      window._basemapLayers.geoserver.forEach((l) => map.removeLayer(l));
+      setOrthoOn(false);
+    } else {
+      // turn on
+      window._basemapLayers.geoserver.forEach((l) => l.addTo(map).bringToBack());
+      setOrthoOn(true);
+    }
   };
 
   // --- Control button ---
@@ -181,13 +196,14 @@ function BaseMapSelector() {
           <label htmlFor="layer-satellite"> Google Satellite</label>
         </div>
 
+        <hr />
+
         <div>
           <input
             id="layer-orthophotos"
-            type="radio"
-            name="basemap"
-            checked={activeBase === "geoserver"}
-            onChange={() => switchBase("geoserver")}
+            type="checkbox"
+            checked={orthoOn}
+            onChange={toggleOrtho}
           />
           <label htmlFor="layer-orthophotos"> Orthophotos</label>
         </div>
