@@ -30,7 +30,7 @@ class RegisterRequest(BaseModel):
     email: str
     contact_number: str | None = None
     requested_provincial_access: str | None = None   # Province PSGC code (e.g., PH04034)
-    requested_municipal_access: str | None = None 
+    requested_municipal_access: str | None = None    # Municipality PSGC code or "ALL"
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -84,6 +84,9 @@ def create_access_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+# =======================
+# Login route
+# =======================
 @router.post("/login", response_model=TokenResponse)
 async def login(request: LoginRequest, auth_db: Session = Depends(get_auth_db)):
     # 🔹 Admin login
@@ -146,6 +149,9 @@ async def login(request: LoginRequest, auth_db: Session = Depends(get_auth_db)):
         "allowed_schemas": access_info.get("allowed_schemas", [])
     }
 
+# =======================
+# Register route
+# =======================
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth_db)):
     # ✅ Validate password
@@ -164,7 +170,7 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
 
     is_available = False
 
-    # 🔎 Check if province DB exists (match prefix)
+    # 🔎 Province DB must exist
     if province_code:
         try:
             db_exists = auth_db.execute(
@@ -173,18 +179,22 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
             ).fetchone()
 
             if db_exists:
-                # 🔎 Now check schema inside that DB (match prefix)
-                prov_session = get_user_database_session(province_code)
-                try:
-                    schema_exists = prov_session.execute(
-                        text("SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE :schema"),
-                        {"schema": f"{municipal_code}%"}
-                    ).fetchone()
+                # If "ALL", we don't need to check schema existence
+                if municipal_code and municipal_code.strip().lower() == "all":
+                    is_available = True
+                else:
+                    # 🔎 Check schema inside province DB
+                    prov_session = get_user_database_session(province_code)
+                    try:
+                        schema_exists = prov_session.execute(
+                            text("SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE :schema"),
+                            {"schema": f"{municipal_code}%"}
+                        ).fetchone()
 
-                    if schema_exists:
-                        is_available = True
-                finally:
-                    prov_session.close()
+                        if schema_exists:
+                            is_available = True
+                    finally:
+                        prov_session.close()
         except Exception as e:
             print(f"❌ DB/Schema check failed for {province_code}.{municipal_code}: {e}")
             is_available = False
@@ -198,8 +208,8 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
             last_name=request.last_name,
             email=request.email,
             contact_number=request.contact_number,
-            requested_provincial_access=province_code,   # only store PSA code
-            requested_municipal_access=municipal_code,   # only store PSA code
+            requested_provincial_access=province_code,   # PSA code only
+            requested_municipal_access=municipal_code,   # PSA code or "ALL"
             requested_provincial_code=province_code,
             requested_municipal_code=municipal_code,
             status="pending",
@@ -243,6 +253,9 @@ async def register(request: RegisterRequest, auth_db: Session = Depends(get_auth
             detail=f"Failed to submit registration request: {str(e)}"
         )
 
+# =======================
+# Registration status check
+# =======================
 @router.get("/registration-status/{username}")
 async def check_registration_status(username: str, auth_db: Session = Depends(get_auth_db)):
     reg_request = (

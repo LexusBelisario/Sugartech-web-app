@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../css_files/animation.css";
-import { ArrowLeft, User, ChevronDown } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import SuccessModal from "./sucess_modal";
 import { API_URL } from "../../../config";
 
@@ -13,33 +13,32 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
   );
   const [errors, setErrors] = useState({});
   const [provinces, setProvinces] = useState([]);
-  const [municipalitiesByProvince, setMunicipalitiesByProvince] = useState({}); // Changed to object
+  const [municipalitiesByProvince, setMunicipalitiesByProvince] = useState({});
   const [municipalities, setMunicipalities] = useState([]);
 
   const isEditMode = !!user;
 
   const [formData, setFormData] = useState({
     name: "",
-    firstName: "", // Add first name
-    lastName: "", // Add last name
+    firstName: "",
+    lastName: "",
     email: "",
     contactNo: "",
     provinceAccess: "",
     municipalAccess: "",
   });
 
-  // 🔹 Fetch provinces and municipalities when modal opens
+  // 🔹 Fetch provinces + municipalities
   useEffect(() => {
     const fetchLocations = async () => {
       try {
         const token = localStorage.getItem("access_token");
         const res = await fetch(`${API_URL}/api/admin/locations`, {
-          headers: { "Authorization": `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
-        
+
         if (res.ok) {
           const data = await res.json();
-          console.log("Locations data:", data); // Debug
           setProvinces(data.provinces || []);
           setMunicipalitiesByProvince(data.municipalities || {});
         } else {
@@ -49,7 +48,7 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
         console.error("Error fetching locations:", err);
       }
     };
-    
+
     if (isVisible) {
       fetchLocations();
     }
@@ -64,7 +63,7 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
     }
   }, [formData.provinceAccess, municipalitiesByProvince]);
 
-  // 🔹 Populate form when editing
+  // 🔹 Populate form in edit mode
   useEffect(() => {
     if (user) {
       setFormData({
@@ -73,8 +72,10 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
         lastName: user.last_name || "",
         email: user.email || "",
         contactNo: user.contact_number || user.contact_no || "",
-        provinceAccess: user.provincial_access || user.requested_provincial_access || "",
-        municipalAccess: user.municipal_access || user.requested_municipal_access || "",
+        provinceAccess:
+          user.provincial_access || user.requested_provincial_access || "",
+        municipalAccess:
+          user.municipal_access || user.requested_municipal_access || "",
       });
     }
   }, [user]);
@@ -104,19 +105,15 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      const confirmMessage = isEditMode
-        ? `Update ${formData.firstName} ${formData.lastName}'s information?`
-        : `Add ${formData.firstName} ${formData.lastName} as a new user?`;
-
-      if (window.confirm(confirmMessage)) {
-        // Pass the properly formatted data
-        onSave({
-          ...formData,
-          provinceAccess: formData.provinceAccess || null,
-          municipalAccess: formData.municipalAccess || null
-        });
-        openSuccessModal();
-      }
+      onSave({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        contact_number: formData.contactNo,
+        provincial_access: formData.provinceAccess || null,
+        municipal_access: formData.municipalAccess || null,
+      });
+      openSuccessModal();
     }
   };
 
@@ -165,14 +162,7 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
                 : "Fill out the form to add a user"}
             </p>
 
-            {/* Avatar placeholder */}
-            <div className="flex items-center mb-6">
-              <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
-                <User size={40} className="text-gray-500" />
-              </div>
-            </div>
-
-            {/* Username (read-only for edit) */}
+            {/* Username (read-only in edit) */}
             {isEditMode && (
               <div className="mb-4">
                 <label className="block font-semibold text-gray-700">
@@ -269,8 +259,8 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
                 >
                   <option value="">No Access</option>
                   {provinces.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
+                    <option key={p.code} value={p.code}>
+                      {p.name}
                     </option>
                   ))}
                 </select>
@@ -285,19 +275,21 @@ const UserModal = ({ isVisible, onClose, user = null, onSave }) => {
               </label>
               <div className="relative">
                 <select
-                  name="municipalAccess"
-                  value={formData.municipalAccess}
-                  onChange={handleChange}
-                  className="w-full border-2 rounded-lg px-3 py-2 appearance-none"
-                  disabled={!formData.provinceAccess}
-                >
-                  <option value="">No Access</option>
-                  {municipalities.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
+  name="municipalAccess"
+  value={formData.municipalAccess}
+  onChange={handleChange}
+  className="w-full border-2 rounded-lg px-3 py-2 appearance-none"
+  disabled={!formData.provinceAccess}
+>
+  <option value="">No Access</option>
+  <option value="ALL">All Municipalities</option> {/* ✅ Added */}
+  {municipalities.map((m) => (
+    <option key={m.code} value={m.code}>
+      {m.name}
+    </option>
+  ))}
+</select>
+
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
               </div>
             </div>
