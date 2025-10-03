@@ -147,7 +147,7 @@ function AdminBoundaries() {
 
         const panel = L.DomUtil.create("div", "boundary-panel hidden", container);
         panel.innerHTML = `
-          <h4>Administrative Boundaries</h4>
+          <h4>Admin Boundaries</h4>
           <div><input type="checkbox" id="municipal" checked/> <label for="municipal">Municipal Boundary</label></div>
           <div><input type="checkbox" id="barangay" checked/> <label for="barangay">Barangay Boundary</label></div>
           <div><input type="checkbox" id="section" checked/> <label for="section">Section Boundary</label></div>
