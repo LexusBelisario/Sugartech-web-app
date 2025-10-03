@@ -9,10 +9,6 @@ function BaseMapSelector() {
   const map = useMap();
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeBase, setActiveBase] = useState("google");
-  const [aerialOn, setAerialOn] = useState(false);
-  const [municipalOn, setMunicipalOn] = useState(false);
-  const [barangayOn, setBarangayOn] = useState(false);
-  const [sectionOn, setSectionOn] = useState(false);
 
   useEffect(() => {
     if (!map) return;
@@ -38,56 +34,7 @@ function BaseMapSelector() {
       maxZoom: 25,
     });
 
-    // --- Municipal boundary ---
-    const municipalBoundary = L.tileLayer.wms(
-      "http://104.199.142.35:8080/geoserver/MapBoundaries/wms",
-      {
-        layers: "MapBoundaries:ph_municipalmap",
-        format: "image/png",
-        transparent: true,
-        tiled: false,
-        version: "1.1.1",
-        crs: L.CRS.EPSG4326,
-        attribution: "Municipal Boundary",
-      }
-    );
-
-    // --- Barangay boundary ---
-    const barangayBoundary = L.tileLayer.wms(
-      "http://104.199.142.35:8080/geoserver/MapBoundaries/wms",
-      {
-        layers: "MapBoundaries:BarangayBoundary",
-        format: "image/png",
-        transparent: true,
-        tiled: false,
-        tileSize: 4096,
-        version: "1.1.1",
-        crs: L.CRS.EPSG4326,
-        attribution: "Barangay Boundary",
-        minZoom: 13,
-        maxZoom: 15,
-      }
-    );
-
-    // --- Section boundary ---
-    const sectionBoundary = L.tileLayer.wms(
-      "http://104.199.142.35:8080/geoserver/MapBoundaries/wms",
-      {
-        layers: "MapBoundaries:SectionBoundary",
-        format: "image/png",
-        transparent: true,
-        tiled: false,
-        tileSize: 4096,
-        version: "1.1.1",
-        crs: L.CRS.EPSG4326,
-        attribution: "Section Boundary",
-        minZoom: 16,
-        maxZoom: 25,
-      }
-    );
-
-
-    // --- Other WMTS (orthophotos) ---
+    // --- WMTS Orthophotos ---
     const geoserver_kanluran = L.tileLayer.wmts(
       "http://3.111.145.107/geoserver/gwc/service/wmts",
       {
@@ -121,17 +68,15 @@ function BaseMapSelector() {
       }
     );
 
-    // Store globally
+    // store globally
     window._basemapLayers = {
       osm,
       google,
       satellite,
       geoserver: [geoserver_kanluran, geoserver_silangan, geoserver_masiit],
-      municipalBoundary,
-      barangayBoundary,
-      sectionBoundary,
     };
 
+    // default layer
     google.addTo(map);
 
     return () => {
@@ -149,6 +94,8 @@ function BaseMapSelector() {
   // --- Switchers ---
   const switchBase = (key) => {
     if (!map || !window._basemapLayers) return;
+
+    // remove current
     if (activeBase && window._basemapLayers[activeBase]) {
       const currentLayer = window._basemapLayers[activeBase];
       if (Array.isArray(currentLayer)) {
@@ -157,6 +104,8 @@ function BaseMapSelector() {
         map.removeLayer(currentLayer);
       }
     }
+
+    // add new
     const newLayer = window._basemapLayers[key];
     if (Array.isArray(newLayer)) {
       newLayer.forEach((l) => l.addTo(map));
@@ -166,37 +115,7 @@ function BaseMapSelector() {
     setActiveBase(key);
   };
 
-  const toggleMunicipal = () => {
-    if (!map) return;
-    if (municipalOn) {
-      map.removeLayer(window._basemapLayers.municipalBoundary);
-    } else {
-      window._basemapLayers.municipalBoundary.addTo(map);
-    }
-    setMunicipalOn(!municipalOn);
-  };
-
-  const toggleBarangay = () => {
-    if (!map) return;
-    if (barangayOn) {
-      map.removeLayer(window._basemapLayers.barangayBoundary);
-    } else {
-      window._basemapLayers.barangayBoundary.addTo(map);
-    }
-    setBarangayOn(!barangayOn);
-  };
-
-  const toggleSection = () => {
-    if (!map) return;
-    if (sectionOn) {
-      map.removeLayer(window._basemapLayers.sectionBoundary);
-    } else {
-      window._basemapLayers.sectionBoundary.addTo(map);
-    }
-    setSectionOn(!sectionOn);
-  };
-
-  // --- Control button for opening panel ---
+  // --- Control button ---
   useEffect(() => {
     if (!map) return;
     const BasemapControl = L.Control.extend({
@@ -264,32 +183,13 @@ function BaseMapSelector() {
 
         <div>
           <input
-            id="layer-municipal"
-            type="checkbox"
-            checked={municipalOn}
-            onChange={toggleMunicipal}
+            id="layer-orthophotos"
+            type="radio"
+            name="basemap"
+            checked={activeBase === "geoserver"}
+            onChange={() => switchBase("geoserver")}
           />
-          <label htmlFor="layer-municipal"> Municipal Boundary + Labels</label>
-        </div>
-
-        <div>
-          <input
-            id="layer-barangay"
-            type="checkbox"
-            checked={barangayOn}
-            onChange={toggleBarangay}
-          />
-          <label htmlFor="layer-barangay"> Barangay Boundary + Labels</label>
-        </div>
-
-        <div>
-          <input
-            id="layer-section"
-            type="checkbox"
-            checked={sectionOn}
-            onChange={toggleSection}
-          />
-          <label htmlFor="layer-section"> Section Boundary</label>
+          <label htmlFor="layer-orthophotos"> Orthophotos</label>
         </div>
       </div>
     )

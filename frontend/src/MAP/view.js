@@ -3,14 +3,6 @@ export const parcelLayers = [];
 import API from "../api";
 window.parcelLayers = parcelLayers;
 
-// === Default style applied to parcels ===
-const defaultParcelStyle = {
-  color: "black",
-  weight: 1,
-  fillColor: "black",
-  fillOpacity: 0.1,
-};
-
 // === Function to load all parcel features from selected schemas ===
 export async function loadAllGeoTables(map, selectedSchemas = []) {
   if (!selectedSchemas.length) {
@@ -21,10 +13,9 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
   if (window.setLoadingProgress) window.setLoadingProgress(true);
 
   const query = selectedSchemas.map(s => `schemas=${encodeURIComponent(s)}`).join("&");
-  const url = `${API}/all-barangays?${query}`; // ✅ Add API prefix manually
+  const url = `${API}/all-barangays?${query}`;
 
   try {
-    // ✅ Use fetch directly
     const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
     const response = await fetch(url, {
       headers: {
@@ -46,27 +37,17 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
     parcelLayers.forEach(({ layer }) => map.removeLayer(layer));
     parcelLayers.length = 0;
 
-    // add new parcels
+    // add new parcels (unstyled, no click handlers)
     L.geoJSON(data, {
-      style: defaultParcelStyle,
       onEachFeature: (feature, layer) => {
         parcelLayers.push({ feature, layer });
-
-        layer.on("click", () => {
-          parcelLayers.forEach(({ layer: l }) => l.setStyle(defaultParcelStyle));
-          layer.setStyle({
-            fillColor: "white",
-            color: "black",
-            weight: 2.5,
-            fillOpacity: 0.5,
-          });
-
-          if (document.getElementById("infoPopup") && window.populateParcelInfo) {
-            window.populateParcelInfo(feature.properties);
-          }
-        });
       }
     }).addTo(map);
+
+    // 🔔 notify AdminBoundaries that parcels are ready
+    if (window.onParcelsLoaded) {
+      window.onParcelsLoaded();
+    }
 
     if (window.setLoadingProgress) window.setLoadingProgress(false);
   } catch (err) {
@@ -82,7 +63,6 @@ export async function loadGeoTable(map, schema, table) {
   if (window.setLoadingProgress) window.setLoadingProgress(true);
 
   try {
-    // ✅ Use fetch directly
     const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
     const response = await fetch(url, {
       headers: {
@@ -111,26 +91,17 @@ export async function loadGeoTable(map, schema, table) {
       }
     }
 
+    // add new parcels (unstyled, no click handlers)
     L.geoJSON(data, {
-      style: defaultParcelStyle,
       onEachFeature: (feature, layer) => {
         parcelLayers.push({ feature, layer });
-
-        layer.on("click", () => {
-          parcelLayers.forEach(({ layer: l }) => l.setStyle(defaultParcelStyle));
-          layer.setStyle({
-            fillColor: "white",
-            color: "black",
-            weight: 2.5,
-            fillOpacity: 0.5,
-          });
-
-          if (document.getElementById("infoPopup") && window.populateParcelInfo) {
-            window.populateParcelInfo(feature.properties);
-          }
-        });
       }
     }).addTo(map);
+
+    // 🔔 notify AdminBoundaries that parcels are ready
+    if (window.onParcelsLoaded) {
+      window.onParcelsLoaded();
+    }
 
     if (window.setLoadingProgress) window.setLoadingProgress(false);
   } catch (err) {
