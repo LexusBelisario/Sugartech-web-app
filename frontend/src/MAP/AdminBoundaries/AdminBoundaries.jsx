@@ -1,16 +1,21 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./AdminBoundaries.css";
+import BoundaryLayers from "./BoundaryLayers";
 
 function AdminBoundaries() {
   const map = useMap();
 
+  // ✅ Checkbox states (for integration with BoundaryLayers)
+  const [showBarangay, setShowBarangay] = useState(true);
+  const [showSection, setShowSection] = useState(true);
+
   useEffect(() => {
     if (!map) return;
 
-    // --- Define boundary layers ---
+    // --- Define WMS (municipal only, unchanged)
     const municipalBoundary = L.tileLayer.wms("http://104.199.142.35:8080/geoserver/MapBoundaries/wms", {
       layers: "MapBoundaries:PH_MunicipalMap",
       format: "image/png",
@@ -19,31 +24,9 @@ function AdminBoundaries() {
       crs: L.CRS.EPSG4326,
     });
 
-    const barangayBoundary = L.tileLayer.wms("http://104.199.142.35:8080/geoserver/MapBoundaries/wms", {
-      layers: "MapBoundaries:BarangayBoundary",
-      format: "image/png",
-      transparent: true,
-      version: "1.1.1",
-      tileSize: 4096,
-      crs: L.CRS.EPSG4326,
-    });
-
-    const sectionBoundary = L.tileLayer.wms("http://104.199.142.35:8080/geoserver/MapBoundaries/wms", {
-      layers: "MapBoundaries:SectionBoundary",
-      format: "image/png",
-      transparent: true,
-      version: "1.1.1",
-      tileSize: 4096,
-      crs: L.CRS.EPSG4326,
-    });
-
     // --- Zoom thresholds ---
     const municipalMin = 6;
     const municipalMax = 14;
-    const barangayMin = 12;
-    const barangayMax = 15;
-    const sectionMin = 15;
-    const sectionMax = 16;
 
     // --- Parcel styles ---
     window.parcelOutlineColor = window.parcelOutlineColor || "black";
@@ -62,26 +45,20 @@ function AdminBoundaries() {
 
     function bindParcelClick(feature, layer) {
       layer.on("click", () => {
-        // Reset styles
-        window.parcelLayers.forEach(({ layer: l }) =>
-          l.setStyle(makeDefaultParcelStyle())
-        );
-
-        // Highlight clicked
+        window.parcelLayers.forEach(({ layer: l }) => l.setStyle(makeDefaultParcelStyle()));
         layer.setStyle({
           fillColor: "white",
           color: window.parcelOutlineColor,
           weight: 2.5,
           fillOpacity: 0.5,
         });
-
         if (document.getElementById("infoPopup") && window.populateParcelInfo) {
           window.populateParcelInfo(feature.properties);
         }
       });
     }
 
-    // --- Update visibility with zoom thresholds + toggle state ---
+    // --- Update visibility for WMS + Parcels ---
     function updateVisibility() {
       const zoom = map.getZoom();
 
@@ -91,22 +68,6 @@ function AdminBoundaries() {
         if (!map.hasLayer(municipalBoundary)) map.addLayer(municipalBoundary);
       } else if (map.hasLayer(municipalBoundary)) {
         map.removeLayer(municipalBoundary);
-      }
-
-      // Barangay
-      const barangayCheckbox = document.getElementById("barangay");
-      if (zoom >= barangayMin && zoom <= barangayMax && barangayCheckbox?.checked) {
-        if (!map.hasLayer(barangayBoundary)) map.addLayer(barangayBoundary);
-      } else if (map.hasLayer(barangayBoundary)) {
-        map.removeLayer(barangayBoundary);
-      }
-
-      // Section
-      const sectionCheckbox = document.getElementById("section");
-      if (zoom >= sectionMin && zoom <= sectionMax && sectionCheckbox?.checked) {
-        if (!map.hasLayer(sectionBoundary)) map.addLayer(sectionBoundary);
-      } else if (map.hasLayer(sectionBoundary)) {
-        map.removeLayer(sectionBoundary);
       }
 
       // Parcels
@@ -127,11 +88,8 @@ function AdminBoundaries() {
 
       // Keep proper stacking order
       if (map.hasLayer(municipalBoundary)) municipalBoundary.bringToFront();
-      if (map.hasLayer(barangayBoundary)) barangayBoundary.bringToFront();
-      if (map.hasLayer(sectionBoundary)) sectionBoundary.bringToFront();
     }
 
-    // --- Hook for parcels loading ---
     window.onParcelsLoaded = () => {
       updateVisibility();
     };
@@ -139,9 +97,9 @@ function AdminBoundaries() {
     map.on("zoomend", updateVisibility);
     updateVisibility();
 
-    window._boundaryLayers = { municipalBoundary, barangayBoundary, sectionBoundary };
+    window._boundaryLayers = { municipalBoundary };
 
-    // --- Custom control ---
+    // --- Control Panel ---
     const BoundaryControl = L.Control.extend({
       onAdd: () => {
         const container = L.DomUtil.create("div", "leaflet-bar boundary-control");
@@ -178,29 +136,22 @@ function AdminBoundaries() {
           panel.classList.toggle("hidden");
         };
 
-        // Layer toggles
+        // Toggle logic
         panel.querySelector("#municipal").onchange = (e) => {
           e.target.checked
             ? map.addLayer(municipalBoundary)
             : map.removeLayer(municipalBoundary);
         };
         panel.querySelector("#barangay").onchange = (e) => {
-          e.target.checked
-            ? map.addLayer(barangayBoundary)
-            : map.removeLayer(barangayBoundary);
+          setShowBarangay(e.target.checked);
         };
         panel.querySelector("#section").onchange = (e) => {
-          e.target.checked
-            ? map.addLayer(sectionBoundary)
-            : map.removeLayer(sectionBoundary);
+          setShowSection(e.target.checked);
         };
-
-        // Parcels toggle
         panel.querySelector("#parcels").onchange = () => {
           updateVisibility();
         };
 
-        // Outline color selector
         const colorSelect = panel.querySelector("#parcelColor");
         colorSelect.value = window.parcelOutlineColor;
         colorSelect.onchange = (e) => {
@@ -218,15 +169,13 @@ function AdminBoundaries() {
     return () => {
       map.removeControl(control);
       map.off("zoomend", updateVisibility);
-      Object.values(window._boundaryLayers).forEach((layer) => {
-        if (map.hasLayer(layer)) map.removeLayer(layer);
-      });
+      if (map.hasLayer(municipalBoundary)) map.removeLayer(municipalBoundary);
       delete window._boundaryLayers;
       delete window.onParcelsLoaded;
     };
   }, [map]);
 
-  // ✅ Smooth zoom animation only for programmatic zooms (no jittery scroll)
+  // ✅ Smooth zoom animation (unchanged)
   useEffect(() => {
     if (!map) return;
 
@@ -260,7 +209,8 @@ function AdminBoundaries() {
     };
   }, [map]);
 
-  return null;
+  // ✅ Inject our schema-based vector boundaries (Barangay + Section)
+  return <BoundaryLayers showBarangay={showBarangay} showSection={showSection} />;
 }
 
 export default AdminBoundaries;
