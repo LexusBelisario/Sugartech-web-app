@@ -21,7 +21,8 @@ const RejectModal = ({ isVisible, onClose, onConfirm }) => {
     "Province or Municipality chosen by the user is not available in the system",
     "Duplicate account found",
     "Invalid or incomplete information provided",
-    "Suspicious registration attempt"
+    "Suspicious registration attempt",
+    "Others"
   ];
 
   const handleModalBack = () => {
@@ -34,11 +35,15 @@ const RejectModal = ({ isVisible, onClose, onConfirm }) => {
   };
 
   const handleConfirm = () => {
-    const reason = customReason.trim() || selectedReason;
+    const reason =
+      selectedReason === "Others" ? customReason.trim() : selectedReason;
     if (!reason) return;
     onConfirm(reason);
     handleModalBack();
   };
+
+  // Determine if the custom input should be active
+  const isOthersSelected = selectedReason === "Others";
 
   return (
     <div
@@ -79,14 +84,23 @@ const RejectModal = ({ isVisible, onClose, onConfirm }) => {
 
         {/* Custom Textarea */}
         <label className="block font-semibold text-gray-700 mb-2">
-          Or Enter Custom Reason
+          Other Reason (only if “Others” is selected)
         </label>
         <textarea
           value={customReason}
           onChange={(e) => setCustomReason(e.target.value)}
           rows={3}
-          className="w-full border-2 rounded-lg px-3 py-2 mb-4 focus:ring-2 focus:ring-[#00519C] focus:border-[#00519C] outline-none"
-          placeholder="Type custom reason here..."
+          disabled={!isOthersSelected}
+          className={`w-full border-2 rounded-lg px-3 py-2 mb-4 outline-none ${
+            isOthersSelected
+              ? "focus:ring-2 focus:ring-[#00519C] focus:border-[#00519C]"
+              : "bg-gray-100 cursor-not-allowed text-gray-500"
+          }`}
+          placeholder={
+            isOthersSelected
+              ? "Type custom reason here..."
+              : "Select 'Others' to enable this field"
+          }
         />
 
         {/* Actions */}
@@ -99,9 +113,13 @@ const RejectModal = ({ isVisible, onClose, onConfirm }) => {
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!selectedReason && !customReason.trim()}
+            disabled={
+              !selectedReason ||
+              (selectedReason === "Others" && !customReason.trim())
+            }
             className={`px-6 py-2 rounded-lg text-white ${
-              !selectedReason && !customReason.trim()
+              !selectedReason ||
+              (selectedReason === "Others" && !customReason.trim())
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-red-600 hover:bg-red-700"
             }`}
