@@ -4,17 +4,53 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./LeafletWMTS";
 import "./BaseMapSelector.css";
+import { ApiService } from "../../api_service";
+import { useSchema } from "../SchemaContext";
 
 function BaseMapSelector() {
   const map = useMap();
+  const { schema } = useSchema();
+
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeBase, setActiveBase] = useState("google");
+  const [orthoLayer, setOrthoLayer] = useState(null);
+  const [orthoConfig, setOrthoConfig] = useState(null);
   const [orthoOn, setOrthoOn] = useState(false);
 
+  // ==========================================================
+  // 🛰️ Fetch Orthophoto Config (URL + Layer) from Backend
+  // ==========================================================
+  useEffect(() => {
+    if (!schema) return;
+
+    const fetchOrtho = async () => {
+      try {
+        const res = await ApiService.get(`/orthophoto-config?schema=${schema}`);
+        if (res.status === "success") {
+          setOrthoConfig({
+            url: res.Gsrvr_URL,
+            layer: res.Layer_Name,
+          });
+          console.log(`✅ Loaded orthophoto config for ${schema}:`, res);
+        } else {
+          console.warn(`⚠️ No orthophoto config found for ${schema}`);
+          setOrthoConfig(null);
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch orthophoto config:", err);
+        setOrthoConfig(null);
+      }
+    };
+
+    fetchOrtho();
+  }, [schema]);
+
+  // ==========================================================
+  // 🗺️ Initialize Basemap Layers
+  // ==========================================================
   useEffect(() => {
     if (!map) return;
 
-    // --- Base layers ---
     const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "© OpenStreetMap contributors",
       minZoom: 0,
@@ -35,102 +71,85 @@ function BaseMapSelector() {
       maxZoom: 25,
     });
 
-    // --- WMTS Orthophotos ---
-    const geoserver_kanluran = L.tileLayer.wmts(
-      "http://3.111.145.107/geoserver/gwc/service/wmts",
-      {
-        layer: "CL_OP:01_Kanluran",
-        tilematrixSet: "EPSG:900913",
-        format: "image/png",
-        style: "",
-        maxZoom: 24,
-      }
-    );
-
-    const geoserver_silangan = L.tileLayer.wmts(
-      "http://3.111.145.107/geoserver/gwc/service/wmts",
-      {
-        layer: "CL_OP:02_Silangan",
-        tilematrixSet: "EPSG:900913",
-        format: "image/png",
-        style: "",
-        maxZoom: 24,
-      }
-    );
-
-    const geoserver_masiit = L.tileLayer.wmts(
-      "http://3.111.145.107/geoserver/gwc/service/wmts",
-      {
-        layer: "CL_OP:12_Masiit",
-        tilematrixSet: "EPSG:900913",
-        format: "image/png",
-        style: "",
-        maxZoom: 24,
-      }
-    );
-
-    // store globally
-    window._basemapLayers = {
-      osm,
-      google,
-      satellite,
-      geoserver: [geoserver_kanluran, geoserver_silangan, geoserver_masiit],
-    };
-
-    // default layer
+    window._basemapLayers = { osm, google, satellite };
     google.addTo(map).bringToBack();
 
     return () => {
       Object.values(window._basemapLayers).forEach((layer) => {
-        if (Array.isArray(layer)) {
-          layer.forEach((l) => map.removeLayer(l));
-        } else if (map.hasLayer(layer)) {
-          map.removeLayer(layer);
-        }
+        if (map.hasLayer(layer)) map.removeLayer(layer);
       });
       delete window._basemapLayers;
     };
   }, [map]);
 
-  // --- Switchers ---
+  // ==========================================================
+  // 🧱 Create / Update Orthophoto Layer
+  // ==========================================================
+  useEffect(() => {
+    if (!map || !orthoConfig) return;
+
+    const { url, layer } = orthoConfig;
+
+    const wmtsLayer = L.tileLayer.wmts(url, {
+      layer: layer,
+      tilematrixSet: "EPSG:900913",
+      format: "image/png",
+      style: "",
+      maxZoom: 24,
+    });
+
+    setOrthoLayer(wmtsLayer);
+
+    // If user already toggled orthophoto on, show it immediately
+    if (orthoOn) {
+      wmtsLayer.addTo(map).bringToFront();
+    }
+
+    console.log(`🛰️ Orthophoto layer ready: ${layer}`);
+
+    return () => {
+      if (map.hasLayer(wmtsLayer)) map.removeLayer(wmtsLayer);
+    };
+  }, [map, orthoConfig]);
+
+  // ==========================================================
+  // 🔁 Switch Basemap (Orthophoto always stays on top)
+  // ==========================================================
   const switchBase = (key) => {
     if (!map || !window._basemapLayers) return;
 
-    // remove current base (not orthophotos)
     if (activeBase && window._basemapLayers[activeBase]) {
-      const currentLayer = window._basemapLayers[activeBase];
-      if (Array.isArray(currentLayer)) {
-        currentLayer.forEach((l) => map.removeLayer(l));
-      } else {
-        map.removeLayer(currentLayer);
-      }
+      map.removeLayer(window._basemapLayers[activeBase]);
     }
 
-    // add new base
     const newLayer = window._basemapLayers[key];
-    if (Array.isArray(newLayer)) {
-      newLayer.forEach((l) => l.addTo(map).bringToBack());
-    } else {
-      newLayer.addTo(map).bringToBack();
-    }
+    newLayer.addTo(map).bringToBack();
     setActiveBase(key);
+
+    // ✅ Keep orthophoto above basemap
+    if (orthoOn && orthoLayer) {
+      orthoLayer.bringToFront();
+    }
   };
 
+  // ==========================================================
+  // 🌍 Toggle Orthophoto Visibility
+  // ==========================================================
   const toggleOrtho = () => {
-    if (!map || !window._basemapLayers) return;
+    if (!map || !orthoLayer) return;
 
     if (orthoOn) {
-      // turn off
-      window._basemapLayers.geoserver.forEach((l) => map.removeLayer(l));
+      map.removeLayer(orthoLayer);
       setOrthoOn(false);
     } else {
-      // turn on
-      window._basemapLayers.geoserver.forEach((l) => l.addTo(map).bringToBack());
+      orthoLayer.addTo(map).bringToFront();
       setOrthoOn(true);
     }
   };
 
-  // --- Control button ---
+  // ==========================================================
+  // 🧭 Leaflet Control Button
+  // ==========================================================
   useEffect(() => {
     if (!map) return;
     const BasemapControl = L.Control.extend({
@@ -140,10 +159,6 @@ function BaseMapSelector() {
         button.innerHTML = "🗺️";
         L.DomEvent.disableClickPropagation(button);
         L.DomEvent.disableScrollPropagation(button);
-        button.ondblclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        };
         button.onclick = (e) => {
           e.preventDefault();
           setPanelOpen((open) => !open);
@@ -153,11 +168,12 @@ function BaseMapSelector() {
     });
     const control = new BasemapControl({ position: "topright" });
     map.addControl(control);
-    return () => {
-      map.removeControl(control);
-    };
+    return () => map.removeControl(control);
   }, [map]);
 
+  // ==========================================================
+  // 🧩 UI Panel
+  // ==========================================================
   return (
     panelOpen && (
       <div className="basemap-panel">
@@ -204,8 +220,11 @@ function BaseMapSelector() {
             type="checkbox"
             checked={orthoOn}
             onChange={toggleOrtho}
+            disabled={!orthoConfig}
           />
-          <label htmlFor="layer-orthophotos"> Orthophotos</label>
+          <label htmlFor="layer-orthophotos">
+            Orthophotos {orthoConfig ? "" : "(no config)"}
+          </label>
         </div>
       </div>
     )

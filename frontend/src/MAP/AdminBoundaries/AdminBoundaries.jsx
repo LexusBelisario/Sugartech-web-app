@@ -10,8 +10,8 @@ function AdminBoundaries() {
   useEffect(() => {
     if (!map) return;
 
-    // --- Define boundary layers (no minZoom here) ---
-const municipalBoundary = L.tileLayer.wms("http://104.199.142.35:8080/geoserver/MapBoundaries/wms", {
+    // --- Define boundary layers ---
+    const municipalBoundary = L.tileLayer.wms("http://104.199.142.35:8080/geoserver/MapBoundaries/wms", {
       layers: "MapBoundaries:PH_MunicipalMap",
       format: "image/png",
       transparent: true,
@@ -62,46 +62,51 @@ const municipalBoundary = L.tileLayer.wms("http://104.199.142.35:8080/geoserver/
 
     function bindParcelClick(feature, layer) {
       layer.on("click", () => {
-        // reset all parcels
+        // Reset styles
         window.parcelLayers.forEach(({ layer: l }) =>
           l.setStyle(makeDefaultParcelStyle())
         );
-        // highlight clicked
+
+        // Highlight clicked
         layer.setStyle({
           fillColor: "white",
           color: window.parcelOutlineColor,
           weight: 2.5,
           fillOpacity: 0.5,
         });
+
         if (document.getElementById("infoPopup") && window.populateParcelInfo) {
           window.populateParcelInfo(feature.properties);
         }
       });
     }
 
-    // --- Master visibility function (boundaries + parcels) ---
+    // --- Update visibility with zoom thresholds + toggle state ---
     function updateVisibility() {
       const zoom = map.getZoom();
 
       // Municipal
-      if (zoom >= municipalMin && zoom <= municipalMax) {
+      const municipalCheckbox = document.getElementById("municipal");
+      if (zoom >= municipalMin && zoom <= municipalMax && municipalCheckbox?.checked) {
         if (!map.hasLayer(municipalBoundary)) map.addLayer(municipalBoundary);
-      } else {
-        if (map.hasLayer(municipalBoundary)) map.removeLayer(municipalBoundary);
+      } else if (map.hasLayer(municipalBoundary)) {
+        map.removeLayer(municipalBoundary);
       }
 
       // Barangay
-      if (zoom >= barangayMin && zoom <= barangayMax) {
+      const barangayCheckbox = document.getElementById("barangay");
+      if (zoom >= barangayMin && zoom <= barangayMax && barangayCheckbox?.checked) {
         if (!map.hasLayer(barangayBoundary)) map.addLayer(barangayBoundary);
-      } else {
-        if (map.hasLayer(barangayBoundary)) map.removeLayer(barangayBoundary);
+      } else if (map.hasLayer(barangayBoundary)) {
+        map.removeLayer(barangayBoundary);
       }
 
       // Section
-      if (zoom >= sectionMin && zoom <= sectionMax) {
+      const sectionCheckbox = document.getElementById("section");
+      if (zoom >= sectionMin && zoom <= sectionMax && sectionCheckbox?.checked) {
         if (!map.hasLayer(sectionBoundary)) map.addLayer(sectionBoundary);
-      } else {
-        if (map.hasLayer(sectionBoundary)) map.removeLayer(sectionBoundary);
+      } else if (map.hasLayer(sectionBoundary)) {
+        map.removeLayer(sectionBoundary);
       }
 
       // Parcels
@@ -112,7 +117,7 @@ const municipalBoundary = L.tileLayer.wms("http://104.199.142.35:8080/geoserver/
           if (visible && parcelCheckbox?.checked) {
             layer.setStyle(makeDefaultParcelStyle());
             bindParcelClick(feature, layer);
-            layer.bringToBack(); // ✅ parcels always under boundaries
+            layer.bringToBack();
           } else {
             layer.setStyle(hiddenParcelStyle);
             layer.off("click");
@@ -120,22 +125,20 @@ const municipalBoundary = L.tileLayer.wms("http://104.199.142.35:8080/geoserver/
         });
       }
 
-      // enforce boundary order
+      // Keep proper stacking order
       if (map.hasLayer(municipalBoundary)) municipalBoundary.bringToFront();
       if (map.hasLayer(barangayBoundary)) barangayBoundary.bringToFront();
       if (map.hasLayer(sectionBoundary)) sectionBoundary.bringToFront();
     }
 
-    // --- Handler when parcels finish loading ---
+    // --- Hook for parcels loading ---
     window.onParcelsLoaded = () => {
       updateVisibility();
     };
 
-    // --- Listen for zoom changes ---
     map.on("zoomend", updateVisibility);
     updateVisibility();
 
-    // --- Store globally for toggling ---
     window._boundaryLayers = { municipalBoundary, barangayBoundary, sectionBoundary };
 
     // --- Custom control ---
@@ -175,7 +178,7 @@ const municipalBoundary = L.tileLayer.wms("http://104.199.142.35:8080/geoserver/
           panel.classList.toggle("hidden");
         };
 
-        // Boundary toggles
+        // Layer toggles
         panel.querySelector("#municipal").onchange = (e) => {
           e.target.checked
             ? map.addLayer(municipalBoundary)
@@ -220,6 +223,40 @@ const municipalBoundary = L.tileLayer.wms("http://104.199.142.35:8080/geoserver/
       });
       delete window._boundaryLayers;
       delete window.onParcelsLoaded;
+    };
+  }, [map]);
+
+  // ✅ Smooth zoom animation only for programmatic zooms (no jittery scroll)
+  useEffect(() => {
+    if (!map) return;
+
+    let lastZoom = map.getZoom();
+    let isUserZoom = false;
+
+    const handleUserZoom = () => {
+      isUserZoom = true;
+    };
+
+    const handleZoom = () => {
+      const targetZoom = map.getZoom();
+      if (!isUserZoom && targetZoom !== lastZoom) {
+        const currentCenter = map.getCenter();
+        map.flyTo(currentCenter, targetZoom, {
+          animate: true,
+          duration: 0.6,
+          easeLinearity: 0.25,
+        });
+      }
+      lastZoom = targetZoom;
+      isUserZoom = false;
+    };
+
+    map.on("zoomstart", handleUserZoom);
+    map.on("zoomend", handleZoom);
+
+    return () => {
+      map.off("zoomstart", handleUserZoom);
+      map.off("zoomend", handleZoom);
     };
   }, [map]);
 

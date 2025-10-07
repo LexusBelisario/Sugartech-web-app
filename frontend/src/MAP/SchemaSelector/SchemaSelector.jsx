@@ -84,24 +84,26 @@ const SchemaSelector = () => {
   useEffect(() => {
     if (!selectedSchema) return;
 
-    const fetchCentroidAndZoom = async () => {
+    const fetchBoundsAndZoom = async () => {
       try {
-        const res = await ApiService.get(
-          `/municipal-centroid?schema=${selectedSchema}`
-        );
-        if (res?.status === "success") {
-          const { x, y } = res;
-          console.log(`📍 Zooming to centroid of ${selectedSchema}: [${y}, ${x}]`);
-          map.flyTo([y, x], 13); // zoom level 13, adjust if needed
+        const res = await ApiService.get(`/municipal-centroid?schema=${selectedSchema}`);
+        if (res?.status === "success" && Array.isArray(res.bounds) && res.bounds.length === 4) {
+          const [xmin, ymin, xmax, ymax] = res.bounds;
+          const bounds = [
+            [ymin, xmin],
+            [ymax, xmax]
+          ];
+          console.log(`📦 Zooming to bounds of ${selectedSchema}:`, bounds);
+          map.fitBounds(bounds, { padding: [50, 50] });
         } else {
-          console.warn("⚠️ Centroid not found:", res);
+          console.warn("⚠️ Bounds not found or invalid:", res);
         }
       } catch (err) {
-        console.error("❌ Failed to fetch centroid:", err);
+        console.error("❌ Failed to fetch bounds:", err);
       }
     };
 
-    fetchCentroidAndZoom();
+    fetchBoundsAndZoom();
   }, [selectedSchema, map]);
 
   const getButtonTitle = () => {
@@ -201,3 +203,4 @@ const SchemaSelector = () => {
 };
 
 export default SchemaSelector;
+    
