@@ -5,6 +5,8 @@ import TBLandLegendTools from "./TBLandLegendTools.jsx";
 import TBThematicMaps from "./TBThematicMaps.jsx";
 import TBLabelTools from "./TBLabelTools.jsx";
 import TBLandmarkTools from "./TBLandmarkTools.jsx";
+import TBAIModelTools from "./TBAIModelTools.jsx";
+
 
 
 
@@ -14,7 +16,9 @@ const tabs = [
   { id: "thematic", label: "Thematic Maps" },
   { id: "label", label: "Label Tools" },
   { id: "landmark", label: "Landmark Tools" },
+  { id: "ai", label: "AI Model Tools" },
 ];
+
 
 const Toolbar = ({
   onSearchClick,
@@ -72,6 +76,14 @@ const Toolbar = ({
             onShowLandmarksClick={onShowLandmarksClick}
           />
         );
+
+      case "ai":
+        return (
+          <TBAIModelTools
+            onLinearRegressionClick={() => console.log("Linear Regression clicked")}
+          />
+        );
+
 
       default:
         return null;
