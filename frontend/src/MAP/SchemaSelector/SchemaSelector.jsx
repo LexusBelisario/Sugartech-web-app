@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { ApiService } from "../../api_service.js";
 import "./SchemaSelector.css";
 import { useSchema } from "../SchemaContext";
-import { useMap } from "react-leaflet";   // ✅ import Leaflet map hook
+import { useMap } from "react-leaflet";   // ✅ Leaflet map hook
 
 const SchemaSelector = () => {
   const [schemas, setSchemas] = useState([]);
@@ -13,10 +13,10 @@ const SchemaSelector = () => {
   const [error, setError] = useState(null);
   const containerRef = useRef(null);
   const { setSchema } = useSchema();
-  const map = useMap();   // ✅ get Leaflet map instance
+  const map = useMap();   // ✅ Get Leaflet map instance
 
+  // 🔒 Prevent map interactions while using the dropdown
   useEffect(() => {
-    // 🔑 Prevent Leaflet map zoom/pan when interacting with selector
     if (containerRef.current) {
       containerRef.current.addEventListener("dblclick", (e) => {
         e.preventDefault();
@@ -28,6 +28,34 @@ const SchemaSelector = () => {
     }
   }, []);
 
+  // ======================================================
+  // 🔹 Helper: Fetch and zoom to provincial bounds
+  // ======================================================
+  const fetchProvincialBoundsAndZoom = async () => {
+    try {
+      const res = await ApiService.get("/province/provincial-bounds");
+      if (res?.status === "success" && Array.isArray(res.bounds) && res.bounds.length === 4) {
+        const [xmin, ymin, xmax, ymax] = res.bounds;
+        const bounds = [
+          [ymin, xmin],
+          [ymax, xmax]
+        ];
+        console.log(`🗺️ Smooth zoom to provincial bounds (${res.prov_code}):`, bounds);
+
+        const center = [(ymin + ymax) / 2, (xmin + xmax) / 2];
+        const zoom = map.getBoundsZoom(bounds, false);
+        map.flyTo(center, zoom, { animate: true, duration: 1.5 });
+      } else {
+        console.warn("⚠️ Invalid or missing provincial bounds:", res);
+      }
+    } catch (err) {
+      console.error("❌ Failed to fetch provincial bounds:", err);
+    }
+  };
+
+  // ======================================================
+  // 🔹 Load schemas from backend
+  // ======================================================
   useEffect(() => {
     const loadSchemas = async () => {
       try {
@@ -37,31 +65,33 @@ const SchemaSelector = () => {
         const data = await ApiService.get("/list-schemas");
         console.log("🔍 Schemas response:", data);
 
-        // Handle the new response structure
         if (data?.schemas) {
           setSchemas(data.schemas);
           setUserAccess(data.user_access);
 
-          if (
-            data.schemas.length === 0 &&
-            data.user_access?.provincial_access
-          ) {
-            setError(
-              `You have access to ${data.user_access.provincial_access} but no municipal access assigned.`
-            );
-          } else if (data.schemas.length === 1) {
+          // ✅ Provincial-level zoom happens automatically if multiple schemas
+          if (data.schemas.length > 1) {
+            await fetchProvincialBoundsAndZoom();
+          }
+
+          // ✅ If only one schema → automatically select & zoom to municipal bounds
+          if (data.schemas.length === 1) {
             const singleSchema = data.schemas[0];
             setSelectedSchema(singleSchema);
             setSchema(singleSchema);
           }
+
+          // 🚫 Handle empty schema list
+          if (data.schemas.length === 0 && data.user_access?.provincial_access) {
+            setError(
+              `You have access to ${data.user_access.provincial_access} but no municipal access assigned.`
+            );
+          }
         }
       } catch (err) {
         console.error("❌ Failed to load schemas:", err);
-
         if (err.response?.status === 403) {
-          setError(
-            err.response?.data?.detail || "Access pending admin approval"
-          );
+          setError(err.response?.data?.detail || "Access pending admin approval");
         } else {
           setError("Failed to load schemas. Please try again.");
         }
@@ -74,13 +104,18 @@ const SchemaSelector = () => {
     loadSchemas();
   }, [setSchema]);
 
+  // ======================================================
+  // 🔹 Handle schema change (user selection)
+  // ======================================================
   const handleSchemaChange = (e) => {
     const schema = e.target.value;
     setSelectedSchema(schema);
     setSchema(schema);
   };
 
-  // ✅ Zoom effect: runs whenever a schema is selected
+  // ======================================================
+  // 🔹 Zoom to municipal bounds when schema changes
+  // ======================================================
   useEffect(() => {
     if (!selectedSchema) return;
 
@@ -93,8 +128,12 @@ const SchemaSelector = () => {
             [ymin, xmin],
             [ymax, xmax]
           ];
-          console.log(`📦 Zooming to bounds of ${selectedSchema}:`, bounds);
-          map.fitBounds(bounds, { padding: [50, 50] });
+          console.log(`📦 Smooth zoom to bounds of ${selectedSchema}:`, bounds);
+
+          // ✨ Smooth animated zoom
+          const center = [(ymin + ymax) / 2, (xmin + xmax) / 2];
+          const zoom = map.getBoundsZoom(bounds, false);
+          map.flyTo(center, zoom, { animate: true, duration: 1.5 });
         } else {
           console.warn("⚠️ Bounds not found or invalid:", res);
         }
@@ -106,6 +145,9 @@ const SchemaSelector = () => {
     fetchBoundsAndZoom();
   }, [selectedSchema, map]);
 
+  // ======================================================
+  // 🔹 Helpers for UI text formatting
+  // ======================================================
   const getButtonTitle = () => {
     if (error) return "No access";
     if (loading) return "Loading...";
@@ -114,10 +156,7 @@ const SchemaSelector = () => {
   };
 
   const formatSchemaName = (schema) => {
-    if (schema.includes(", ")) {
-      return schema;
-    }
-
+    if (schema.includes(", ")) return schema;
     const parts = schema.split("_");
     if (parts.length >= 2) {
       const municipality = parts.slice(0, -1).join(" ");
@@ -129,6 +168,9 @@ const SchemaSelector = () => {
     return schema;
   };
 
+  // ======================================================
+  // 🔹 Component Render
+  // ======================================================
   return (
     <div className="schema-selector-container" ref={containerRef}>
       <button
@@ -203,4 +245,3 @@ const SchemaSelector = () => {
 };
 
 export default SchemaSelector;
-    
