@@ -18,6 +18,7 @@ from routes.landmarks import router as landmark_router
 from routes.search import router as search_router
 from routes.GeoServerAccess import router as GeoServerAccess_router
 from routes import municipal as municipal_router
+from AI_Model_Tools import linear_regression as ai_linear_router
 
 
 app = FastAPI()
@@ -47,6 +48,8 @@ app.include_router(landmark_router, prefix="/api")
 app.include_router(thematic_router, prefix="/api")
 app.include_router(tableinfo_router, prefix="/api")
 app.include_router(municipal_router.router, prefix="/api")
+app.include_router(ai_linear_router.router, prefix="/api")
+
 
 @app.get("/health")
 def health():
