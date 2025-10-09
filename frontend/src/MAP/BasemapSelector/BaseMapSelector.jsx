@@ -2,16 +2,53 @@ import { useEffect, useState, useRef } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "./LeafletWMTS";
 import "./BaseMapSelector.css";
+import { ApiService } from "../../api_service";
+import { useSchema } from "../SchemaContext";
 
 function BaseMapSelector() {
   const map = useMap();
+  const { schema } = useSchema();
   const [activeBase, setActiveBase] = useState("terrain");
   const [isExpanded, setIsExpanded] = useState(false);
   const containerRef = useRef(null);
 
+  // Orthophoto states
+  const [orthoLayer, setOrthoLayer] = useState(null);
+  const [orthoConfig, setOrthoConfig] = useState(null);
+  const [orthoOn, setOrthoOn] = useState(false);
+
   // ==========================================================
-  // 🗺️ Basemap Options (Removed Google Maps)
+  // 🛰️ Fetch Orthophoto Config from Backend
+  // ==========================================================
+  useEffect(() => {
+    if (!schema) return;
+
+    const fetchOrtho = async () => {
+      try {
+        const res = await ApiService.get(`/orthophoto-config?schema=${schema}`);
+        if (res.status === "success") {
+          setOrthoConfig({
+            url: res.Gsrvr_URL,
+            layer: res.Layer_Name,
+          });
+          console.log(`✅ Loaded orthophoto config for ${schema}:`, res);
+        } else {
+          console.warn(`⚠️ No orthophoto config found for ${schema}`);
+          setOrthoConfig(null);
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch orthophoto config:", err);
+        setOrthoConfig(null);
+      }
+    };
+
+    fetchOrtho();
+  }, [schema]);
+
+  // ==========================================================
+  // 🗺️ Basemap Options
   // ==========================================================
   const basemaps = [
     {
@@ -51,6 +88,8 @@ function BaseMapSelector() {
   useEffect(() => {
     if (!map) return;
 
+    console.log("🗺️ Initializing basemap selector...");
+
     // Store layers globally
     window._basemapLayers = {};
     basemaps.forEach(({ key, layer }) => {
@@ -69,10 +108,42 @@ function BaseMapSelector() {
   }, [map]);
 
   // ==========================================================
-  // 🔁 Switch Basemap
+  // 🧱 Create / Update Orthophoto Layer
+  // ==========================================================
+  useEffect(() => {
+    if (!map || !orthoConfig) return;
+
+    const { url, layer } = orthoConfig;
+
+    const wmtsLayer = L.tileLayer.wmts(url, {
+      layer: layer,
+      tilematrixSet: "EPSG:900913",
+      format: "image/png",
+      style: "",
+      maxZoom: 24,
+    });
+
+    setOrthoLayer(wmtsLayer);
+
+    // If user already toggled orthophoto on, show it immediately
+    if (orthoOn) {
+      wmtsLayer.addTo(map).bringToFront();
+    }
+
+    console.log(`🛰️ Orthophoto layer ready: ${layer}`);
+
+    return () => {
+      if (map.hasLayer(wmtsLayer)) map.removeLayer(wmtsLayer);
+    };
+  }, [map, orthoConfig]);
+
+  // ==========================================================
+  // 🔁 Switch Basemap (Orthophoto stays on top)
   // ==========================================================
   const switchBase = (key) => {
     if (!map || !window._basemapLayers) return;
+
+    console.log(`🔄 Switching to ${key}`);
 
     // Remove current basemap
     if (activeBase && window._basemapLayers[activeBase]) {
@@ -84,8 +155,30 @@ function BaseMapSelector() {
     newLayer.addTo(map);
     setActiveBase(key);
 
+    // ✅ Keep orthophoto above basemap
+    if (orthoOn && orthoLayer) {
+      orthoLayer.bringToFront();
+    }
+
     // Collapse after selection
     setIsExpanded(false);
+  };
+
+  // ==========================================================
+  // 🌍 Toggle Orthophoto Visibility
+  // ==========================================================
+  const toggleOrtho = () => {
+    if (!map || !orthoLayer) return;
+
+    if (orthoOn) {
+      map.removeLayer(orthoLayer);
+      setOrthoOn(false);
+      console.log("🛰️ Orthophoto hidden");
+    } else {
+      orthoLayer.addTo(map).bringToFront();
+      setOrthoOn(true);
+      console.log("🛰️ Orthophoto shown");
+    }
   };
 
   // ==========================================================
@@ -99,7 +192,6 @@ function BaseMapSelector() {
     };
 
     if (isExpanded) {
-      // Use setTimeout to avoid immediate trigger
       setTimeout(() => {
         document.addEventListener("mousedown", handleClickOutside);
       }, 0);
@@ -115,7 +207,7 @@ function BaseMapSelector() {
   const inactiveBasemaps = basemaps.filter((b) => b.key !== activeBase);
 
   // ==========================================================
-  // 🧩 Collapsible UI (Active at Bottom)
+  // 🧩 Collapsible UI
   // ==========================================================
   return (
     <div className="basemap-selector-container" ref={containerRef}>
@@ -124,23 +216,40 @@ function BaseMapSelector() {
           isExpanded ? "basemap-cards-expanded" : ""
         }`}
       >
-        {/* Other Cards - Show when Expanded (at top) */}
+        {/* Other Cards - Show when Expanded */}
         {isExpanded && (
-          <div className="basemap-cards-list">
-            {inactiveBasemaps.map(({ key, label, thumbnail }) => (
-              <button
-                key={key}
-                className="basemap-card"
-                onClick={() => switchBase(key)}
-                title={label}
-              >
-                <div className="basemap-card-thumbnail">
-                  <img src={thumbnail} alt={label} />
-                </div>
-                <div className="basemap-card-label">{label}</div>
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="basemap-cards-list">
+              {inactiveBasemaps.map(({ key, label, thumbnail }) => (
+                <button
+                  key={key}
+                  className="basemap-card"
+                  onClick={() => switchBase(key)}
+                  title={label}
+                >
+                  <div className="basemap-card-thumbnail">
+                    <img src={thumbnail} alt={label} />
+                  </div>
+                  <div className="basemap-card-label">{label}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* Orthophoto Toggle - Only show when config exists */}
+            {orthoConfig && (
+              <div className="basemap-ortho-toggle">
+                <label className="ortho-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={orthoOn}
+                    onChange={toggleOrtho}
+                    className="ortho-checkbox"
+                  />
+                  <span className="ortho-label-text">🛰️ Orthophoto</span>
+                </label>
+              </div>
+            )}
+          </>
         )}
 
         {/* Active Card - Always at Bottom */}
