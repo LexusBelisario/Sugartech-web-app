@@ -7,9 +7,6 @@ import TBLabelTools from "./TBLabelTools.jsx";
 import TBLandmarkTools from "./TBLandmarkTools.jsx";
 import TBAIModelTools from "./TBAIModelTools.jsx";
 
-
-
-
 const tabs = [
   { id: "parcel", label: "Parcel Main Toolbar" },
   { id: "land", label: "Land Legend Tools" },
@@ -18,7 +15,6 @@ const tabs = [
   { id: "landmark", label: "Landmark Tools" },
   { id: "ai", label: "AI Model Tools" },
 ];
-
 
 const Toolbar = ({
   onSearchClick,
@@ -29,16 +25,15 @@ const Toolbar = ({
   onLandmarkInfoClick,
   onShowLandmarksClick,
 }) => {
-
   const [visible, setVisible] = useState(false);
   const [activeTool, setActiveTool] = useState(null);
   const [activeTab, setActiveTab] = useState("parcel");
 
   const handleToggle = () => {
-    setVisible(prev => !prev);
+    setVisible((prev) => !prev);
   };
 
-  // Renders the buttons depending on selected tab
+  // === Renders the buttons depending on selected tab ===
   const renderButtons = () => {
     switch (activeTab) {
       case "parcel":
@@ -53,6 +48,7 @@ const Toolbar = ({
             onSubdivideClick={onSubdivideClick}
           />
         );
+
       case "land":
         return (
           <TBLandLegendTools
@@ -65,7 +61,7 @@ const Toolbar = ({
         return <TBThematicMaps />;
 
       case "label":
-      return <TBLabelTools />;
+        return <TBLabelTools />;
 
       case "landmark":
         return (
@@ -80,10 +76,14 @@ const Toolbar = ({
       case "ai":
         return (
           <TBAIModelTools
-            onLinearRegressionClick={() => console.log("Linear Regression clicked")}
+            onLinearRegressionClick={() =>
+              console.log("Linear Regression clicked")
+            }
+            onRandomForestClick={() =>
+              console.log("Random Forest clicked")
+            }
           />
         );
-
 
       default:
         return null;
@@ -92,29 +92,30 @@ const Toolbar = ({
 
   return (
     <>
-      {/* Toggle button */}
+      {/* === Toggle Button === */}
       <button id="toggleToolbarBtn" onClick={handleToggle}>
         ☰ GISTools
       </button>
 
-      <div className={`toolbar-panel ${visible ? "visible" : ""}`} id="toolbarPanel">
-        {/* Tab selector */}
+      <div
+        className={`toolbar-panel ${visible ? "visible" : ""}`}
+        id="toolbarPanel"
+      >
+        {/* === Tab Selector === */}
         <select
           className="toolbar-dropdown"
           value={activeTab}
           onChange={(e) => setActiveTab(e.target.value)}
         >
-          {tabs.map(tab => (
+          {tabs.map((tab) => (
             <option key={tab.id} value={tab.id}>
               {tab.label}
             </option>
           ))}
         </select>
 
-        {/* Tools grid */}
-        <div className="toolbar-grid">
-          {renderButtons()}
-        </div>
+        {/* === Tools Grid === */}
+        <div className="toolbar-grid">{renderButtons()}</div>
       </div>
     </>
   );
