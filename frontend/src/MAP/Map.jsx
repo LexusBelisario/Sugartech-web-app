@@ -3,7 +3,7 @@ import "leaflet/dist/leaflet.css";
 import BaseMapSelector from "./BasemapSelector/BaseMapSelector.jsx";
 import SchemaSelector from "./SchemaSelector/SchemaSelector";
 import AdminBoundaries from "./AdminBoundaries/AdminBoundaries.jsx";
-import Ortophoto from "./Ortophoto/Ortophoto.jsx";
+import Orthophoto from "./Orthophoto/Orthophoto.jsx";
 import ParcelLoader from "./ParcelLoader";
 import LoadingHandler from "./LoadingHandler";
 import Toolbar from "./Toolbar/toolbar.jsx";
@@ -20,7 +20,7 @@ function Map() {
         <BaseMapSelector />
         <SchemaSelector />
         <AdminBoundaries />
-        <Ortophoto />
+        <Orthophoto />
         <ParcelLoader />
         <LoadingHandler />
         <Toolbar />

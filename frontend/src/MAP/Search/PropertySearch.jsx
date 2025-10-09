@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import API from "../../api";
 import { useSchema } from "../SchemaContext";
 import SearchResults from "./SearchResults";
 import { clearParcelHighlights } from "./SearchHelpers";
 import "./Search.css";
 
 const PropertySearch = () => {
-  const { schema } = useSchema();
-  const [attributeData, setAttributeData] = useState([]);
+  // ✅ Access global schema + cached JoinedTable
+  const { schema, joinedTable, loadingJoinedTable, status } = useSchema();
+
   const [filters, setFilters] = useState({
     province: "",
     municipal: "",
@@ -23,14 +23,14 @@ const PropertySearch = () => {
     cad: "",
     name: "",
     block: "",
-    lot: ""
+    lot: "",
   });
 
   const [dropdowns, setDropdowns] = useState({
     provinces: [],
     municipals: [],
     barangays: [],
-    sections: []
+    sections: [],
   });
 
   const [searchResults, setSearchResults] = useState([]);
@@ -39,37 +39,25 @@ const PropertySearch = () => {
   const [noInputMessage, setNoInputMessage] = useState(false);
 
   // ============================================================
-  // 🧭 Load JoinedTable when schema changes
+  // 🧭 Load dropdowns instantly from global joinedTable
   // ============================================================
   useEffect(() => {
-    if (!schema) return;
-    const fetchJoinedTable = async () => {
-      try {
-        const res = await fetch(`${API}/attribute-table?schema=${schema}`);
-        const json = await res.json();
-        if (json.status === "success") {
-          console.log(`✅ Loaded JoinedTable for ${schema}: ${json.data.length} records`);
-          setAttributeData(json.data);
-        } else {
-          console.warn("⚠️ Failed to load JoinedTable:", json.message);
-        }
-      } catch (err) {
-        console.error("❌ Error fetching JoinedTable:", err);
-      }
-    };
-    fetchJoinedTable();
-  }, [schema]);
+    if (!joinedTable || joinedTable.length === 0) {
+      setDropdowns({
+        provinces: [],
+        municipals: [],
+        barangays: [],
+        sections: [],
+      });
+      return;
+    }
 
-  // ============================================================
-  // 🧩 Populate hierarchical dropdowns
-  // ============================================================
-  useEffect(() => {
     const provinces = new Set();
     const municipals = new Set();
     const barangays = new Set();
     const sections = new Set();
 
-    attributeData.forEach((p) => {
+    joinedTable.forEach((p) => {
       if (p.province) provinces.add(p.province);
 
       if (!filters.province || p.province === filters.province) {
@@ -96,9 +84,9 @@ const PropertySearch = () => {
       provinces: [...provinces].sort(),
       municipals: [...municipals].sort(),
       barangays: [...barangays].sort(),
-      sections: [...sections].sort()
+      sections: [...sections].sort(),
     });
-  }, [attributeData, filters.province, filters.municipal, filters.barangay]);
+  }, [joinedTable, filters.province, filters.municipal, filters.barangay]);
 
   // ============================================================
   // ✏️ Helpers
@@ -120,6 +108,11 @@ const PropertySearch = () => {
   // 🔍 Search Logic
   // ============================================================
   const handlePropertySearch = () => {
+    if (loadingJoinedTable || !joinedTable || joinedTable.length === 0) {
+      alert("⚠️ Please wait for property data to finish loading.");
+      return;
+    }
+
     const hasInput = Object.values(filters).some((v) => v.trim() !== "");
     if (!hasInput) {
       setNoInputMessage(true);
@@ -134,7 +127,7 @@ const PropertySearch = () => {
     clearParcelHighlights();
 
     // === Perform local filtering ===
-    const results = attributeData.filter((p) => {
+    const results = joinedTable.filter((p) => {
       return (
         (!filters.province || p.province === filters.province) &&
         (!filters.municipal || p.municipal === filters.municipal) &&
@@ -178,6 +171,14 @@ const PropertySearch = () => {
   // ============================================================
   // 🧱 UI
   // ============================================================
+  if (loadingJoinedTable) {
+    return <div className="tab-content">⏳ Loading property data...</div>;
+  }
+
+  if (status === "error") {
+    return <div className="tab-content text-red-500">❌ Failed to load property data for {schema}</div>;
+  }
+
   return (
     <div className="tab-content">
       {/* === Input Fields === */}
