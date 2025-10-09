@@ -5,13 +5,15 @@ import os
 import uvicorn
 
 from auth.routes import router as auth_router
-from admin.routes import router as admin_router 
-from routes.view import router as view_router
+from admin.routes import router as admin_router
+from routes.mun_access import router as mun_access_router
+from routes.table_viewer import router as table_viewer_router
+from routes.orthophoto import router as orthophoto_router
+# from routes.view import router as view_router
+from routes.parcel import router as parcel_router
 from routes.edit import router as edit_router
 from routes.consolidate import router as merge_router
 from routes.subdivide import router as subdivide_router
-from routes.matchingreport import router as matchingreport
-from routes.TMCR import router as TMCR
 from routes.thematic import router as thematic_router
 from routes.tableinfo import router as tableinfo_router
 from routes.landmarks import router as landmark_router
@@ -35,17 +37,19 @@ app.add_middleware(
 
 # Include routers ONLY ONCE with proper prefixes
 app.include_router(auth_router, prefix="/api")
-app.include_router(admin_router, prefix="/api")  # This gives you /api/admin/...
-app.include_router(view_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
+app.include_router(mun_access_router, prefix="/api")
+app.include_router(table_viewer_router, prefix="/api")
+app.include_router(parcel_router, prefix="/api")
+# app.include_router(view_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
 app.include_router(edit_router, prefix="/api")
 app.include_router(merge_router, prefix="/api")
 app.include_router(subdivide_router, prefix="/api")
-app.include_router(matchingreport, prefix="/api")
-app.include_router(TMCR, prefix="/api")
 app.include_router(landmark_router, prefix="/api")
 app.include_router(thematic_router, prefix="/api")
 app.include_router(tableinfo_router, prefix="/api")
+app.include_router(orthophoto_router, prefix="/api")
 app.include_router(province_router, prefix="/api")
 app.include_router(municipal_router.router, prefix="/api")
 app.include_router(ai_linear_router.router, prefix="/api")

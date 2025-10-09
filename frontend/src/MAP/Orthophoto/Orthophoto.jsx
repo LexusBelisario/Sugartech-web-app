@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import "./Ortophoto.css";
+import "./Orthophoto.css";
 import { ApiService } from "../../api_service";
 import { useSchema } from "../SchemaContext";
 
-function Ortophoto() {
+function Orthophoto() {
   const map = useMap();
   const { schema } = useSchema();
 
@@ -140,4 +140,4 @@ function Ortophoto() {
   );
 }
 
-export default Ortophoto;
+export default Orthophoto;
