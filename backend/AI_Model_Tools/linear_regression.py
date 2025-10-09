@@ -587,15 +587,47 @@ async def run_saved_model(
 
 
 # ============================================================
-# 🔹 4. File Download Endpoint
+# 🔹 4. File Download Endpoint (Delete full run folder)
 # ============================================================
 @router.get("/download")
 async def download_file(file: str = Query(...)):
-    """Serve generated model/report/shapefile for download"""
+    """
+    Serve generated model/report/shapefile for download.
+    After sending, delete the entire model run folder (e.g., linear_123456).
+    """
     try:
         if not os.path.exists(file):
             return JSONResponse(status_code=404, content={"error": "File not found"})
+
         filename = os.path.basename(file)
-        return FileResponse(file, filename=filename)
+
+        # ✅ Send file to client
+        response = FileResponse(file, filename=filename)
+
+        # ✅ Schedule delete of its parent run folder
+        import threading, time, shutil
+
+        def delete_run_folder(path):
+            time.sleep(5)  # wait a few seconds so download completes
+            try:
+                # Find top-level folder inside EXPORT_DIR
+                folder = os.path.dirname(path)
+                while folder != EXPORT_DIR and os.path.dirname(folder) != folder:
+                    if os.path.dirname(folder) == EXPORT_DIR:
+                        # Found the run folder (e.g. linear_310243)
+                        break
+                    folder = os.path.dirname(folder)
+
+                if os.path.exists(folder):
+                    shutil.rmtree(folder, ignore_errors=True)
+                    print(f"🧹 Deleted entire run folder: {folder}")
+            except Exception as e:
+                print(f"⚠️ Cleanup error: {e}")
+
+        threading.Thread(target=delete_run_folder, args=(file,)).start()
+
+        return response
+
     except Exception as e:
+        print(f"❌ Download error: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})

@@ -196,3 +196,72 @@ select:focus {
   color: #00ff9d;
   text-decoration: underline;
 }
+
+/* === Modal Overlay === */
+.lr-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+/* === Modal Box === */
+.lr-modal-content {
+  background: #111;
+  color: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  width: 400px;
+  box-shadow: 0 0 15px rgba(0, 255, 150, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lr-modal-content h4 {
+  margin: 0 0 10px 0;
+  color: #28b487;
+}
+
+.lr-modal-content input[type="file"] {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 6px;
+  color: #ccc;
+}
+
+.lr-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.lr-modal-buttons button {
+  background-color: #28b487;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #fff;
+}
+
+.lr-modal-buttons button:hover {
+  background-color: #2ecc71;
+}
+
+.cancel-btn {
+  background-color: #555 !important;
+}
+
+.cancel-btn:hover {
+  background-color: #777 !important;
+}
+
