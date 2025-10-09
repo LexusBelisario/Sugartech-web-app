@@ -2,8 +2,8 @@
 
 .basemap-selector-container {
   position: absolute;
-  bottom: 24px;
-  right: 16px;
+  bottom: 20px;
+  right: 14px;
   z-index: 1000;
   pointer-events: none;
   font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont,
@@ -13,12 +13,12 @@
 .basemap-cards {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   background: rgba(21, 25, 34, 0.95);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
   pointer-events: auto;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -33,14 +33,14 @@
 .basemap-cards-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -48,16 +48,16 @@
   }
 }
 
-/* Individual Card - 110px Size */
+/* Individual Card - Reduced to 90px Size */
 .basemap-card {
   background: rgba(255, 255, 255, 0.08);
   border: 2px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 0;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  width: 110px;
+  width: 90px;
   position: relative;
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
@@ -65,10 +65,10 @@
 
 /* 🟡 YELLOW HOVER - #F7C800 */
 .basemap-card:hover {
-  transform: translateY(-3px) scale(1.02);
+  transform: translateY(-2px) scale(1.02);
   background: rgba(247, 200, 0, 0.15);
   border-color: #f7c800;
-  box-shadow: 0 4px 16px rgba(247, 200, 0, 0.4), 0 0 20px rgba(247, 200, 0, 0.2);
+  box-shadow: 0 4px 14px rgba(247, 200, 0, 0.4), 0 0 18px rgba(247, 200, 0, 0.2);
 }
 
 /* Active/Main Card Styling - NO GLOW, SIMPLE BLUE BORDER */
@@ -83,21 +83,21 @@
 
 /* 🟡 YELLOW HOVER for Active Card */
 .basemap-card-main:hover {
-  transform: translateY(-3px) scale(1.02);
+  transform: translateY(-2px) scale(1.02);
   border-color: #f7c800;
   background: rgba(247, 200, 0, 0.2);
   box-shadow: 0 0 0 2px rgba(247, 200, 0, 0.5),
-    0 6px 20px rgba(247, 200, 0, 0.4), 0 0 30px rgba(247, 200, 0, 0.2);
+    0 5px 18px rgba(247, 200, 0, 0.4), 0 0 25px rgba(247, 200, 0, 0.2);
 }
 
-/* Thumbnail */
+/* Thumbnail - Reduced Height */
 .basemap-card-thumbnail {
   width: 100%;
-  height: 85px;
+  height: 70px;
   position: relative;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 10px 10px 0 0;
+  border-radius: 8px 8px 0 0;
 }
 
 .basemap-card-thumbnail img {
@@ -109,42 +109,47 @@
 }
 
 .basemap-card:hover .basemap-card-thumbnail img {
-  transform: scale(1.1);
+  transform: scale(1.08);
   filter: brightness(1.1);
 }
 
-/* Chevron icon on active card (pointing UP) */
+/* Chevron icon on active card - Smaller */
 .basemap-card-chevron {
   position: absolute;
-  bottom: 6px;
-  right: 6px;
+  bottom: 4px;
+  right: 4px;
   background: rgba(0, 0, 0, 0.6);
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
+}
+
+.basemap-card-chevron svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* 🟡 YELLOW HOVER for Chevron */
 .basemap-card-main:hover .basemap-card-chevron {
   background: #f7c800;
-  box-shadow: 0 0 12px rgba(247, 200, 0, 0.6);
+  box-shadow: 0 0 10px rgba(247, 200, 0, 0.6);
 }
 
 .basemap-card-main:hover .basemap-card-chevron svg {
-  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.5));
 }
 
-/* Label with Plus Jakarta Sans */
+/* Label - Smaller Font */
 .basemap-card-label {
-  padding: 8px 6px;
-  font-size: 11px;
+  padding: 6px 4px;
+  font-size: 10px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
   text-align: center;
@@ -164,7 +169,7 @@
 .basemap-card:hover .basemap-card-label {
   color: #f7c800;
   font-weight: 700;
-  text-shadow: 0 0 8px rgba(247, 200, 0, 0.5);
+  text-shadow: 0 0 6px rgba(247, 200, 0, 0.5);
 }
 
 /* ========================================
@@ -173,65 +178,26 @@
 
 @media (max-width: 768px) {
   .basemap-selector-container {
-    bottom: 16px;
-    right: 12px;
+    bottom: 14px;
+    right: 10px;
   }
 
   .basemap-cards {
-    gap: 10px;
-    padding: 10px;
-    border-radius: 10px;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 8px;
   }
 
   .basemap-cards-list {
-    gap: 10px;
+    gap: 6px;
   }
 
   .basemap-card {
-    width: 95px;
+    width: 75px;
   }
 
   .basemap-card-thumbnail {
-    height: 75px;
-  }
-
-  .basemap-card-label {
-    font-size: 10px;
-    padding: 6px 4px;
-  }
-
-  .basemap-card-chevron {
-    width: 22px;
-    height: 22px;
-  }
-
-  .basemap-card-chevron svg {
-    width: 18px;
-    height: 18px;
-  }
-}
-
-@media (max-width: 480px) {
-  .basemap-selector-container {
-    bottom: 12px;
-    right: 8px;
-  }
-
-  .basemap-cards {
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .basemap-cards-list {
-    gap: 8px;
-  }
-
-  .basemap-card {
-    width: 85px;
-  }
-
-  .basemap-card-thumbnail {
-    height: 65px;
+    height: 58px;
   }
 
   .basemap-card-label {
@@ -240,15 +206,54 @@
   }
 
   .basemap-card-chevron {
-    width: 20px;
-    height: 20px;
-    bottom: 4px;
-    right: 4px;
+    width: 18px;
+    height: 18px;
   }
 
   .basemap-card-chevron svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .basemap-selector-container {
+    bottom: 10px;
+    right: 8px;
+  }
+
+  .basemap-cards {
+    gap: 5px;
+    padding: 5px;
+  }
+
+  .basemap-cards-list {
+    gap: 5px;
+  }
+
+  .basemap-card {
+    width: 65px;
+  }
+
+  .basemap-card-thumbnail {
+    height: 50px;
+  }
+
+  .basemap-card-label {
+    font-size: 8px;
+    padding: 4px 2px;
+  }
+
+  .basemap-card-chevron {
     width: 16px;
     height: 16px;
+    bottom: 3px;
+    right: 3px;
+  }
+
+  .basemap-card-chevron svg {
+    width: 12px;
+    height: 12px;
   }
 }
 
@@ -327,4 +332,87 @@
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+
+/* orthopoto toggle */
+
+/* ========================================
+   🛰️ Orthophoto Toggle
+======================================== */
+
+.basemap-ortho-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 8px 10px;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.basemap-ortho-toggle:hover {
+  background: rgba(247, 200, 0, 0.15);
+  border-color: #f7c800;
+  box-shadow: 0 0 12px rgba(247, 200, 0, 0.3);
+}
+
+.ortho-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ortho-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #f7c800;
+}
+
+.ortho-label-text {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.basemap-ortho-toggle:hover .ortho-label-text {
+  color: #f7c800;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(247, 200, 0, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .basemap-ortho-toggle {
+    padding: 6px 8px;
+  }
+
+  .ortho-checkbox {
+    width: 14px;
+    height: 14px;
+  }
+
+  .ortho-label-text {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .basemap-ortho-toggle {
+    padding: 5px 6px;
+  }
+
+  .ortho-checkbox {
+    width: 12px;
+    height: 12px;
+  }
+
+  .ortho-label-text {
+    font-size: 8px;
+  }
 }
