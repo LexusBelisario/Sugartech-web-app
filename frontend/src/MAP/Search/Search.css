@@ -1,172 +1,217 @@
-/* === SEARCH POPUP PANEL === */
+/* =========================================================
+   🔍 SEARCH PANEL — Compact Layout with InfoTool-Like Spacing
+   ========================================================= */
+
 .search-popup {
-  position: absolute; /* Anchored relative to the page */
+  position: fixed !important;
   top: 0;
   left: 0;
-  width: 330px;
-  max-height: 100vh; /* Prevents overflow beyond the viewport */
-  background-color: rgb(227, 227, 227);
-  padding: 16px;
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.3); /* Adds right-side shadow */
-  z-index: 2100;
-  transform: translateX(-100%); /* Initially hidden (off-screen left) */
-  transition: transform 0.3s ease; /* Smooth slide-in effect */
-  overflow: hidden; /* Hides content overflow during animation */
+  width: 350px;                      /* balanced sidebar width */
+  height: 500px;
+  background-color: #e4e4e4;          /* same tone as toolbar */
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.25);
+  z-index: 9999;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
 }
 
 .search-popup.visible {
-  transform: translateX(0); /* Slide into view when "visible" class is added */
+  transform: translateX(0);
 }
 
-/* === INNER WRAPPER (scrollable content) === */
+/* =========================================================
+   🧭 INNER WRAPPER (Main Content Container)
+   ========================================================= */
+
 #searchPopupInner {
-  font-family: sans-serif;
-  max-height: 95vh;
-  overflow-y: auto; /* Allows scrolling within inner popup */
-  padding-right: 6px; /* Space for scrollbar */
-}
-
-#searchPopupInner h2 {
-  margin-top: 0; /* Remove default top margin from title */
-}
-
-/* === BUTTON ROW STYLING === */
-.button-row {
-  margin-top: 10px;
-  display: flex;
-  gap: 10px;
-}
-
-.button-row button {
-  flex: 1; /* Evenly distribute button widths */
-  text-align: center;
-}
-
-.button-row .search-btn.active,
-.button-row .clear-btn.active {
-  background-color: #ffffff;
-  color: rgb(0, 0, 0);
-  font-weight: bold;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-}
-
-/* === INPUT FIELD GRID === */
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 columns equally spaced */
-  gap: 10px 16px;
-  margin-top: 16px;
-  margin-bottom: 16px;
-}
-
-/* === INDIVIDUAL INPUT CELL === */
-.field-cell {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding-bottom: 10px;
-}
-
-.field-cell label {
-  font-size: 13px;
-  font-weight: bold;
-  margin: 0;
-  line-height: 1;
-  padding-bottom: 2px;
-}
-
-.field-cell input,
-.field-cell select {
-  margin: 0;
-  font-size: 13px;
-  padding: 4px 6px;
-  height: auto;
-  max-width: 100%;
+  overflow-y: auto;
+  height: 100%;
+  padding: 18px 16px;                 /* more balanced padding */
   box-sizing: border-box;
-  width: 100%;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: #111;
 }
 
-/* === CLOSE BUTTON (TOP-RIGHT) === */
-.close-btn {
+/* =========================================================
+   🧱 HEADER & CLOSE BUTTON
+   ========================================================= */
+
+#searchPopupInner h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+  color: #000;
+}
+
+.search-close-btn {
   float: right;
-  margin-bottom: 10px;
-  background-color: #fffbfb;
-  color: rgb(16, 16, 16);
-  border: 1px solid #000000;
-  padding: 6px 10px;
+  margin-left: 10px;
+  background-color: #fff;
+  color: #000;
+  border: 1px solid #000;
+  padding: 5px 10px;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 12px;
   font-weight: bold;
+  transition: background-color 0.2s ease;
 }
 
-.close-btn:hover {
+.search-close-btn:hover {
   background-color: #ad1414;
   color: white;
 }
 
-/* === SEARCH BUTTON === */
+/* =========================================================
+   🔹 TAB BUTTONS (Property / Road / Landmark)
+   ========================================================= */
+
+.button-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 12px;
+}
+
+.button-row button {
+  flex: 1;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  background-color: #222;
+  color: #fff;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.button-row button:hover {
+  background-color: #555;
+  transform: translateY(-1px);
+}
+
+.button-row .search-btn.active {
+  background-color: #fff;
+  color: #000;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* =========================================================
+   🔢 INPUT GRID (Reflowed, cleaner proportions)
+   ========================================================= */
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.field-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.field-cell label {
+  font-size: 12px;
+  font-weight: bold;
+  color: #111;
+}
+
+.field-cell input,
+.field-cell select {
+  font-size: 12px;
+  padding: 5px 6px;
+  width: 100%;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  background-color: #fff;
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   🔘 ACTION BUTTONS (Search / Clear)
+   ========================================================= */
+
+.button-row + .button-row {
+  margin-top: 10px;
+}
+
 .search-btn {
-  background-color: #050505;
+  background-color: #000;
   color: white;
   border: none;
-  padding: 8px 14px;
+  padding: 8px 12px;
   border-radius: 4px;
-  margin-right: 6px;
   cursor: pointer;
   font-weight: bold;
+  font-size: 12px;
+  transition: background-color 0.2s ease;
 }
 
 .search-btn:hover {
-  background-color: #a1a1a1;
+  background-color: #2b2b2b;
 }
 
-/* === CLEAR BUTTON === */
 .clear-btn {
-  background-color: #1c1c1c;
+  background-color: #444;
   color: white;
   border: none;
-  padding: 8px 14px;
+  padding: 8px 12px;
   border-radius: 4px;
   cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+  transition: background-color 0.2s ease;
 }
 
 .clear-btn:hover {
-  background-color: #495057;
+  background-color: #666;
 }
 
-/* === SEARCH RESULTS PANEL === */
+/* =========================================================
+   📋 SEARCH RESULTS (Inner Container Adjustments)
+   ========================================================= */
+
 .search-results {
-  font-size: 16px;
-  max-height: 330px; /* Scrollable height limit */
-  padding: 12px;
-  background-color: white;
-  overflow-y: auto;
+  flex: 1;
+  font-size: 13px;
+  background-color: #fff;
   border-radius: 4px;
-  margin-top: 12px;
   border-top: 1px solid #ccc;
-  display: block;
+  padding: 10px;
+  margin-top: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.search-results p {
+  margin: 6px 0;
 }
 
 .search-results ul {
   list-style: none;
   padding: 0;
   margin: 0;
-  text-align: left;
-  width: 100%;
 }
 
 .search-results li {
-  display: block;
-  width: 100%;
-  padding: 10px 12px;
-  box-sizing: border-box;
-  cursor: pointer;
+  padding: 6px 10px;
   border-radius: 4px;
-  transition: background-color 0.2s ease;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .search-results li:hover {
-  background-color: #adadad;
+  background-color: #bfbfbf;
 }
 
 .search-results li.selected {
@@ -174,31 +219,17 @@
   font-weight: bold;
 }
 
-/* === TAB CONTENT WRAPPER === */
-.tab-content {
-  margin-top: 12px;
-}
+/* =========================================================
+   🌍 RESPONSIVENESS
+   ========================================================= */
 
-.search-close-btn {
-  float: right;
-  margin-bottom: 12px;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  background-color: #f9f9f9;
-  color: #000;
-  border: 1px solid #000;
-  border-radius: 4px;
-  cursor: pointer;
-  line-height: 1;
-  height: 30px;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
+@media (max-width: 768px) {
+  .search-popup {
+    width: 100%;
+    height: 100vh;
+  }
 
-.search-close-btn:hover {
-  background-color: #ad1414;
-  color: white;
+  .field-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

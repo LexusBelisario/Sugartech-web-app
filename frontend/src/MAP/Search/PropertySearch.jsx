@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import API from "../../api";
+import { useSchema } from "../SchemaContext";
 import SearchResults from "./SearchResults";
 import { clearParcelHighlights } from "./SearchHelpers";
-import API from "../../api.js";
+import "./Search.css";
 
-const PropertySearch = ({ schema }) => {
+const PropertySearch = () => {
+  const { schema } = useSchema();
   const [attributeData, setAttributeData] = useState([]);
   const [filters, setFilters] = useState({
     province: "",
@@ -20,62 +23,46 @@ const PropertySearch = ({ schema }) => {
     cad: "",
     name: "",
     block: "",
-    lot: "",
+    lot: ""
   });
 
-  const [dropdownOptions, setDropdownOptions] = useState({
+  const [dropdowns, setDropdowns] = useState({
     provinces: [],
     municipals: [],
     barangays: [],
-    sections: [],
+    sections: []
   });
 
   const [searchResults, setSearchResults] = useState([]);
-  const [searchTriggered, setSearchTriggered] = useState(false);
   const [selectedPin, setSelectedPin] = useState(null);
+  const [searchTriggered, setSearchTriggered] = useState(false);
   const [noInputMessage, setNoInputMessage] = useState(false);
 
-  // === Load JoinedTable on mount
+  // ============================================================
+  // 🧭 Load JoinedTable when schema changes
+  // ============================================================
   useEffect(() => {
-    const loadJoinedTable = async () => {
+    if (!schema) return;
+    const fetchJoinedTable = async () => {
       try {
-        const url = `${API}/attribute-table?schema=${schema}`;
-
-        // ✅ ADD AUTH HEADERS
-        const token =
-          localStorage.getItem("access_token") ||
-          localStorage.getItem("accessToken");
-        const res = await fetch(url, {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
-        });
-
-        // ✅ CHECK RESPONSE STATUS
-        if (!res.ok) {
-          if (res.status === 401 || res.status === 403) {
-            console.error("❌ Authentication error");
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("accessToken");
-            window.location.href = "/login";
-            return;
-          }
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-
+        const res = await fetch(`${API}/attribute-table?schema=${schema}`);
         const json = await res.json();
-        if (json.status === "success") setAttributeData(json.data || []);
+        if (json.status === "success") {
+          console.log(`✅ Loaded JoinedTable for ${schema}: ${json.data.length} records`);
+          setAttributeData(json.data);
+        } else {
+          console.warn("⚠️ Failed to load JoinedTable:", json.message);
+        }
       } catch (err) {
-        console.error("❌ Failed to load JoinedTable:", err);
-        setAttributeData([]);
+        console.error("❌ Error fetching JoinedTable:", err);
       }
     };
-
-    if (schema) loadJoinedTable();
+    fetchJoinedTable();
   }, [schema]);
 
-  // === Dropdown population
+  // ============================================================
+  // 🧩 Populate hierarchical dropdowns
+  // ============================================================
   useEffect(() => {
     const provinces = new Set();
     const municipals = new Set();
@@ -105,14 +92,17 @@ const PropertySearch = ({ schema }) => {
       }
     });
 
-    setDropdownOptions({
+    setDropdowns({
       provinces: [...provinces].sort(),
       municipals: [...municipals].sort(),
       barangays: [...barangays].sort(),
-      sections: [...sections].sort(),
+      sections: [...sections].sort()
     });
   }, [attributeData, filters.province, filters.municipal, filters.barangay]);
 
+  // ============================================================
+  // ✏️ Helpers
+  // ============================================================
   const updateFilter = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
@@ -120,14 +110,17 @@ const PropertySearch = ({ schema }) => {
   const clearForm = () => {
     setFilters(Object.fromEntries(Object.keys(filters).map((k) => [k, ""])));
     setSearchResults([]);
-    setSearchTriggered(false);
     setSelectedPin(null);
+    setSearchTriggered(false);
     setNoInputMessage(false);
     clearParcelHighlights();
   };
 
+  // ============================================================
+  // 🔍 Search Logic
+  // ============================================================
   const handlePropertySearch = () => {
-    const hasInput = Object.values(filters).some((val) => val.trim() !== "");
+    const hasInput = Object.values(filters).some((v) => v.trim() !== "");
     if (!hasInput) {
       setNoInputMessage(true);
       setSearchResults([]);
@@ -140,85 +133,61 @@ const PropertySearch = ({ schema }) => {
     setSelectedPin(null);
     clearParcelHighlights();
 
-    const matches = attributeData.filter((p) => {
+    // === Perform local filtering ===
+    const results = attributeData.filter((p) => {
       return (
         (!filters.province || p.province === filters.province) &&
         (!filters.municipal || p.municipal === filters.municipal) &&
         (!filters.barangay || p.barangay === filters.barangay) &&
         (!filters.section || p.section === filters.section) &&
-        (!filters.parcel ||
-          (p.parcel && p.parcel.toLowerCase().includes(filters.parcel))) &&
-        (!filters.pin ||
-          (p.pin && p.pin.toLowerCase().includes(filters.pin))) &&
-        (!filters.arpn ||
-          (p.arpn && p.arpn.toLowerCase().includes(filters.arpn))) &&
-        (!filters.octtct ||
-          (p.octtct && p.octtct.toLowerCase().includes(filters.octtct))) &&
-        (!filters.td || (p.td && p.td.toLowerCase().includes(filters.td))) &&
-        (!filters.cct ||
-          (p.cct && p.cct.toLowerCase().includes(filters.cct))) &&
-        (!filters.survey ||
-          (p.survey && p.survey.toLowerCase().includes(filters.survey))) &&
-        (!filters.cad ||
-          (p.cad_no && p.cad_no.toLowerCase().includes(filters.cad))) &&
+        (!filters.parcel || (p.parcel && p.parcel.toLowerCase().includes(filters.parcel.toLowerCase()))) &&
+        (!filters.pin || (p.pin && p.pin.toLowerCase().includes(filters.pin.toLowerCase()))) &&
+        (!filters.arpn || (p.arpn && p.arpn.toLowerCase().includes(filters.arpn.toLowerCase()))) &&
+        (!filters.octtct || (p.octtct && p.octtct.toLowerCase().includes(filters.octtct.toLowerCase()))) &&
+        (!filters.td || (p.td && p.td.toLowerCase().includes(filters.td.toLowerCase()))) &&
+        (!filters.cct || (p.cct && p.cct.toLowerCase().includes(filters.cct.toLowerCase()))) &&
+        (!filters.survey || (p.survey && p.survey.toLowerCase().includes(filters.survey.toLowerCase()))) &&
+        (!filters.cad || (p.cad_no && p.cad_no.toLowerCase().includes(filters.cad.toLowerCase()))) &&
         (!filters.name ||
-          (p.l_lastname && p.l_lastname.toLowerCase().includes(filters.name)) ||
-          (p.l_frstname &&
-            p.l_frstname.toLowerCase().includes(filters.name))) &&
-        (!filters.block ||
-          (p.blk_no && p.blk_no.toLowerCase().includes(filters.block))) &&
-        (!filters.lot ||
-          (p.lot_no && p.lot_no.toLowerCase().includes(filters.lot)))
+          (p.l_lastname && p.l_lastname.toLowerCase().includes(filters.name.toLowerCase())) ||
+          (p.l_frstname && p.l_frstname.toLowerCase().includes(filters.name.toLowerCase()))) &&
+        (!filters.block || (p.blk_no && p.blk_no.toLowerCase().includes(filters.block.toLowerCase()))) &&
+        (!filters.lot || (p.lot_no && p.lot_no.toLowerCase().includes(filters.lot.toLowerCase())))
       );
     });
 
-    const pins = matches
-      .map((m) => m.pin)
-      .filter((pin) => !!pin)
+    // === Extract unique sorted PINs ===
+    const pins = results
+      .map((r) => r.pin)
+      .filter(Boolean)
       .filter((v, i, arr) => arr.indexOf(v) === i)
-      .sort((a, b) => {
-        const parse = (pin) => {
-          const parts = pin.split("-");
-          if (parts.length < 5) return 0;
-          return parseInt(parts[3] + parts[4], 10) || 0;
-        };
-        return parse(a) - parse(b);
-      });
+      .sort();
+
+    // === Highlight on map ===
+    (window.parcelLayers || []).forEach(({ feature, layer }) => {
+      if (pins.includes(feature.properties.pin)) {
+        layer.setStyle({ color: "black", weight: 2, fillColor: "lime", fillOpacity: 0.2 });
+      } else {
+        layer.setStyle({ color: "black", weight: 1, fillColor: "black", fillOpacity: 0.1 });
+      }
+    });
 
     setSearchResults(pins);
-
-    // Highlight on map
-    for (const { feature, layer } of window.parcelLayers || []) {
-      if (pins.includes(feature.properties.pin)) {
-        layer.setStyle({
-          color: "black",
-          weight: 2,
-          fillColor: "lime",
-          fillOpacity: 0.2,
-        });
-      } else {
-        layer.setStyle({
-          color: "black",
-          weight: 1,
-          fillColor: "black",
-          fillOpacity: 0.1,
-        });
-      }
-    }
   };
 
+  // ============================================================
+  // 🧱 UI
+  // ============================================================
   return (
     <div className="tab-content">
+      {/* === Input Fields === */}
       <div className="field-grid">
-        {["province", "municipal", "barangay", "section"].map((field) => (
-          <div className="field-cell" key={field}>
-            <label>{field}</label>
-            <select
-              value={filters[field]}
-              onChange={(e) => updateFilter(field, e.target.value)}
-            >
+        {["province", "municipal", "barangay", "section"].map((key) => (
+          <div className="field-cell" key={key}>
+            <label>{key}</label>
+            <select value={filters[key]} onChange={(e) => updateFilter(key, e.target.value)}>
               <option value="">- Select -</option>
-              {dropdownOptions[`${field}s`]?.map((val) => (
+              {dropdowns[`${key}s`].map((val) => (
                 <option key={val} value={val}>
                   {val}
                 </option>
@@ -227,29 +196,15 @@ const PropertySearch = ({ schema }) => {
           </div>
         ))}
 
-        {[
-          "parcel",
-          "pin",
-          "arpn",
-          "octtct",
-          "td",
-          "cct",
-          "survey",
-          "cad",
-          "name",
-          "block",
-          "lot",
-        ].map((field) => (
-          <div className="field-cell" key={field}>
-            <label>{field.toUpperCase()}</label>
-            <input
-              value={filters[field]}
-              onChange={(e) => updateFilter(field, e.target.value)}
-            />
+        {["parcel", "pin", "arpn", "octtct", "td", "cct", "survey", "cad", "name", "block", "lot"].map((key) => (
+          <div className="field-cell" key={key}>
+            <label>{key.toUpperCase()}</label>
+            <input value={filters[key]} onChange={(e) => updateFilter(key, e.target.value)} />
           </div>
         ))}
       </div>
 
+      {/* === Buttons === */}
       <div className="button-row">
         <button className="search-btn" onClick={handlePropertySearch}>
           Search
@@ -259,6 +214,7 @@ const PropertySearch = ({ schema }) => {
         </button>
       </div>
 
+      {/* === Results === */}
       {searchTriggered && (
         <SearchResults
           pins={searchResults}
