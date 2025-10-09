@@ -363,6 +363,7 @@ async def train_linear_regression_zip(
             # ✅ Generate PDF Report
             pdf_path = os.path.join(export_path, "regression_report.pdf")
             with PdfPages(pdf_path) as pp:
+                # 1️⃣ Summary Table
                 fig, ax = plt.subplots(figsize=(6, 1.5))
                 ax.axis("off")
                 table = ax.table(
@@ -374,8 +375,38 @@ async def train_linear_regression_zip(
                     cellLoc="center",
                 )
                 table.scale(1, 2)
-                pp.savefig(fig)
-                plt.close(fig)
+                pp.savefig(fig); plt.close(fig)
+
+                # 2️⃣ Feature Importance
+                std_X = np.std(X_train, axis=0)
+                std_y = np.std(y_train)
+                importance = model.coef_ * std_X / std_y
+                fig, ax = plt.subplots(figsize=(8, 4))
+                ax.bar(independent_vars, importance)
+                ax.set_ylabel("Standardized Coefficient")
+                ax.set_title("Feature Importance")
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                pp.savefig(fig); plt.close(fig)
+
+                # 3️⃣ Residual Distribution
+                fig, ax = plt.subplots(figsize=(6, 4))
+                sns.histplot(residuals, kde=True, ax=ax)
+                ax.set_title("Residual Distribution (Normal Curve)")
+                ax.set_xlabel("Residual")
+                ax.set_ylabel("Frequency")
+                plt.tight_layout()
+                pp.savefig(fig); plt.close(fig)
+
+                # 4️⃣ Actual vs Predicted Scatter
+                fig, ax = plt.subplots(figsize=(6, 6))
+                ax.scatter(y_test, preds, alpha=0.6)
+                ax.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], "k--", lw=1.5)
+                ax.set_xlabel("Actual Values")
+                ax.set_ylabel("Predicted Values")
+                ax.set_title("Actual vs Predicted Scatter Plot")
+                plt.tight_layout()
+                pp.savefig(fig); plt.close(fig)
 
             # ✅ Predict safely on valid rows only
             df_full["prediction"] = np.nan
