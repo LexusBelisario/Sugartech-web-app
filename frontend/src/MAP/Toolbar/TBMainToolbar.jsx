@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import ParcelClickHandler from "../ParcelClickHandler.jsx";
-import BarangaySectionTable from "../TMCR/TMCR.jsx";
-import ExactMismatchChecker from "../MatchingReport/MatchingReport.jsx";
 import Search from "../Search/Search.jsx";
 import InfoTool from "../InfoTool/InfoTool.jsx";
 import Consolidate from "../Consolidate/consolidate.jsx";
