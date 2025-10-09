@@ -10,108 +10,52 @@ const LinearRegression = ({ onClose }) => {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // === Modal states ===
+  const [showRunModal, setShowRunModal] = useState(false);
+  const [modelFile, setModelFile] = useState(null);
+  const [runFiles, setRunFiles] = useState([]);
+
   // === Handle upload (either .zip or .shp/.dbf/.shx/.prj) ===
   const handleFileChange = async (e) => {
     const selectedFiles = Array.from(e.target.files);
     if (selectedFiles.length === 0) return;
 
-    // 🧹 Reset previous state
-    setFiles([]);
+    setFiles(selectedFiles);
     setFields([]);
     setIndependentVars([]);
     setDependentVar("");
     setResult(null);
 
-    setFiles(selectedFiles);
-
     try {
-      // === Check for file type mix (ZIP + shapefile components)
       const hasZip = selectedFiles.some((f) => f.name.toLowerCase().endsWith(".zip"));
-      const hasShapefileParts = selectedFiles.some((f) =>
+      const hasParts = selectedFiles.some((f) =>
         [".shp", ".dbf", ".shx", ".prj"].some((ext) => f.name.toLowerCase().endsWith(ext))
       );
 
-      if (hasZip && hasShapefileParts) {
-        alert("Multiple file types detected. Please select only a single ZIP file or a complete set of shapefile components.");
+      if (hasZip && hasParts) {
+        alert("Please select only a single ZIP file or a complete shapefile set.");
         return;
       }
 
-      // === Case 1: Single ZIP upload ===
+      const formData = new FormData();
       if (hasZip) {
         if (selectedFiles.length > 1) {
           alert("Multiple ZIP files detected. Please upload only one ZIP file.");
           return;
         }
-
-        const formData = new FormData();
         formData.append("zip_file", selectedFiles[0]);
-        const res = await fetch(`${API}/linear-regression/fields-zip`, {
-          method: "POST",
-          body: formData,
-        });
-
-        const data = await res.json();
-        if (res.ok && data.fields) {
-          setFields(data.fields);
-        } else {
-          alert(data.error || "Unable to extract fields from ZIP file.");
-        }
-        return;
+        var endpoint = `${API}/linear-regression/fields-zip`;
+      } else {
+        selectedFiles.forEach((f) => formData.append("shapefiles", f));
+        var endpoint = `${API}/linear-regression/fields`;
       }
 
-      // === Case 2: Individual shapefile components ===
-      const validExts = [".shp", ".dbf", ".shx", ".prj"];
-      const fileMap = {};
-
-      selectedFiles.forEach((f) => {
-        const name = f.name.toLowerCase();
-        const ext = name.substring(name.lastIndexOf("."));
-        const base = name.replace(ext, "");
-        if (validExts.includes(ext)) {
-          if (!fileMap[base]) fileMap[base] = [];
-          fileMap[base].push(ext);
-        }
-      });
-
-      const baseNames = Object.keys(fileMap);
-      if (baseNames.length === 0) {
-        alert("No shapefile components detected.");
-        return;
-      }
-      if (baseNames.length > 1) {
-        alert("Multiple shapefile base names detected. Please upload only one complete shapefile set.");
-        return;
-      }
-
-      const requiredExts = [".shp", ".dbf", ".shx", ".prj"];
-      const uploadedExts = fileMap[baseNames[0]];
-      const missing = requiredExts.filter((ext) => !uploadedExts.includes(ext));
-      if (missing.length > 0) {
-        alert(`Incomplete shapefile. Missing: ${missing.join(", ")}`);
-        return;
-      }
-
-      for (const ext of requiredExts) {
-        const duplicates = selectedFiles.filter((f) => f.name.toLowerCase().endsWith(ext));
-        if (duplicates.length > 1) {
-          alert(`Duplicate ${ext} files detected. Please upload only one of each shapefile component.`);
-          return;
-        }
-      }
-
-      // === Fetch fields ===
-      const formData = new FormData();
-      selectedFiles.forEach((f) => formData.append("shapefiles", f));
-      const res = await fetch(`${API}/linear-regression/fields`, {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(endpoint, { method: "POST", body: formData });
       const data = await res.json();
-
       if (res.ok && data.fields) {
         setFields(data.fields);
       } else {
-        alert(data.error || "Unable to extract fields from shapefile components.");
+        alert(data.error || "Unable to extract fields.");
       }
     } catch (err) {
       console.error("Error reading shapefile fields:", err);
@@ -138,19 +82,18 @@ const LinearRegression = ({ onClose }) => {
     setResult(null);
 
     const formData = new FormData();
+    let endpoint;
 
-    // Handle ZIP vs multiple files
     if (files.length === 1 && files[0].name.toLowerCase().endsWith(".zip")) {
       formData.append("zip_file", files[0]);
-      formData.append("independent_vars", JSON.stringify(independentVars));
-      formData.append("dependent_var", dependentVar);
-      var endpoint = `${API}/linear-regression/train-zip`;
+      endpoint = `${API}/linear-regression/train-zip`;
     } else {
       files.forEach((f) => formData.append("shapefiles", f));
-      formData.append("independent_vars", JSON.stringify(independentVars));
-      formData.append("dependent_var", dependentVar);
-      var endpoint = `${API}/linear-regression/train`;
+      endpoint = `${API}/linear-regression/train`;
     }
+
+    formData.append("independent_vars", JSON.stringify(independentVars));
+    formData.append("dependent_var", dependentVar);
 
     try {
       const res = await fetch(endpoint, { method: "POST", body: formData });
@@ -158,119 +101,56 @@ const LinearRegression = ({ onClose }) => {
       if (!res.ok) {
         console.error("Training error:", data);
         alert(`Error: ${data.error || res.statusText}`);
-      } else {
-        setResult(data);
-      }
+      } else setResult(data);
     } catch (err) {
       console.error("Training fetch error:", err);
-      alert("Failed to connect to backend. Check console for details.");
+      alert("Failed to connect to backend.");
     } finally {
       setLoading(false);
     }
   };
 
   // === Run Saved Model ===
-  const handleRunSavedModel = async () => {
+  const handleRunModel = async () => {
+    if (!modelFile) return alert("Please select a .pkl model file.");
+    if (runFiles.length === 0) return alert("Please upload a shapefile or ZIP.");
+
+    const hasZip = runFiles.some((f) => f.name.toLowerCase().endsWith(".zip"));
+    const hasParts = runFiles.some((f) =>
+      [".shp", ".dbf", ".shx", ".prj"].some((ext) => f.name.toLowerCase().endsWith(ext))
+    );
+    if (hasZip && hasParts) {
+      alert("Multiple file types detected. Please select only a ZIP or shapefile set.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("model_file", modelFile);
+    if (hasZip) formData.append("zip_file", runFiles[0]);
+    else runFiles.forEach((f) => formData.append("shapefiles", f));
+
+    setLoading(true);
+    setResult(null);
+
     try {
-      // Step 1: Select PKL file
-      const pklInput = document.createElement("input");
-      pklInput.type = "file";
-      pklInput.accept = ".pkl";
-      pklInput.click();
+      const res = await fetch(`${API}/linear-regression/run-saved-model`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
 
-      pklInput.onchange = async (e) => {
-        const pklFile = e.target.files[0];
-        if (!pklFile) return alert("Please select a .pkl file.");
-
-        // Step 2: Select Shapefile or ZIP
-        const shpInput = document.createElement("input");
-        shpInput.type = "file";
-        shpInput.accept = ".zip,.shp,.dbf,.shx,.prj";
-        shpInput.multiple = true;
-        shpInput.click();
-
-        shpInput.onchange = async (e2) => {
-          const selectedFiles = Array.from(e2.target.files);
-          if (selectedFiles.length === 0) return;
-
-          // Validation
-          const hasZip = selectedFiles.some((f) => f.name.toLowerCase().endsWith(".zip"));
-          const hasParts = selectedFiles.some((f) =>
-            [".shp", ".dbf", ".shx", ".prj"].some((ext) => f.name.toLowerCase().endsWith(ext))
-          );
-          if (hasZip && hasParts) {
-            alert("Multiple file types detected. Please select only a ZIP or a complete shapefile set.");
-            return;
-          }
-          if (hasZip && selectedFiles.length > 1) {
-            alert("Multiple ZIP files detected. Please upload only one ZIP file.");
-            return;
-          }
-
-          // Build FormData
-          const formData = new FormData();
-          formData.append("model_file", pklFile);
-
-          if (hasZip) {
-            formData.append("zip_file", selectedFiles[0]);
-          } else {
-            // Validate shapefile set
-            const validExts = [".shp", ".dbf", ".shx", ".prj"];
-            const fileMap = {};
-            selectedFiles.forEach((f) => {
-              const name = f.name.toLowerCase();
-              const ext = name.substring(name.lastIndexOf("."));
-              const base = name.replace(ext, "");
-              if (validExts.includes(ext)) {
-                if (!fileMap[base]) fileMap[base] = [];
-                fileMap[base].push(ext);
-              }
-            });
-            const baseNames = Object.keys(fileMap);
-            if (baseNames.length === 0) {
-              alert("No shapefile components detected.");
-              return;
-            }
-            if (baseNames.length > 1) {
-              alert("Multiple shapefile base names detected. Please upload only one shapefile set.");
-              return;
-            }
-            const requiredExts = [".shp", ".dbf", ".shx", ".prj"];
-            const uploadedExts = fileMap[baseNames[0]];
-            const missing = requiredExts.filter((ext) => !uploadedExts.includes(ext));
-            if (missing.length > 0) {
-              alert(`Incomplete shapefile. Missing: ${missing.join(", ")}`);
-              return;
-            }
-            selectedFiles.forEach((f) => formData.append("shapefiles", f));
-          }
-
-          setLoading(true);
-          setResult(null);
-
-          try {
-            const res = await fetch(`${API}/linear-regression/run-saved-model`, {
-              method: "POST",
-              body: formData,
-            });
-            const data = await res.json();
-
-            if (!res.ok) {
-              console.error("Run Model Error:", data);
-              alert(`Error: ${data.error || res.statusText}`);
-            } else {
-              setResult(data);
-            }
-          } catch (err) {
-            console.error("Run Model Fetch Error:", err);
-            alert("Failed to connect to backend. Check console for details.");
-          } finally {
-            setLoading(false);
-          }
-        };
-      };
+      if (!res.ok) {
+        console.error("Run Model Error:", data);
+        alert(`Error: ${data.error || res.statusText}`);
+      } else setResult(data);
     } catch (err) {
-      console.error("Run Saved Model Error:", err);
+      console.error("Run Model Fetch Error:", err);
+      alert("Failed to connect to backend.");
+    } finally {
+      setLoading(false);
+      setShowRunModal(false);
+      setModelFile(null);
+      setRunFiles([]);
     }
   };
 
@@ -283,7 +163,7 @@ const LinearRegression = ({ onClose }) => {
         </div>
 
         <div className="lr-content">
-          <label>Upload Shapefile (.shp, .dbf, .shx, .prj) or a ZIP containing them</label>
+          <label>Upload Shapefile (.shp, .dbf, .shx, .prj) or ZIP</label>
           <div className="file-upload">
             <input
               type="file"
@@ -293,16 +173,11 @@ const LinearRegression = ({ onClose }) => {
               style={{ display: "none" }}
               onChange={handleFileChange}
             />
-            <button
-              className="choose-file-btn"
-              onClick={() => document.getElementById("shpInput").click()}
-            >
+            <button className="choose-file-btn" onClick={() => document.getElementById("shpInput").click()}>
               Choose Files
             </button>
             <span className="file-name">
-              {files.length > 0
-                ? files.map((f) => f.name).join(", ")
-                : "No files chosen"}
+              {files.length > 0 ? files.map((f) => f.name).join(", ") : "No files chosen"}
             </span>
           </div>
 
@@ -327,27 +202,18 @@ const LinearRegression = ({ onClose }) => {
           </div>
 
           <label>Dependent Variable (Select one)</label>
-          <select
-            value={dependentVar}
-            onChange={(e) => setDependentVar(e.target.value)}
-          >
+          <select value={dependentVar} onChange={(e) => setDependentVar(e.target.value)}>
             <option value="">-- Select --</option>
-            {fields.length > 0 ? (
-              fields.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))
-            ) : (
-              <option disabled>No fields loaded yet</option>
-            )}
+            {fields.map((f) => (
+              <option key={f} value={f}>{f}</option>
+            ))}
           </select>
 
           <div className="lr-buttons">
             <button className="run-btn" onClick={handleTrainModel} disabled={loading}>
               {loading ? "Training..." : "Train Model"}
             </button>
-            <button className="run-btn secondary" onClick={handleRunSavedModel} disabled={loading}>
+            <button className="run-btn secondary" onClick={() => setShowRunModal(true)} disabled={loading}>
               {loading ? "Processing..." : "Run Saved Model"}
             </button>
           </div>
@@ -359,36 +225,20 @@ const LinearRegression = ({ onClose }) => {
                 <p style={{ color: "red" }}>{result.error}</p>
               ) : (
                 <>
-                  {result.metrics && (
-                    <pre>{JSON.stringify(result.metrics, null, 2)}</pre>
-                  )}
-                  {result.record_count && (
-                    <p><strong>Records processed:</strong> {result.record_count}</p>
-                  )}
+                  {result.metrics && <pre>{JSON.stringify(result.metrics, null, 2)}</pre>}
+                  {result.record_count && <p><strong>Records processed:</strong> {result.record_count}</p>}
                   {result.downloads && (
                     <div className="download-links">
                       <h4>Downloads</h4>
                       <ul>
                         {result.downloads.model && (
-                          <li>
-                            <a href={result.downloads.model} target="_blank" rel="noopener noreferrer">
-                              📦 Download Model (.pkl)
-                            </a>
-                          </li>
+                          <li><a href={result.downloads.model} target="_blank">📦 Model (.pkl)</a></li>
                         )}
                         {result.downloads.report && (
-                          <li>
-                            <a href={result.downloads.report} target="_blank" rel="noopener noreferrer">
-                              📄 Download PDF Report
-                            </a>
-                          </li>
+                          <li><a href={result.downloads.report} target="_blank">📄 PDF Report</a></li>
                         )}
                         {result.downloads.shapefile && (
-                          <li>
-                            <a href={result.downloads.shapefile} target="_blank" rel="noopener noreferrer">
-                              🗺️ Download Predicted Shapefile (.zip)
-                            </a>
-                          </li>
+                          <li><a href={result.downloads.shapefile} target="_blank">🗺️ Predicted Shapefile (.zip)</a></li>
                         )}
                       </ul>
                     </div>
@@ -399,6 +249,32 @@ const LinearRegression = ({ onClose }) => {
           )}
         </div>
       </div>
+
+      {/* === Run Saved Model Modal === */}
+      {showRunModal && (
+        <div className="lr-modal">
+          <div className="lr-modal-content">
+            <h4>Run Saved Model</h4>
+            <label>Upload Model (.pkl)</label>
+            <input type="file" accept=".pkl" onChange={(e) => setModelFile(e.target.files[0])} />
+
+            <label>Upload Shapefile (.zip or .shp/.dbf/.shx/.prj)</label>
+            <input
+              type="file"
+              accept=".zip,.shp,.dbf,.shx,.prj"
+              multiple
+              onChange={(e) => setRunFiles(Array.from(e.target.files))}
+            />
+
+            <div className="lr-modal-buttons">
+              <button onClick={handleRunModel} disabled={loading}>
+                {loading ? "Running..." : "Run"}
+              </button>
+              <button className="cancel-btn" onClick={() => setShowRunModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
