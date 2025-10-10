@@ -1,6 +1,7 @@
 // SearchResults.jsx
-import API from "../../api.js"; // ✅ CHANGED from api_service to api.js
+import API from "../../api.js";
 import React from "react";
+import L from "leaflet";
 
 // Displays the list of matched parcel PINs after a property search
 // Also handles click behavior to highlight and zoom to a selected result
@@ -11,15 +12,17 @@ const SearchResults = ({
   selectedPin,
   setSelectedPin,
 }) => {
-  // Called when a user clicks on a result
+  // === Handle click on a search result ===
   const handleResultClick = async (pin) => {
-    // Find the matching parcel by its PIN
     const match = window.parcelLayers?.find(
       ({ feature }) => feature.properties.pin === pin
     );
-    if (!match) return;
+    if (!match) {
+      console.warn("⚠️ No parcel layer found for PIN:", pin);
+      return;
+    }
 
-    // Reset the previously selected parcel (if any) to lime highlight
+    // Reset previous selected parcel to lime highlight
     window.parcelLayers?.forEach(({ feature, layer }) => {
       if (feature.properties.pin === selectedPin) {
         layer.setStyle({
@@ -31,10 +34,8 @@ const SearchResults = ({
       }
     });
 
-    // Update selected pin
+    // Highlight the newly selected parcel
     setSelectedPin(pin);
-
-    // Highlight the clicked result in yellow
     match.layer.setStyle({
       color: "yellow",
       weight: 3,
@@ -42,20 +43,31 @@ const SearchResults = ({
       fillOpacity: 0.3,
     });
 
-    // Zoom the map to the bounds of the selected parcel
-    window.map?.fitBounds(match.layer.getBounds(), { maxZoom: 19 });
+    // ✅ Guaranteed zoom logic (always works even if layer lacks getBounds)
+    try {
+      if (window.map && match.feature?.geometry) {
+        const geo = L.geoJSON(match.feature.geometry);
+        const bounds = geo.getBounds();
+        if (bounds.isValid()) {
+          window.map.fitBounds(bounds, { maxZoom: 19 });
+        } else {
+          console.warn("⚠️ Invalid geometry bounds for PIN:", pin);
+        }
+      } else {
+        console.warn("⚠️ Missing map or geometry for zoom.");
+      }
+    } catch (err) {
+      console.error("❌ Error zooming to parcel:", err);
+    }
 
-    // Show parcel info in the info popup (if supported)
-    // Optional: you can show a loader or disable clicks while this runs
+    // === Fetch parcel info for InfoTool (safe guarded)
     const schema = match.feature.properties.source_schema;
-
     try {
       const url = `${API}/parcel-info?schema=${schema}&pin=${pin}`;
-
-      // ✅ ADD AUTH HEADERS
       const token =
         localStorage.getItem("access_token") ||
         localStorage.getItem("accessToken");
+
       const res = await fetch(url, {
         headers: {
           "Content-Type": "application/json",
@@ -63,7 +75,6 @@ const SearchResults = ({
         },
       });
 
-      // ✅ CHECK RESPONSE STATUS
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
           console.error("❌ Authentication error");
@@ -77,7 +88,11 @@ const SearchResults = ({
 
       const json = await res.json();
       if (json.status === "success" && json.data) {
-        window.populateParcelInfo(json.data);
+        if (typeof window.populateParcelInfo === "function") {
+          window.populateParcelInfo(json.data);
+        } else {
+          console.warn("⚠️ populateParcelInfo not defined; skipping info panel.");
+        }
       } else {
         console.warn("Parcel info not found for", pin);
       }
@@ -86,7 +101,7 @@ const SearchResults = ({
     }
   };
 
-  // === No input warning ===
+  // === UI when no input ===
   if (noInput) {
     return (
       <div className="search-results">
@@ -97,21 +112,17 @@ const SearchResults = ({
     );
   }
 
-  // === Main results UI ===
+  // === Main results list ===
   return (
     <div className="search-results">
       {pins.length === 0 ? (
-        // No matches found
         <>
           <p>
             <b>Results:</b> 0
           </p>
-          <p style={{ color: "#555", fontStyle: "italic" }}>
-            No matches found.
-          </p>
+          <p style={{ color: "#555", fontStyle: "italic" }}>No matches found.</p>
         </>
       ) : (
-        // Display matched PINs as clickable list items
         <>
           <p>
             <b>Results:</b> {pins.length}
@@ -120,7 +131,7 @@ const SearchResults = ({
             {pins.map((pin, idx) => (
               <li
                 key={idx}
-                className={selectedPin === pin ? "selected" : ""} // Highlight if selected
+                className={selectedPin === pin ? "selected" : ""}
                 onClick={() => handleResultClick(pin)}
               >
                 {pin}

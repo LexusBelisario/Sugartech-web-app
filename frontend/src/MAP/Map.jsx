@@ -9,6 +9,7 @@ import LoadingHandler from "./LoadingHandler";
 import Toolbar from "./Toolbar/toolbar.jsx";
 import { SchemaProvider } from "./SchemaContext.jsx";
 import CoordinatesDisplay from "./CoordinatesDisplay/CoordinatesDisplay.jsx";
+import MapRefRegisterer from "./MapRefRegister.jsx"; // ✅ import here
 
 function Map() {
   return (
@@ -19,6 +20,7 @@ function Map() {
         style={{ height: "100vh", width: "100%" }}
       >
         <BaseMapSelector />
+        <MapRefRegisterer /> {/* ✅ Register global map reference */}
         <SchemaSelector />
         <AdminBoundaries />
         <Orthophoto />
