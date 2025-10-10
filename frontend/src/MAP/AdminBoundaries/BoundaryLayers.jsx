@@ -11,6 +11,7 @@ const BoundaryLayers = ({ showBarangay, showSection }) => {
 
   const barangayLayerRef = useRef(null);
   const sectionLayerRef = useRef(null);
+  const updateVisibilityRef = useRef(null);
 
   // 🎨 Standard color palette
   const colorPalette = [
@@ -20,154 +21,153 @@ const BoundaryLayers = ({ showBarangay, showSection }) => {
     "#aaffc3", "#808000", "#ffd8b1", "#000075", "#808080"
   ];
 
-  const barangayMin = 12;
-  const barangayMax = 15;
-  const sectionMin = 15;
-  const sectionMax = 16;
+    const barangayMin = 12;
+    const barangayMax = 15;
+    const sectionMin = 16;
+    const sectionMax = 25;
+
 
   useEffect(() => {
     if (!map || !schema) return;
 
+    window._debugMap = map; // optional for debugging
     const url = `${API}/municipal-boundaries?schema=${schema}`;
     console.log(`📡 Fetching boundaries for schema=${schema}`);
 
-    let currentZoom = map.getZoom();
-
     fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
+      .then(res => res.json())
+      .then(data => {
         if (data.status !== "success") {
           console.warn("⚠️ No boundaries found:", data);
           return;
         }
 
-        // --- Clear old layers ---
-        if (barangayLayerRef.current) {
-          map.removeLayer(barangayLayerRef.current);
-          barangayLayerRef.current = null;
-        }
-        if (sectionLayerRef.current) {
-          map.removeLayer(sectionLayerRef.current);
-          sectionLayerRef.current = null;
-        }
+        // 🧹 Remove old layers
+        const removeOld = (ref) => {
+          if (ref.current) {
+            try {
+              ref.current.eachLayer((child) => {
+                try { child.remove(); } catch {}
+              });
+              ref.current.clearLayers();
+              map.removeLayer(ref.current);
+            } catch {}
+            ref.current = null;
+          }
+        };
+        removeOld(barangayLayerRef);
+        removeOld(sectionLayerRef);
 
-        // --- Barangay colors ---
+        // --- Color assignments ---
         const barangayColors = {};
-        let brgyColorIndex = 0;
-        if (data.barangay?.features) {
-          data.barangay.features.forEach((f) => {
-            const name = f.properties.barangay;
-            if (name && !barangayColors[name]) {
-              barangayColors[name] = colorPalette[brgyColorIndex % colorPalette.length];
-              brgyColorIndex++;
-            }
-          });
-        }
+        let brgyIndex = 0;
+        data.barangay?.features?.forEach(f => {
+          const n = f.properties.barangay;
+          if (n && !barangayColors[n]) {
+            barangayColors[n] = colorPalette[brgyIndex++ % colorPalette.length];
+          }
+        });
 
-        // --- Section colors (grouped by barangay) ---
         const sectionColors = {};
-        let secColorIndex = 0;
-        if (data.section?.features) {
-          data.section.features.forEach((f) => {
-            const brgyName = f.properties.barangay;
-            if (brgyName && !sectionColors[brgyName]) {
-              sectionColors[brgyName] = colorPalette[secColorIndex % colorPalette.length];
-              secColorIndex++;
-            }
-          });
-        }
+        let secIndex = 0;
+        data.section?.features?.forEach(f => {
+          const n = f.properties.barangay;
+          if (n && !sectionColors[n]) {
+            sectionColors[n] = colorPalette[secIndex++ % colorPalette.length];
+          }
+        });
 
-        // --- Create barangay layer ---
-        if (showBarangay && data.barangay) {
-          barangayLayerRef.current = L.geoJSON(data.barangay, {
-            style: (feature) => {
-              const name = feature.properties.barangay;
-              const color = barangayColors[name] || "#999";
-              return {
-                color: "#000000", // 🟫 black outline
-                weight: 1.5,
-                fillColor: color,
-                fillOpacity: 1.0,
-              };
-            },
-            interactive: false,
-          });
-        }
+        // --- Create layers ---
+        barangayLayerRef.current = L.geoJSON(data.barangay || null, {
+          style: (f) => ({
+            color: "#000000",
+            weight: 1.5,
+            fillColor: barangayColors[f.properties.barangay] || "#999",
+            fillOpacity: 0.8,
+          }),
+          interactive: false,
+        });
 
-        // --- Create section layer ---
-        if (showSection && data.section) {
-          sectionLayerRef.current = L.geoJSON(data.section, {
-            style: (feature) => {
-              const brgyName = feature.properties.barangay;
-              const color = sectionColors[brgyName] || "#999";
-              return {
-                color: "#202020", // 🟫 dark gray outline
-                weight: 1.0,
-                fillColor: color,
-                fillOpacity: 1.0,
-              };
-            },
-            interactive: false,
-          });
-        }
+        sectionLayerRef.current = L.geoJSON(data.section || null, {
+          style: (f) => ({
+            color: "#202020",
+            weight: 1.0,
+            fillColor: sectionColors[f.properties.barangay] || "#999",
+            fillOpacity: 0.1,
+          }),
+          interactive: false,
+        });
 
-        // --- Apply visibility based on zoom ---
+        // --- Visibility toggle ---
         const updateVisibility = () => {
           const zoom = map.getZoom();
 
-          // Barangay layer zoom logic
-          if (
-            showBarangay &&
-            zoom >= barangayMin &&
-            zoom <= barangayMax &&
-            barangayLayerRef.current &&
-            !map.hasLayer(barangayLayerRef.current)
-          ) {
-            map.addLayer(barangayLayerRef.current);
-          } else if (
-            barangayLayerRef.current &&
-            map.hasLayer(barangayLayerRef.current) &&
-            (zoom < barangayMin || zoom > barangayMax)
-          ) {
+          const barangayVisible =
+            showBarangay && zoom >= barangayMin && zoom <= barangayMax;
+          const sectionVisible =
+            showSection && zoom >= sectionMin && zoom <= sectionMax;
+
+          // Barangay toggle
+          if (barangayVisible) {
+            if (!map.hasLayer(barangayLayerRef.current))
+              map.addLayer(barangayLayerRef.current);
+          } else if (map.hasLayer(barangayLayerRef.current)) {
             map.removeLayer(barangayLayerRef.current);
           }
 
-          // Section layer zoom logic
-          if (
-            showSection &&
-            zoom >= sectionMin &&
-            zoom <= sectionMax &&
-            sectionLayerRef.current &&
-            !map.hasLayer(sectionLayerRef.current)
-          ) {
-            map.addLayer(sectionLayerRef.current);
-          } else if (
-            sectionLayerRef.current &&
-            map.hasLayer(sectionLayerRef.current) &&
-            (zoom < sectionMin || zoom > sectionMax)
-          ) {
+          // Section toggle
+          if (sectionVisible) {
+            if (!map.hasLayer(sectionLayerRef.current))
+              map.addLayer(sectionLayerRef.current);
+          } else if (map.hasLayer(sectionLayerRef.current)) {
             map.removeLayer(sectionLayerRef.current);
           }
         };
 
+        updateVisibilityRef.current = updateVisibility;
         updateVisibility();
         map.on("zoomend", updateVisibility);
       })
-      .catch((err) => {
-        console.error("❌ Boundary fetch error:", err);
-      });
+      .catch(err => console.error("❌ Boundary fetch error:", err));
 
-    // 🧹 Cleanup
+    // 🧹 Deep cleanup
     return () => {
-      map.off("zoomend");
-      if (barangayLayerRef.current) {
-        map.removeLayer(barangayLayerRef.current);
-        barangayLayerRef.current = null;
+      // Remove event listener
+      if (updateVisibilityRef.current)
+        map.off("zoomend", updateVisibilityRef.current);
+
+      // Destroy GeoJSON layers and sublayers
+      const destroyGeoJsonLayer = (layerRef) => {
+        const layer = layerRef.current;
+        if (!layer) return;
+        try {
+          layer.eachLayer((child) => {
+            try { child.remove(); } catch {}
+          });
+          layer.clearLayers();
+          map.removeLayer(layer);
+        } catch {}
+        layerRef.current = null;
+      };
+
+      destroyGeoJsonLayer(barangayLayerRef);
+      destroyGeoJsonLayer(sectionLayerRef);
+
+      // Reset global caches
+      window.sectionLayers = [];
+      window.barangayLayers = [];
+      window.parcelLayers = [];
+
+      // Hard purge orphaned layers still tracked internally
+      for (const key in map._layers) {
+        const l = map._layers[key];
+        if (l instanceof L.Path || l instanceof L.GeoJSON) {
+          try { map.removeLayer(l); } catch {}
+        }
       }
-      if (sectionLayerRef.current) {
-        map.removeLayer(sectionLayerRef.current);
-        sectionLayerRef.current = null;
-      }
+
+      console.log("🧹 Deep purge complete. Layer count:",
+        Object.keys(map._layers).length);
     };
   }, [map, schema, showBarangay, showSection]);
 
