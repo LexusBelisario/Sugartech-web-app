@@ -20,15 +20,9 @@ def get_attribute_table(
     schema: str = Query(..., description="Municipal schema name, e.g., PH0403406"),
     db: Session = Depends(get_user_main_db)
 ):
-    """
-    Loads all rows from the 'JoinedTable' of the given schema.
-    Uses the user's provincial database session to ensure the
-    correct province-level DB connection is used.
-    """
     try:
         print(f"📂 Fetching JoinedTable for schema: {schema}")
 
-        # Check if the table exists first
         check_sql = text("""
             SELECT EXISTS (
                 SELECT 1 FROM information_schema.tables
@@ -41,7 +35,6 @@ def get_attribute_table(
             print(f"⚠️ No JoinedTable found in schema '{schema}'")
             return {"status": "error", "message": f"No JoinedTable found in schema '{schema}'", "data": []}
 
-        # Fetch all rows from JoinedTable
         query = text(f'SELECT * FROM "{schema}"."JoinedTable"')
         result = db.execute(query)
         rows = [dict(row._mapping) for row in result]
@@ -59,10 +52,6 @@ def get_attribute_table(
 
 @router.post("/property-search")
 async def property_search(request: Request, db: Session = Depends(get_user_main_db)):
-    """
-    Performs property search within the JoinedTable of a given schema.
-    Filters are case-insensitive and partial-match capable.
-    """
     data = await request.json()
     schema = data.get("schema")
     filters = data.get("filters", {})
@@ -74,7 +63,6 @@ async def property_search(request: Request, db: Session = Depends(get_user_main_
         where_clauses = []
         params = {}
 
-        # Build WHERE clauses dynamically
         for i, (field, value) in enumerate(filters.items()):
             if not value:
                 continue
@@ -98,13 +86,14 @@ async def property_search(request: Request, db: Session = Depends(get_user_main_
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================
-# 🛣️ 3. ROAD SEARCH
+# 🛣️ 3. ROAD SEARCH (Adaptive)
 # ============================================================
 
 @router.post("/road-search")
 async def road_search(request: Request, db: Session = Depends(get_user_main_db)):
     """
-    Searches for roads by name or classification from the 'RoadInfo' table.
+    Searches for roads by name, type, or classification.
+    Works for both 'RoadNetwork' and 'RoadInfo' tables.
     """
     data = await request.json()
     schema = data.get("schema")
@@ -114,6 +103,21 @@ async def road_search(request: Request, db: Session = Depends(get_user_main_db))
         raise HTTPException(status_code=400, detail="Schema is required for road search.")
 
     try:
+        # 🔍 Check which road table exists
+        table_check = text("""
+            SELECT table_name FROM information_schema.tables
+            WHERE table_schema = :schema AND table_name IN ('RoadNetwork', 'RoadInfo')
+            LIMIT 1;
+        """)
+        result = db.execute(table_check, {"schema": schema}).fetchone()
+
+        if not result:
+            raise HTTPException(status_code=404, detail=f"No road table found in schema '{schema}'")
+
+        table_name = result[0]
+        print(f"🛣️ Using road table: {table_name}")
+
+        # 🧩 Build WHERE clause (search by road_name, classification, or type)
         where_clauses = []
         params = {}
 
@@ -121,10 +125,19 @@ async def road_search(request: Request, db: Session = Depends(get_user_main_db))
             if not value:
                 continue
             key = f"v{i}"
-            where_clauses.append(f'LOWER("{field}") LIKE :{key}')
+            where_clauses.append(f'(LOWER("{field}") LIKE :{key})')
             params[key] = f"%{value.lower()}%"
 
-        sql = f'SELECT * FROM "{schema}"."RoadInfo"'
+        # If only one generic search term provided, search multiple columns
+        if not where_clauses and "road_name" in filters:
+            val = filters.get("road_name")
+            if val:
+                params["val"] = f"%{val.lower()}%"
+                where_clauses = [
+                    '(LOWER("road_name") LIKE :val OR LOWER("type") LIKE :val OR LOWER("classification") LIKE :val)'
+                ]
+
+        sql = f'SELECT * FROM "{schema}"."{table_name}"'
         if where_clauses:
             sql += " WHERE " + " AND ".join(where_clauses)
 
@@ -132,9 +145,11 @@ async def road_search(request: Request, db: Session = Depends(get_user_main_db))
         result = db.execute(query, params)
         rows = [dict(row._mapping) for row in result]
 
-        print(f"✅ Road search in {schema}: {len(rows)} result(s)")
+        print(f"✅ Road search in {schema}.{table_name}: {len(rows)} result(s)")
         return {"status": "success", "data": rows, "count": len(rows)}
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"❌ Road search error for {schema}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -145,9 +160,6 @@ async def road_search(request: Request, db: Session = Depends(get_user_main_db))
 
 @router.post("/landmark-search")
 async def landmark_search(request: Request, db: Session = Depends(get_user_main_db)):
-    """
-    Searches landmarks (e.g., schools, churches, etc.) from the 'Landmarks' table.
-    """
     data = await request.json()
     schema = data.get("schema")
     filters = data.get("filters", {})

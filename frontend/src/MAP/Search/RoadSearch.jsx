@@ -1,205 +1,188 @@
-import React, { useState, useEffect } from "react";
+// RoadSearch.jsx
+import React, { useState } from "react";
 import "./Search.css";
 import API from "../../api.js";
 import { useSchema } from "../SchemaContext";
+import L from "leaflet";
 
 const RoadSearch = () => {
   const { schema } = useSchema();
-  const [roadName, setRoadName] = useState("");
+
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [selectedRoad, setSelectedRoad] = useState(null);
   const [status, setStatus] = useState("");
 
-  // === Load all roads when schema changes ===
-  useEffect(() => {
+  // 🧹 Reset all road styles to black
+  const resetRoadStyles = () => {
+    window.roadLayers?.forEach(({ layer }) =>
+      layer.setStyle({ color: "black", weight: 1 })
+    );
+  };
+
+  // 🔍 Search logic
+  const handleSearch = async () => {
     if (!schema) {
-      console.log("⚠️ RoadSearch: No schema selected.");
+      alert("Please select a municipality schema first.");
       return;
     }
 
-    console.log(`🔄 Loading roads for schema: ${schema}`);
-    window.roadLayers = []; // ✅ always initialize, avoids undefined crash
+    const term = query.trim();
+    if (!term) {
+      setStatus("Please enter a road name or keyword.");
+      setResults([]);
+      return;
+    }
 
-    const loadRoads = async () => {
-      try {
-        const url = `${API}/single-table?schema=${schema}&table=RoadNetwork`;
-        console.log("🌐 Fetching:", url);
+    try {
+      setStatus("Searching...");
 
-        // ✅ ADD AUTH HEADERS
-        const token =
-          localStorage.getItem("access_token") ||
-          localStorage.getItem("accessToken");
-        const res = await fetch(url, {
-          headers: {
-            "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
-        });
+      // Fetch search results
+      const res = await fetch(`${API}/search/road-search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          schema,
+          filters: { road_name: term },
+        }),
+      });
 
-        // ✅ CHECK RESPONSE STATUS
-        if (!res.ok) {
-          if (res.status === 401 || res.status === 403) {
-            console.error("❌ Authentication error");
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("accessToken");
-            window.location.href = "/login";
-            return;
-          }
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-
-        const geojson = await res.json();
-
-        if (!geojson.features || geojson.features.length === 0) {
-          console.warn("⚠️ No road features found for schema:", schema);
-          return;
-        }
-
-        if (window.map) {
-          if (window.roadLayerGroup) {
-            console.log("🗑️ Removing old road layer group");
-            window.map.removeLayer(window.roadLayerGroup);
-          }
-
-          window.roadLayers = []; // ✅ reset mapping
-
-          console.log("➕ Adding new road layer group");
-          const group = L.geoJSON(geojson, {
-            style: { color: "black", weight: 1 },
-            onEachFeature: (feature, layer) => {
-              window.roadLayers.push({ feature, layer }); // ✅ store pair
-              layer.on("click", () => {
-                console.log("🖱️ Road clicked:", feature.properties);
-                if (window.openRoadInfoOnly)
-                  window.openRoadInfoOnly(feature.properties);
-              });
-            },
-          }).addTo(window.map);
-
-          window.roadLayerGroup = group;
-        }
-      } catch (err) {
-        console.error("❌ Failed to load roads:", err);
+      const json = await res.json();
+      if (json.status !== "success" || !json.data?.length) {
+        setStatus("No matching roads found.");
+        setResults([]);
+        return;
       }
-    };
 
-    loadRoads();
-  }, [schema]);
+      // Remove previous road layer if any
+      if (window.roadLayerGroup) {
+        window.map.removeLayer(window.roadLayerGroup);
+      }
+      window.roadLayers = [];
 
-  const resetStyle = () => {
-    if (window.roadLayers && window.roadLayers.length > 0) {
-      console.log("🔄 Resetting road styles");
-      window.roadLayers.forEach(({ layer }) =>
-        layer.setStyle({ color: "black", weight: 1 })
-      );
+      // Load and draw road layer
+      const url = `${API}/single-table?schema=${schema}&table=RoadNetwork`;
+      const token =
+        localStorage.getItem("access_token") ||
+        localStorage.getItem("accessToken");
+      const layerRes = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
+
+      const geojson = await layerRes.json();
+      const group = L.geoJSON(geojson, {
+        style: { color: "black", weight: 1 },
+        onEachFeature: (feature, layer) => {
+          window.roadLayers.push({ feature, layer });
+        },
+      }).addTo(window.map);
+      window.roadLayerGroup = group;
+
+      // Group results by unique road_name
+      const grouped = {};
+      json.data.forEach((r) => {
+        const name = r.road_name?.trim() || "Unnamed Road";
+        if (!grouped[name]) grouped[name] = [];
+        grouped[name].push(r);
+      });
+
+      const groupedList = Object.keys(grouped)
+        .sort((a, b) => a.localeCompare(b))
+        .map((name) => ({ name, features: grouped[name] }));
+
+      setResults(groupedList);
+      setStatus("");
+      resetRoadStyles();
+
+      // Highlight matched roads in dark green
+      json.data.forEach((road) => {
+        const match = window.roadLayers?.find(
+          ({ feature }) =>
+            feature.properties.id === road.id ||
+            feature.properties.road_name === road.road_name
+        );
+        if (match)
+          match.layer.setStyle({ color: "#006400", weight: 3 }); // dark green
+      });
+
+      console.log(`✅ Grouped into ${groupedList.length} unique road names`);
+    } catch (err) {
+      console.error("❌ Road search error:", err);
+      setStatus("Search failed.");
     }
   };
 
-  // === Search ===
-  const handleSearch = () => {
-    console.log("🔍 Searching for:", roadName);
+  // 🎯 Zoom to clicked road group
+  const handleResultClick = (roadGroup) => {
+    const roadName = roadGroup.name;
+    setSelectedRoad(roadName);
+    resetRoadStyles();
 
-    if (!window.roadLayers || window.roadLayers.length === 0) {
-      console.warn("⚠️ No road layers available yet — maybe still loading?");
-      setStatus("Road layer not loaded yet.");
-      return;
-    }
-
-    const input = roadName.trim().toLowerCase();
-    if (!input) {
-      setStatus("Please enter a road name.");
-      setResults([]);
-      return;
-    }
-
-    const matches = window.roadLayers.filter(({ feature }) =>
-      (feature.properties.road_name || "").toLowerCase().includes(input)
-    );
-    console.log(`✅ Found ${matches.length} matches`);
-
-    if (matches.length === 0) {
-      setStatus("No matching roads found.");
-      setResults([]);
-      return;
-    }
-
-    const grouped = {};
-    matches.forEach(({ feature }) => {
-      const name = feature.properties.road_name || "Unnamed Road";
-      if (!grouped[name]) grouped[name] = [];
-      grouped[name].push(feature);
-    });
-
-    setResults(Object.keys(grouped).sort());
-    setStatus("");
-    window.groupedRoadResults = grouped;
-
-    resetStyle();
-    matches.forEach(({ layer, feature }) => {
-      console.log("🟩 Highlighting green:", feature.properties.road_name);
-      layer.setStyle({ color: "green", weight: 3 });
-    });
-  };
-
-  // === Zoom ===
-  const zoomToRoad = (name) => {
-    console.log("🎯 Zooming to road:", name);
-    const group = window.groupedRoadResults?.[name];
-    if (!group) return;
-
-    setSelectedRoad(name);
-    resetStyle();
-
-    const layers = window.roadLayers.filter(({ feature }) =>
-      group.some((g) => g.properties.id === feature.properties.id)
+    // Find all matching layers by name or id
+    const matches = window.roadLayers?.filter(({ feature }) =>
+      roadGroup.features.some(
+        (r) =>
+          feature.properties.id === r.id ||
+          feature.properties.road_name === r.road_name
+      )
     );
 
-    layers.forEach(({ layer, feature }) => {
-      console.log("🟨 Highlighting yellow:", feature.properties.road_name);
-      layer.setStyle({ color: "yellow", weight: 3 });
+    matches?.forEach(({ layer }) => {
+      layer.setStyle({ color: "yellow", weight: 4 });
     });
 
-    if (layers.length > 0) {
-      const bounds = layers
+    if (matches?.length) {
+      const bounds = matches
         .map(({ layer }) => layer.getBounds())
-        .reduce((a, b) => a.extend(b), layers[0].layer.getBounds());
-      console.log("📏 Fitting bounds:", bounds);
-      window.map.fitBounds(bounds);
-      if (window.openRoadInfoOnly) window.openRoadInfoOnly(group[0].properties);
+        .reduce((a, b) => a.extend(b), matches[0].layer.getBounds());
+      window.map.fitBounds(bounds, { maxZoom: 18 });
     }
   };
 
-  const clear = () => {
-    console.log("🧹 Clearing search");
-    setRoadName("");
+  // 🧼 Clear everything (including road layer)
+  const handleClear = () => {
+    console.log("🧹 Clearing Road Search and removing layer");
+    setQuery("");
     setResults([]);
-    setStatus("");
     setSelectedRoad(null);
-    resetStyle();
+    setStatus("");
+    resetRoadStyles();
+
+    if (window.roadLayerGroup) {
+      window.map.removeLayer(window.roadLayerGroup);
+      delete window.roadLayerGroup;
+    }
+    window.roadLayers = [];
   };
 
   return (
     <div className="tab-content">
+      {/* Input Field */}
       <div className="field-grid">
         <div className="field-cell" style={{ gridColumn: "span 3" }}>
           <label>Road Name</label>
           <input
-            value={roadName}
-            onChange={(e) => setRoadName(e.target.value)}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Enter road name..."
           />
         </div>
       </div>
 
+      {/* Buttons */}
       <div className="button-row">
-        <button id="searchBtn" className="search-btn" onClick={handleSearch}>
-          Search Road
+        <button className="search-btn" onClick={handleSearch}>
+          Search
         </button>
-        <button className="clear-btn" onClick={clear}>
+        <button className="clear-btn" onClick={handleClear}>
           Clear
         </button>
       </div>
 
+      {/* Results */}
       {status && (
         <div className="search-results">
           <p style={{ fontStyle: "italic" }}>{status}</p>
@@ -212,13 +195,13 @@ const RoadSearch = () => {
             <b>Results:</b> {results.length}
           </p>
           <ul>
-            {results.map((name, idx) => (
+            {results.map((group, idx) => (
               <li
                 key={idx}
-                className={selectedRoad === name ? "selected" : ""}
-                onClick={() => zoomToRoad(name)}
+                className={selectedRoad === group.name ? "selected" : ""}
+                onClick={() => handleResultClick(group)}
               >
-                {name}
+                {group.name}
               </li>
             ))}
           </ul>

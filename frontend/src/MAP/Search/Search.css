@@ -7,7 +7,7 @@
   top: 0;
   left: 0;
   width: 350px;                      /* balanced sidebar width */
-  height: 500px;
+  height: 100vh;
   background-color: #e4e4e4;          /* same tone as toolbar */
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.25);
   z-index: 9999;
