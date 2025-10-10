@@ -296,9 +296,6 @@ async def train_linear_regression(
         print(f"❌ Error during training: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-# ============================================================
-# 🔹 Train Linear Regression directly from ZIP shapefile (full PDF)
-# ============================================================
 @router.post("/train-zip")
 async def train_linear_regression_zip(
     zip_file: UploadFile,
@@ -314,6 +311,7 @@ async def train_linear_regression_zip(
     from sklearn.preprocessing import StandardScaler
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+    from datetime import datetime
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -322,7 +320,7 @@ async def train_linear_regression_zip(
             with open(zip_path, "wb") as out:
                 out.write(await zip_file.read())
 
-            # ✅ Extract all shapefile components
+            # ✅ Extract shapefile contents
             with zfmod.ZipFile(zip_path, "r") as archive:
                 archive.extractall(tmpdir)
 
@@ -330,28 +328,42 @@ async def train_linear_regression_zip(
             shp_files = [
                 os.path.join(root, f)
                 for root, _, files in os.walk(tmpdir)
-                for f in files if f.endswith(".shp")
+                for f in files
+                if f.endswith(".shp")
             ]
             if len(shp_files) == 0:
-                return JSONResponse(status_code=400, content={"error": "No .shp file found in ZIP."})
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "No .shp file found in ZIP."},
+                )
             if len(shp_files) > 1:
-                return JSONResponse(status_code=400, content={"error": "Multiple shapefiles detected. Please upload only one shapefile."})
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "Multiple shapefiles detected. Please upload only one."},
+                )
 
             shp_path = shp_files[0]
             gdf = gpd.read_file(shp_path)
             df_full = pd.DataFrame(gdf.drop(columns="geometry", errors="ignore"))
 
             # ✅ Parse variable selections
-            independent_vars = json.loads(independent_vars) if independent_vars.startswith("[") else independent_vars.split(",")
+            independent_vars = (
+                json.loads(independent_vars)
+                if independent_vars.startswith("[")
+                else independent_vars.split(",")
+            )
             independent_vars = [v.strip() for v in independent_vars if v.strip()]
             target = dependent_var.strip()
 
-            # ✅ Validate column existence
+            # ✅ Validate variables
             missing = [v for v in independent_vars + [target] if v not in df_full.columns]
             if missing:
-                return JSONResponse(status_code=400, content={"error": f"Missing variables in shapefile: {missing}"})
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": f"Missing variables in shapefile: {missing}"},
+                )
 
-            # ✅ Clean and convert numeric data safely
+            # ✅ Safe numeric conversion
             def safe_to_float(x):
                 try:
                     if pd.isna(x):
@@ -360,6 +372,7 @@ async def train_linear_regression_zip(
                         x = x.strip().replace(",", "")
                         if x.lower() in ["", "none", "nan", "null"]:
                             return np.nan
+                        return float(x)
                     return float(x)
                 except Exception:
                     return np.nan
@@ -369,19 +382,23 @@ async def train_linear_regression_zip(
 
             df_valid = df_full.dropna(subset=independent_vars + [target])
             if df_valid.empty:
-                return JSONResponse(status_code=400, content={"error": "No valid numeric data found in selected fields."})
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "No valid numeric data found in selected fields."},
+                )
 
             # ✅ Train-test split
             X = df_valid[independent_vars]
             y = df_valid[target]
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.3, random_state=42
+            )
 
-            # ✅ Scale features
+            # ✅ Scale & train
             scaler = StandardScaler()
             X_train_scaled = scaler.fit_transform(X_train)
             X_test_scaled = scaler.transform(X_test)
 
-            # ✅ Train model
             model = LinearRegression()
             model.fit(X_train_scaled, y_train)
             preds = model.predict(X_test_scaled)
@@ -393,34 +410,44 @@ async def train_linear_regression_zip(
             rmse = np.sqrt(mse)
             r2 = r2_score(y_test, preds)
 
-            # ✅ Prepare export directory
+            # ✅ Prepare export dir
             export_id = f"zip_linear_{np.random.randint(100000, 999999)}"
             export_path = os.path.join(EXPORT_DIR, export_id)
             os.makedirs(export_path, exist_ok=True)
 
-            # ✅ Save model file
+            # ✅ Save model
             model_path = os.path.join(export_path, "trained_model.pkl")
-            joblib.dump({
-                "model": model,
-                "scaler": scaler,
-                "features": independent_vars,
-                "dependent_var": target
-            }, model_path)
+            joblib.dump(
+                {
+                    "model": model,
+                    "scaler": scaler,
+                    "features": independent_vars,
+                    "dependent_var": target,
+                },
+                model_path,
+            )
 
-            # ✅ Save PDF & PNG charts
+            # ✅ PDF & plots
             pdf_path = os.path.join(export_path, "regression_report.pdf")
             png_paths = {}
 
             with PdfPages(pdf_path) as pp:
-                # 1️⃣ Metrics Table
+                # --- Metrics table ---
                 fig, ax = plt.subplots(figsize=(6, 1.5))
                 ax.axis("off")
                 table = ax.table(
                     cellText=[
                         ["Model", "MSE", "MAE", "RMSE", "R²"],
-                        ["Linear Regression", f"{mse:.2f}", f"{mae:.2f}", f"{rmse:.2f}", f"{r2:.2f}"],
+                        [
+                            "Linear Regression",
+                            f"{mse:.2f}",
+                            f"{mae:.2f}",
+                            f"{rmse:.2f}",
+                            f"{r2:.2f}",
+                        ],
                     ],
-                    loc="center", cellLoc="center",
+                    loc="center",
+                    cellLoc="center",
                 )
                 table.scale(1, 2)
                 pp.savefig(fig)
@@ -429,7 +456,7 @@ async def train_linear_regression_zip(
                 plt.close(fig)
                 png_paths["metrics"] = metrics_png
 
-                # 2️⃣ Feature Importance
+                # --- Feature importance ---
                 std_X = np.std(X_train_scaled, axis=0)
                 std_y = np.std(y_train)
                 importance = model.coef_ * std_X / std_y
@@ -445,7 +472,7 @@ async def train_linear_regression_zip(
                 plt.close(fig)
                 png_paths["feature_importance"] = fi_png
 
-                # 3️⃣ Residual Distribution
+                # --- Residual distribution ---
                 fig, ax = plt.subplots(figsize=(6, 4))
                 sns.histplot(residuals, kde=True, ax=ax)
                 ax.set_title("Residual Distribution (Normal Curve)")
@@ -458,10 +485,15 @@ async def train_linear_regression_zip(
                 plt.close(fig)
                 png_paths["residual_distribution"] = resid_png
 
-                # 4️⃣ Actual vs Predicted
+                # --- Actual vs Predicted ---
                 fig, ax = plt.subplots(figsize=(6, 6))
                 ax.scatter(y_test, preds, alpha=0.6)
-                ax.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], "k--", lw=1.5)
+                ax.plot(
+                    [min(y_test), max(y_test)],
+                    [min(y_test), max(y_test)],
+                    "k--",
+                    lw=1.5,
+                )
                 ax.set_xlabel("Actual Values")
                 ax.set_ylabel("Predicted Values")
                 ax.set_title("Actual vs Predicted Scatter Plot")
@@ -472,12 +504,13 @@ async def train_linear_regression_zip(
                 plt.close(fig)
                 png_paths["actual_vs_predicted"] = scatter_png
 
-            # ✅ Predict on full valid data and export shapefile
+            # ✅ Predict on full dataset
             df_full["prediction"] = np.nan
             preds_valid = model.predict(scaler.transform(df_valid[independent_vars]))
             df_full.loc[df_valid.index, "prediction"] = preds_valid
             gdf["prediction"] = df_full["prediction"]
 
+            # ✅ Save shapefile output
             shp_pred_dir = os.path.join(export_path, "predicted_shapefile")
             os.makedirs(shp_pred_dir, exist_ok=True)
             shp_pred_path = os.path.join(shp_pred_dir, "predicted_output.shp")
@@ -490,28 +523,69 @@ async def train_linear_regression_zip(
                     for f in files:
                         z.write(os.path.join(root, f), f)
 
-            # ✅ Return all results
+            # ✅ Derive LGU/schema name
+            try:
+                base_name = os.path.splitext(os.path.basename(zip_file.filename))[0]
+                clean_name = base_name.split("_", 1)[-1] if "_" in base_name else base_name
+            except Exception:
+                clean_name = "LinearRegression"
+
+            # ✅ Timestamp for unique version
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
+
+            # ✅ Compose CSV name
+            csv_filename = f"{clean_name}_LinearRegression_CAMA_{timestamp}.csv"
+            csv_path = os.path.join(export_path, csv_filename)
+
+            # ✅ Save CSV + preview
+            df_full[independent_vars + [target, "prediction"]].to_csv(csv_path, index=False)
+            cama_preview = (
+                df_full[independent_vars + [target, "prediction"]]
+                .head(10)
+                .replace({np.nan: ""})
+                .to_dict(orient="records")
+            )
+
+            # ✅ Generate per-variable distribution plots
             base_url = "/api/linear-regression/download"
+            dist_plots = {}
+            for col in independent_vars:
+                try:
+                    fig, ax = plt.subplots(figsize=(6, 4))
+                    sns.histplot(df_full[col].dropna(), kde=True, ax=ax, color="#00ff9d", edgecolor="black")
+                    ax.set_title(f"Distribution of {col}")
+                    ax.set_xlabel(col)
+                    ax.set_ylabel("Frequency")
+                    plt.tight_layout()
+                    dist_path = os.path.join(export_path, f"dist_{col}.png")
+                    fig.savefig(dist_path, bbox_inches="tight")
+                    plt.close(fig)
+                    dist_plots[col] = f"{base_url}?file={dist_path}"
+                except Exception as e:
+                    print(f"⚠️ Skipped {col} distribution plot: {e}")
+
+            # ✅ Return all
             return {
-                "metrics": {"R²": r2, "MSE": mse, "MAE": mae, "RMSE": rmse},
-                "coefficients": dict(zip(independent_vars, model.coef_.round(6))),
-                "intercept": float(round(model.intercept_, 6)),
                 "dependent_var": target,
+                "metrics": {"R²": r2, "MSE": mse, "MAE": mae, "RMSE": rmse},
+                "coefficients": {k: float(v) for k, v in zip(independent_vars, model.coef_)},
+                "intercept": float(model.intercept_),
+                "cama_preview": cama_preview,
+                "distributions": dist_plots,
+                "lgu_name": clean_name,
                 "downloads": {
                     "model": f"{base_url}?file={model_path}",
                     "report": f"{base_url}?file={pdf_path}",
                     "shapefile": f"{base_url}?file={zip_out}",
+                    "cama_csv": f"{base_url}?file={csv_path}",
                 },
-                "plots": {
-                    key: f"{base_url}?file={path}" for key, path in png_paths.items()
-                },
+                "plots": {key: f"{base_url}?file={path}" for key, path in png_paths.items()},
                 "message": "Model trained successfully and files ready for download.",
             }
 
     except Exception as e:
         print(f"❌ TRAIN-ZIP ERROR: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
-
 
 # ============================================================
 # 🔹 4. Run Saved Model (apply pre-trained .pkl model on new shapefile)

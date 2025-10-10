@@ -661,3 +661,88 @@ select:focus {
   background: linear-gradient(90deg, #10ac84, #0abde3);
   transform: translateY(-1px);
 }
+
+
+.prediction-col {
+  color: #00ff9d;
+  font-weight: 600;
+  text-shadow: 0 0 4px rgba(0, 255, 157, 0.4);
+}
+
+
+/* === 🏠 CAMA Table (Modal) === */
+.cama-preview-modal {
+  margin-top: 25px;
+  padding-top: 10px;
+  border-top: 1px solid #222;
+}
+
+.cama-header-modal {
+  color: #00ff9d;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-align: center;
+  text-shadow: 0 0 6px rgba(0, 255, 157, 0.4);
+}
+
+.cama-table-wrapper-modal {
+  overflow-x: auto;
+  margin-top: 8px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: rgba(15, 15, 15, 0.7);
+  box-shadow: 0 0 12px rgba(0, 255, 157, 0.05);
+}
+
+.cama-table-modal {
+  width: 100%;
+  border-collapse: collapse;
+  color: #e0e0e0;
+  font-size: 13px;
+}
+
+.cama-table-modal th,
+.cama-table-modal td {
+  border: 1px solid #333;
+  padding: 6px 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.cama-table-modal th {
+  background: #101010;
+  color: #00ff9d;
+  font-weight: 600;
+}
+
+.cama-table-modal tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.cama-table-modal tr:hover td {
+  background: rgba(0, 255, 157, 0.05);
+}
+
+.cama-download-container {
+  text-align: center;
+  margin-top: 10px;
+}
+
+.download-csv-btn {
+  display: inline-block;
+  padding: 6px 14px;
+  background: #00ff9d20;
+  border: 1px solid #00ff9d60;
+  color: #00ff9d;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: 0.2s ease;
+}
+
+.download-csv-btn:hover {
+  background: #00ff9d40;
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
+}
+
