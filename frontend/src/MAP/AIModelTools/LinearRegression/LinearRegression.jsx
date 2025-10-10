@@ -17,7 +17,7 @@ const LinearRegression = ({ onClose }) => {
   const [showResultsPanel, setShowResultsPanel] = useState(false);
   const [selectedGraph, setSelectedGraph] = useState(null);
 
-  // === Handle Shapefile Upload ===
+  // === Handle file upload ===
   const handleFileChange = async (e) => {
     const selectedFiles = Array.from(e.target.files);
     if (selectedFiles.length === 0) return;
@@ -29,13 +29,9 @@ const LinearRegression = ({ onClose }) => {
     setResult(null);
 
     try {
-      const hasZip = selectedFiles.some((f) =>
-        f.name.toLowerCase().endsWith(".zip")
-      );
+      const hasZip = selectedFiles.some((f) => f.name.toLowerCase().endsWith(".zip"));
       const hasParts = selectedFiles.some((f) =>
-        [".shp", ".dbf", ".shx", ".prj"].some((ext) =>
-          f.name.toLowerCase().endsWith(ext)
-        )
+        [".shp", ".dbf", ".shx", ".prj"].some((ext) => f.name.toLowerCase().endsWith(ext))
       );
 
       if (hasZip && hasParts) {
@@ -67,7 +63,7 @@ const LinearRegression = ({ onClose }) => {
     }
   };
 
-  // === Independent Variable Toggle ===
+  // === Toggle independent variable ===
   const toggleIndependentVar = (field) => {
     setIndependentVars((prev) =>
       prev.includes(field)
@@ -76,7 +72,7 @@ const LinearRegression = ({ onClose }) => {
     );
   };
 
-  // === Train Model ===
+  // === Train model ===
   const handleTrainModel = async () => {
     if (files.length === 0) return alert("Please upload your shapefile or ZIP.");
     if (independentVars.length === 0) return alert("Select independent variables.");
@@ -116,16 +112,14 @@ const LinearRegression = ({ onClose }) => {
     }
   };
 
-  // === Run Saved Model ===
+  // === Run saved model ===
   const handleRunModel = async () => {
     if (!modelFile) return alert("Please select a .pkl model file.");
     if (runFiles.length === 0) return alert("Please upload a shapefile or ZIP.");
 
     const hasZip = runFiles.some((f) => f.name.toLowerCase().endsWith(".zip"));
     const hasParts = runFiles.some((f) =>
-      [".shp", ".dbf", ".shx", ".prj"].some((ext) =>
-        f.name.toLowerCase().endsWith(ext)
-      )
+      [".shp", ".dbf", ".shx", ".prj"].some((ext) => f.name.toLowerCase().endsWith(ext))
     );
     if (hasZip && hasParts) {
       alert("Multiple file types detected. Please select only a ZIP or shapefile set.");
@@ -167,13 +161,11 @@ const LinearRegression = ({ onClose }) => {
       <div className="lr-panel">
         <div className="lr-header">
           <h3>Linear Regression Tool</h3>
-          <button className="lr-close" onClick={onClose}>
-            ✕
-          </button>
+          <button className="lr-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="lr-content">
-          {/* === FILE UPLOAD === */}
+          {/* === File upload === */}
           <label>Upload Shapefile (.shp, .dbf, .shx, .prj) or ZIP</label>
           <div className="file-upload">
             <input
@@ -199,7 +191,7 @@ const LinearRegression = ({ onClose }) => {
 
           <hr className="divider" />
 
-          {/* === VARIABLE SELECTORS === */}
+          {/* === Variable selectors === */}
           <label>Independent Variables (Select multiple)</label>
           <div className="checkbox-list">
             {fields.length > 0 ? (
@@ -225,19 +217,12 @@ const LinearRegression = ({ onClose }) => {
           >
             <option value="">-- Select --</option>
             {fields.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
+              <option key={f} value={f}>{f}</option>
             ))}
           </select>
 
-          {/* === ACTION BUTTONS === */}
           <div className="lr-buttons">
-            <button
-              className="run-btn"
-              onClick={handleTrainModel}
-              disabled={loading}
-            >
+            <button className="run-btn" onClick={handleTrainModel} disabled={loading}>
               {loading ? "Training..." : "Train Model"}
             </button>
             <button
@@ -249,7 +234,7 @@ const LinearRegression = ({ onClose }) => {
             </button>
           </div>
 
-          {/* === MODEL SUMMARY === */}
+          {/* === Model Summary === */}
           {result && (
             <div className="model-summary-box">
               <h3 className="summary-title">🧠 Model Summary</h3>
@@ -298,49 +283,22 @@ const LinearRegression = ({ onClose }) => {
                 Intercept: {result.intercept.toFixed(6)}
               </p>
 
-              {/* === DOWNLOAD LINKS === */}
+              {/* === Downloads === */}
               <div className="download-links">
                 <h4>Downloads</h4>
                 <ul>
-                  <li>
-                    <a
-                      href={result.downloads.model}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      📦 Model (.pkl)
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href={result.downloads.report}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      📄 PDF Report
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href={result.downloads.shapefile}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      🗺️ Predicted Shapefile (.zip)
-                    </a>
-                  </li>
+                  <li><a href={result.downloads.model} target="_blank" rel="noreferrer">📦 Model (.pkl)</a></li>
+                  <li><a href={result.downloads.report} target="_blank" rel="noreferrer">📄 PDF Report</a></li>
+                  <li><a href={result.downloads.shapefile} target="_blank" rel="noreferrer">🗺️ Predicted Shapefile (.zip)</a></li>
                 </ul>
               </div>
 
-              {/* === SHOW GRAPHS BUTTON === */}
               <div className="graphs-button-container">
                 <button
                   className="show-graphs-btn"
                   onClick={() => setShowResultsPanel(!showResultsPanel)}
                 >
-                  {showResultsPanel
-                    ? "Hide Graphs & Tables"
-                    : "Show Graphs & Tables"}
+                  {showResultsPanel ? "Hide Graphs & Tables" : "Show Graphs & Tables"}
                 </button>
               </div>
             </div>
@@ -348,35 +306,25 @@ const LinearRegression = ({ onClose }) => {
         </div>
       </div>
 
-      {/* === GRAPHS MODAL === */}
+      {/* === Graphs Modal === */}
       {showResultsPanel && result && (
         <div className="graphs-modal">
           <div className="graphs-modal-content">
-            <button
-              className="graphs-close"
-              onClick={() => setShowResultsPanel(false)}
-            >
-              ✕
-            </button>
+            <button className="graphs-close" onClick={() => setShowResultsPanel(false)}>✕</button>
 
             <h2 className="graphs-title">📊 Linear Regression Results</h2>
             <p className="graphs-subtitle">
-              Model performance overview, feature importance, and data
-              diagnostics
+              Model performance overview, feature importance, and data diagnostics
             </p>
 
+            {/* === Graphs Grid === */}
             <div className="graphs-grid">
               {result.plots ? (
                 Object.entries(result.plots).map(([key, value]) => (
                   <div
                     key={key}
                     className="graph-card"
-                    onClick={() =>
-                      setSelectedGraph({
-                        title: key.replace(/_/g, " "),
-                        src: value,
-                      })
-                    }
+                    onClick={() => setSelectedGraph({ title: key.replace(/_/g, " "), src: value })}
                   >
                     <h4>{key.replace(/_/g, " ")}</h4>
                     <img src={value} alt={key} loading="lazy" />
@@ -389,21 +337,83 @@ const LinearRegression = ({ onClose }) => {
               )}
             </div>
 
-            {selectedGraph && (
-              <div
-                className="graph-viewer-overlay"
-                onClick={() => setSelectedGraph(null)}
-              >
-                <div
-                  className="graph-viewer-box"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    className="graph-viewer-close"
-                    onClick={() => setSelectedGraph(null)}
+            {/* === CAMA TABLE PREVIEW === */}
+            {result.cama_preview && (
+              <div className="cama-preview-modal">
+                <h3 className="cama-header-modal">🏠 CAMA Attribute Table (Preview)</h3>
+                <p className="graphs-subtitle">
+                  Below is a sample (first 10 rows). Click any column name to see its data distribution.
+                </p>
+
+                <div className="cama-table-wrapper-modal">
+                  <table className="cama-table-modal">
+                    <thead>
+                      <tr>
+                        {Object.keys(result.cama_preview[0] || {}).map((col) => (
+                          <th
+                            key={col}
+                            className={col === "prediction" ? "prediction-col" : ""}
+                            onClick={() => {
+                              if (result.distributions && result.distributions[col]) {
+                                setSelectedGraph({
+                                  title: `Distribution of ${col}`,
+                                  src: result.distributions[col],
+                                });
+                              }
+                            }}
+                            style={{
+                              cursor:
+                                result.distributions && result.distributions[col]
+                                  ? "pointer"
+                                  : "default",
+                            }}
+                          >
+                            {col}
+                            {result.distributions && result.distributions[col] && (
+                              <span style={{ fontSize: "12px", color: "#00ff9d" }}>
+                                &nbsp;📊
+                              </span>
+                            )}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.cama_preview.map((row, i) => (
+                        <tr key={i}>
+                          {Object.entries(row).map(([col, val], j) => (
+                            <td
+                              key={j}
+                              className={col === "prediction" ? "prediction-col" : ""}
+                            >
+                              {val !== "" ? val : "—"}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ✅ Download CSV Button */}
+                <div className="cama-download-container">
+                  <a
+                    className="download-csv-btn"
+                    href={result.downloads.cama_csv}
+                    target="_blank"
+                    rel="noreferrer"
                   >
-                    ✕
-                  </button>
+                    ⬇️ Download Full CAMA Table ({result.lgu_name || "CSV"})
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* === Fullscreen Graph Viewer === */}
+            {selectedGraph && (
+              <div className="graph-viewer-overlay" onClick={() => setSelectedGraph(null)}>
+                <div className="graph-viewer-box" onClick={(e) => e.stopPropagation()}>
+                  <button className="graph-viewer-close" onClick={() => setSelectedGraph(null)}>✕</button>
                   <h3>{selectedGraph.title}</h3>
                   <img src={selectedGraph.src} alt={selectedGraph.title} />
                 </div>
@@ -413,17 +423,13 @@ const LinearRegression = ({ onClose }) => {
         </div>
       )}
 
-      {/* === RUN SAVED MODEL MODAL === */}
+      {/* === Run Saved Model Modal === */}
       {showRunModal && (
         <div className="lr-modal">
           <div className="lr-modal-content">
             <h4>Run Saved Model</h4>
             <label>Upload Model (.pkl)</label>
-            <input
-              type="file"
-              accept=".pkl"
-              onChange={(e) => setModelFile(e.target.files[0])}
-            />
+            <input type="file" accept=".pkl" onChange={(e) => setModelFile(e.target.files[0])} />
 
             <label>Upload Shapefile (.zip or .shp/.dbf/.shx/.prj)</label>
             <input
@@ -437,12 +443,7 @@ const LinearRegression = ({ onClose }) => {
               <button onClick={handleRunModel} disabled={loading}>
                 {loading ? "Running..." : "Run"}
               </button>
-              <button
-                className="cancel-btn"
-                onClick={() => setShowRunModal(false)}
-              >
-                Cancel
-              </button>
+              <button className="cancel-btn" onClick={() => setShowRunModal(false)}>Cancel</button>
             </div>
           </div>
         </div>
