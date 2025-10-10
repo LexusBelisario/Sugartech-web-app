@@ -8,7 +8,7 @@ const SchemaSelector = () => {
   const [schemas, setSchemas] = useState([]);
   const [selectedSchema, setSelectedSchema] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(true); 
+  const [loading, setLoading] = useState(true);
   const [userAccess, setUserAccess] = useState(null);
   const [error, setError] = useState(null);
   const containerRef = useRef(null);
@@ -62,8 +62,7 @@ const SchemaSelector = () => {
         setLoading(true);
         setError(null);
 
-        // ✅ Updated route path
-        const data = await ApiService.get("/mun-access/list-schemas");
+        const data = await ApiService.get("/list-schemas");
         console.log("🔍 Schemas response:", data);
 
         if (data?.schemas) {
@@ -131,6 +130,7 @@ const SchemaSelector = () => {
           ];
           console.log(`📦 Smooth zoom to bounds of ${selectedSchema}:`, bounds);
 
+          // ✨ Smooth animated zoom
           const center = [(ymin + ymax) / 2, (xmin + xmax) / 2];
           const zoom = map.getBoundsZoom(bounds, false);
           map.flyTo(center, zoom, { animate: true, duration: 1.5 });

@@ -13,8 +13,7 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
   if (window.setLoadingProgress) window.setLoadingProgress(true);
 
   const query = selectedSchemas.map(s => `schemas=${encodeURIComponent(s)}`).join("&");
-  // ✅ Updated endpoint (moved to parcel.py)
-  const url = `${API}/parcel/all-barangays?${query}`;
+  const url = `${API}/all-barangays?${query}`;
 
   try {
     const token =
@@ -76,8 +75,7 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
 
 // === Function to reload a single parcel table ===
 export async function loadGeoTable(map, schema, table) {
-  // ✅ Updated endpoint (moved to table_viewer.py)
-  const url = `${API}/table-viewer/single-table?schema=${encodeURIComponent(
+  const url = `${API}/single-table?schema=${encodeURIComponent(
     schema
   )}&table=${encodeURIComponent(table)}`;
 
@@ -99,6 +97,8 @@ export async function loadGeoTable(map, schema, table) {
     }
 
     const data = await response.json();
+
+    
 
     const toRemove = parcelLayers.filter(
       (p) =>
