@@ -6,7 +6,9 @@ import uvicorn
 
 from auth.routes import router as auth_router
 from admin.routes import router as admin_router 
-from routes.view import router as view_router
+from routes.geomdisplay import router as geom_router
+from routes.schemas import router as schema_router
+from routes.parcelinfo import router as parcel_router
 from routes.edit import router as edit_router
 from routes.orthophoto import router as orthophoto_router
 from routes.consolidate import router as merge_router
@@ -29,13 +31,15 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],  # Add this
+    expose_headers=["*"],
 )
 
 # Include routers ONLY ONCE with proper prefixes
 app.include_router(auth_router, prefix="/api")
-app.include_router(admin_router, prefix="/api")  # This gives you /api/admin/...
-app.include_router(view_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
+app.include_router(geom_router, prefix="/api")
+app.include_router(schema_router, prefix="/api")
+app.include_router(parcel_router, prefix="/api")
 app.include_router(orthophoto_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
 app.include_router(edit_router, prefix="/api")
