@@ -17,23 +17,51 @@ const ParcelClickHandler = ({
     if (!["info", "edit", "consolidate"].includes(activeTool)) {
       console.log("⛔ ParcelClickHandler inactive:", activeTool);
 
+      // ✅ Apply zoom-based style logic from AdminBoundaries
+      const map = window.map;
+      const zoom = map?.getZoom?.() ?? 0;
+      const visible = zoom >= 16; // match AdminBoundaries parcel threshold
+
       if (window.parcelLayers?.length) {
         window.parcelLayers.forEach(({ layer }) => {
           layer.off("click");
-          layer.setStyle?.({
-            stroke: true,
-            color: "black",
-            weight: 1,
-            opacity: 1,
-            fill: true,
-            fillColor: "white",
-            fillOpacity: 0.1,
-          });
+
+          if (visible) {
+            // Parcels are allowed to be seen at this zoom
+            layer.setStyle?.({
+              stroke: true,
+              color: "black",
+              weight: 1,
+              opacity: 1,
+              fill: true,
+              fillColor: "white",
+              fillOpacity: 0.1,
+            });
+          } else {
+            // 🔒 Keep parcels fully hidden when zoom < 16
+            layer.setStyle?.({
+              stroke: true,
+              color: "black",
+              weight: 1,
+              opacity: 0,
+              fill: true,
+              fillColor: "white",
+              fillOpacity: 0,
+            });
+          }
         });
       }
-      return; // stop binding
+
+      // ✅ Re-enforce AdminBoundaries visibility + order
+      if (window.onParcelsLoaded) window.onParcelsLoaded();
+      if (window.enforceLayerOrder) window.enforceLayerOrder();
+
+      return;
     }
 
+    // ============================================================
+    // ✅ Active tools: info, edit, consolidate
+    // ============================================================
     const bindClicks = () => {
       if (!window.parcelLayers?.length) {
         console.log("⏳ Waiting for parcel layers to load...");
@@ -83,7 +111,6 @@ const ParcelClickHandler = ({
               layer.bringToFront();
               if (onConsolidateSelect) onConsolidateSelect(pin, feature, true);
             }
-
             return;
           }
 
