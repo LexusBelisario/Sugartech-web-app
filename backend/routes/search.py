@@ -33,7 +33,11 @@ def get_attribute_table(
 
         if not exists:
             print(f"⚠️ No JoinedTable found in schema '{schema}'")
-            return {"status": "error", "message": f"No JoinedTable found in schema '{schema}'", "data": []}
+            return {
+                "status": "error",
+                "message": f"No JoinedTable found in schema '{schema}'",
+                "data": []
+            }
 
         query = text(f'SELECT * FROM "{schema}"."JoinedTable"')
         result = db.execute(query)
@@ -45,6 +49,7 @@ def get_attribute_table(
     except Exception as e:
         print(f"❌ Error fetching JoinedTable for {schema}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # ============================================================
 # 🏠 2. PROPERTY SEARCH
@@ -85,6 +90,7 @@ async def property_search(request: Request, db: Session = Depends(get_user_main_
         print(f"❌ Property search error for {schema}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # ============================================================
 # 🛣️ 3. ROAD SEARCH (Adaptive)
 # ============================================================
@@ -117,7 +123,7 @@ async def road_search(request: Request, db: Session = Depends(get_user_main_db))
         table_name = result[0]
         print(f"🛣️ Using road table: {table_name}")
 
-        # 🧩 Build WHERE clause (search by road_name, classification, or type)
+        # 🧩 Build WHERE clause dynamically
         where_clauses = []
         params = {}
 
@@ -128,13 +134,14 @@ async def road_search(request: Request, db: Session = Depends(get_user_main_db))
             where_clauses.append(f'(LOWER("{field}") LIKE :{key})')
             params[key] = f"%{value.lower()}%"
 
-        # If only one generic search term provided, search multiple columns
+        # 🧭 If only road_name provided, search across name, road_type, and classification
         if not where_clauses and "road_name" in filters:
             val = filters.get("road_name")
             if val:
                 params["val"] = f"%{val.lower()}%"
                 where_clauses = [
-                    '(LOWER("road_name") LIKE :val OR LOWER("type") LIKE :val OR LOWER("classification") LIKE :val)'
+                    '(LOWER("road_name") LIKE :val OR LOWER("road_type") LIKE :val '
+                    'OR LOWER("type") LIKE :val OR LOWER("classification") LIKE :val)'
                 ]
 
         sql = f'SELECT * FROM "{schema}"."{table_name}"'
@@ -146,6 +153,10 @@ async def road_search(request: Request, db: Session = Depends(get_user_main_db))
         rows = [dict(row._mapping) for row in result]
 
         print(f"✅ Road search in {schema}.{table_name}: {len(rows)} result(s)")
+        # ✅ Log first record for debugging column names
+        if rows:
+            print(f"📋 Sample fields: {list(rows[0].keys())}")
+
         return {"status": "success", "data": rows, "count": len(rows)}
 
     except HTTPException:
@@ -153,6 +164,7 @@ async def road_search(request: Request, db: Session = Depends(get_user_main_db))
     except Exception as e:
         print(f"❌ Road search error for {schema}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # ============================================================
 # 📍 4. LANDMARK SEARCH

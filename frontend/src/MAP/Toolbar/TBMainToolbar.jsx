@@ -28,9 +28,17 @@ const TBMainToolbar = ({ activeTool, setActiveTool }) => {
   useEffect(() => {
     window.switchToEditMode = () => setActiveTool("edit");
     window.switchToInfoMode = () => setActiveTool("info");
+
+    // 🩵 Allow SearchResults to open InfoTool directly
+    window.setReactInfoToolData = (parcelData) => {
+      setInfoProps(parcelData);
+      setActiveTool("info");
+    };
+
     return () => {
       delete window.switchToEditMode;
       delete window.switchToInfoMode;
+      delete window.setReactInfoToolData;
     };
   }, [setActiveTool]);
 
@@ -42,6 +50,10 @@ const TBMainToolbar = ({ activeTool, setActiveTool }) => {
 
   // === Handle Search open/close ===
   const openSearch = () => {
+    // 🩵 Enforce correct parcel visibility and stacking order before opening Search
+    if (window.onParcelsLoaded) window.onParcelsLoaded();
+    if (window.enforceLayerOrder) window.enforceLayerOrder();
+
     setToolbarVisible(false); // hide toolbar
     setShowSearch(true);
     setActiveTool("search");
@@ -51,6 +63,10 @@ const TBMainToolbar = ({ activeTool, setActiveTool }) => {
     setShowSearch(false);
     setToolbarVisible(true); // show toolbar again
     setActiveTool(null);
+
+    // 🩵 Re-apply visibility/order when closing Search
+    if (window.onParcelsLoaded) window.onParcelsLoaded();
+    if (window.enforceLayerOrder) window.enforceLayerOrder();
   };
 
   return (
@@ -135,7 +151,7 @@ const TBMainToolbar = ({ activeTool, setActiveTool }) => {
         </>
       )}
 
-      {/* === Search Panel (now portal-based, replaces toolbar) === */}
+      {/* === Search Panel (portal-based, replaces toolbar) === */}
       {showSearch &&
         createPortal(
           <Search visible={showSearch} onClose={closeSearch} />,
@@ -189,7 +205,7 @@ const TBMainToolbar = ({ activeTool, setActiveTool }) => {
             onClose={() => setActiveTool(null)}
             data={infoProps}
             editable={activeTool === "edit"}
-            position="left"
+            position={infoProps?.fromSearch ? "right" : "left"} // ✅ dynamic positioning
           />,
           document.body
         )}

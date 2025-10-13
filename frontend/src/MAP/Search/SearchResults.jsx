@@ -11,6 +11,7 @@ const SearchResults = ({
   noInput = false,
   selectedPin,
   setSelectedPin,
+  onShowParcelInfo, // ✅ new callback to trigger InfoTool
 }) => {
   // === Handle click on a search result ===
   const handleResultClick = async (pin) => {
@@ -60,7 +61,7 @@ const SearchResults = ({
       console.error("❌ Error zooming to parcel:", err);
     }
 
-    // === Fetch parcel info for InfoTool (safe guarded)
+    // === Fetch parcel info for InfoTool
     const schema = match.feature.properties.source_schema;
     try {
       const url = `${API}/parcel-info?schema=${schema}&pin=${pin}`;
@@ -88,10 +89,10 @@ const SearchResults = ({
 
       const json = await res.json();
       if (json.status === "success" && json.data) {
-        if (typeof window.populateParcelInfo === "function") {
-          window.populateParcelInfo(json.data);
+        if (typeof onShowParcelInfo === "function") {
+          onShowParcelInfo(json.data, schema, pin);
         } else {
-          console.warn("⚠️ populateParcelInfo not defined; skipping info panel.");
+          console.warn("⚠️ Info callback not provided; skipping info panel.");
         }
       } else {
         console.warn("Parcel info not found for", pin);

@@ -5,7 +5,6 @@ import { clearParcelHighlights } from "./SearchHelpers";
 import "./Search.css";
 
 const PropertySearch = () => {
-  // ✅ Access global schema + cached JoinedTable
   const { schema, joinedTable, loadingJoinedTable, status } = useSchema();
 
   const [filters, setFilters] = useState({
@@ -133,19 +132,37 @@ const PropertySearch = () => {
         (!filters.municipal || p.municipal === filters.municipal) &&
         (!filters.barangay || p.barangay === filters.barangay) &&
         (!filters.section || p.section === filters.section) &&
-        (!filters.parcel || (p.parcel && p.parcel.toLowerCase().includes(filters.parcel.toLowerCase()))) &&
-        (!filters.pin || (p.pin && p.pin.toLowerCase().includes(filters.pin.toLowerCase()))) &&
-        (!filters.arpn || (p.arpn && p.arpn.toLowerCase().includes(filters.arpn.toLowerCase()))) &&
-        (!filters.octtct || (p.octtct && p.octtct.toLowerCase().includes(filters.octtct.toLowerCase()))) &&
-        (!filters.td || (p.td && p.td.toLowerCase().includes(filters.td.toLowerCase()))) &&
-        (!filters.cct || (p.cct && p.cct.toLowerCase().includes(filters.cct.toLowerCase()))) &&
-        (!filters.survey || (p.survey && p.survey.toLowerCase().includes(filters.survey.toLowerCase()))) &&
-        (!filters.cad || (p.cad_no && p.cad_no.toLowerCase().includes(filters.cad.toLowerCase()))) &&
+        (!filters.parcel ||
+          (p.parcel &&
+            p.parcel.toLowerCase().includes(filters.parcel.toLowerCase()))) &&
+        (!filters.pin ||
+          (p.pin && p.pin.toLowerCase().includes(filters.pin.toLowerCase()))) &&
+        (!filters.arpn ||
+          (p.arpn && p.arpn.toLowerCase().includes(filters.arpn.toLowerCase()))) &&
+        (!filters.octtct ||
+          (p.octtct &&
+            p.octtct.toLowerCase().includes(filters.octtct.toLowerCase()))) &&
+        (!filters.td ||
+          (p.td && p.td.toLowerCase().includes(filters.td.toLowerCase()))) &&
+        (!filters.cct ||
+          (p.cct && p.cct.toLowerCase().includes(filters.cct.toLowerCase()))) &&
+        (!filters.survey ||
+          (p.survey &&
+            p.survey.toLowerCase().includes(filters.survey.toLowerCase()))) &&
+        (!filters.cad ||
+          (p.cad_no &&
+            p.cad_no.toLowerCase().includes(filters.cad.toLowerCase()))) &&
         (!filters.name ||
-          (p.l_lastname && p.l_lastname.toLowerCase().includes(filters.name.toLowerCase())) ||
-          (p.l_frstname && p.l_frstname.toLowerCase().includes(filters.name.toLowerCase()))) &&
-        (!filters.block || (p.blk_no && p.blk_no.toLowerCase().includes(filters.block.toLowerCase()))) &&
-        (!filters.lot || (p.lot_no && p.lot_no.toLowerCase().includes(filters.lot.toLowerCase())))
+          (p.l_lastname &&
+            p.l_lastname.toLowerCase().includes(filters.name.toLowerCase())) ||
+          (p.l_frstname &&
+            p.l_frstname.toLowerCase().includes(filters.name.toLowerCase()))) &&
+        (!filters.block ||
+          (p.blk_no &&
+            p.blk_no.toLowerCase().includes(filters.block.toLowerCase()))) &&
+        (!filters.lot ||
+          (p.lot_no &&
+            p.lot_no.toLowerCase().includes(filters.lot.toLowerCase())))
       );
     });
 
@@ -159,13 +176,39 @@ const PropertySearch = () => {
     // === Highlight on map ===
     (window.parcelLayers || []).forEach(({ feature, layer }) => {
       if (pins.includes(feature.properties.pin)) {
-        layer.setStyle({ color: "black", weight: 2, fillColor: "lime", fillOpacity: 0.2 });
+        layer.setStyle({
+          color: "black",
+          weight: 2,
+          fillColor: "lime",
+          fillOpacity: 0.2,
+        });
       } else {
-        layer.setStyle({ color: "black", weight: 1, fillColor: "black", fillOpacity: 0.1 });
+        layer.setStyle({
+          color: "black",
+          weight: 1,
+          fillColor: "black",
+          fillOpacity: 0.1,
+        });
       }
     });
 
     setSearchResults(pins);
+  };
+
+  // ============================================================
+  // 🔹 React-based InfoTool bridge
+  // ============================================================
+  const handleShowParcelInfo = (data, schema, pin) => {
+    if (window.setReactInfoToolData) {
+      window.setReactInfoToolData({
+        ...data,
+        source_schema: schema,
+        pin: pin,
+        fromSearch: true, // ✅ indicates InfoTool should appear on the right
+      });
+    } else {
+      console.warn("⚠️ InfoTool handler not registered globally yet.");
+    }
   };
 
   // ============================================================
@@ -176,7 +219,11 @@ const PropertySearch = () => {
   }
 
   if (status === "error") {
-    return <div className="tab-content text-red-500">❌ Failed to load property data for {schema}</div>;
+    return (
+      <div className="tab-content text-red-500">
+        ❌ Failed to load property data for {schema}
+      </div>
+    );
   }
 
   return (
@@ -186,7 +233,10 @@ const PropertySearch = () => {
         {["province", "municipal", "barangay", "section"].map((key) => (
           <div className="field-cell" key={key}>
             <label>{key}</label>
-            <select value={filters[key]} onChange={(e) => updateFilter(key, e.target.value)}>
+            <select
+              value={filters[key]}
+              onChange={(e) => updateFilter(key, e.target.value)}
+            >
               <option value="">- Select -</option>
               {dropdowns[`${key}s`].map((val) => (
                 <option key={val} value={val}>
@@ -197,10 +247,25 @@ const PropertySearch = () => {
           </div>
         ))}
 
-        {["parcel", "pin", "arpn", "octtct", "td", "cct", "survey", "cad", "name", "block", "lot"].map((key) => (
+        {[
+          "parcel",
+          "pin",
+          "arpn",
+          "octtct",
+          "td",
+          "cct",
+          "survey",
+          "cad",
+          "name",
+          "block",
+          "lot",
+        ].map((key) => (
           <div className="field-cell" key={key}>
             <label>{key.toUpperCase()}</label>
-            <input value={filters[key]} onChange={(e) => updateFilter(key, e.target.value)} />
+            <input
+              value={filters[key]}
+              onChange={(e) => updateFilter(key, e.target.value)}
+            />
           </div>
         ))}
       </div>
@@ -222,6 +287,7 @@ const PropertySearch = () => {
           noInput={noInputMessage}
           selectedPin={selectedPin}
           setSelectedPin={setSelectedPin}
+          onShowParcelInfo={handleShowParcelInfo}
         />
       )}
     </div>
