@@ -33,14 +33,15 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
 
     const data = await response.json();
 
+    // ✅ Show toolbar when data is loaded
     const toggleBtn = document.getElementById("toggleToolbarBtn");
     if (toggleBtn) toggleBtn.style.display = "block";
 
-    // 🧹 clear existing parcel layers from map
+    // 🧹 Remove existing parcel layers
     parcelLayers.forEach(({ layer }) => map.removeLayer(layer));
     parcelLayers.length = 0;
 
-    // 🆕 create new layer with proper style and NO auto-zoom
+    // 🆕 Create and style new parcel layer
     const newLayer = L.geoJSON(data, {
       style: {
         color: "black",
@@ -55,12 +56,14 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
 
     newLayer.addTo(map);
 
-    // ❌ removed fitBounds here — we don't want zoom changes
-    // (if you ever need it, wrap it under a manual flag)
-
-    // 🔔 notify AdminBoundaries that parcels are ready
+    // 🔔 Notify AdminBoundaries that parcels are ready
     if (window.onParcelsLoaded) {
       window.onParcelsLoaded();
+    }
+
+    // ✅ Reapply visibility logic so parcels/sections show correctly
+    if (window._updateBoundaryVisibility) {
+      window._updateBoundaryVisibility();
     }
 
     if (window.setLoadingProgress) window.setLoadingProgress(false);
@@ -96,7 +99,7 @@ export async function loadGeoTable(map, schema, table) {
 
     const data = await response.json();
 
-    // 🧹 remove existing layers for this schema/table
+    // 🧹 Remove existing layers for this schema/table
     const toRemove = parcelLayers.filter(
       (p) =>
         p.feature.properties.source_table === table &&
@@ -111,7 +114,7 @@ export async function loadGeoTable(map, schema, table) {
       }
     }
 
-    // 🆕 create new layer with correct parcel style (no blue)
+    // 🆕 Create new layer
     const newLayer = L.geoJSON(data, {
       style: {
         color: "black",
@@ -126,12 +129,14 @@ export async function loadGeoTable(map, schema, table) {
 
     newLayer.addTo(map);
 
-    // ❌ removed fitBounds — keep existing view
-    // No zoom or panning after reload
-
-    // 🔔 notify other modules
+    // 🔔 Notify other modules
     if (window.onParcelsLoaded) {
       window.onParcelsLoaded();
+    }
+
+    // ✅ Reapply visibility logic so parcels/sections show correctly
+    if (window._updateBoundaryVisibility) {
+      window._updateBoundaryVisibility();
     }
 
     if (window.setLoadingProgress) window.setLoadingProgress(false);
@@ -141,6 +146,6 @@ export async function loadGeoTable(map, schema, table) {
   }
 }
 
-// === Export to global scope if needed ===
+// === Export to global scope ===
 window.loadAllGeoTables = loadAllGeoTables;
 window.loadGeoTable = loadGeoTable;
