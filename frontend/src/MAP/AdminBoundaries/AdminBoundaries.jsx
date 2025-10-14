@@ -36,14 +36,15 @@ function AdminBoundaries() {
 
     const hiddenStyle = { opacity: 0, fillOpacity: 0 };
 
-    // --- Style cache (fixed, not per-zoom) ---
-    const parcelVisibleStyle = {
+    // ✅ Function to generate styles dynamically based on current color
+    const getParcelVisibleStyle = () => ({
       color: window.parcelOutlineColor,
       weight: 1.2,
       opacity: 1,
       fillColor: "black",
       fillOpacity: 0.1,
-    };
+    });
+
     const sectionVisibleStyle = {
       color: "#202020",
       weight: 0.8,
@@ -55,9 +56,9 @@ function AdminBoundaries() {
     function bindParcelClick(feature, layer) {
       layer.off("click");
       layer.on("click", () => {
-        // Reset all parcel styles
+        // Reset all parcel styles with current color
         window.parcelLayers?.forEach(({ layer: l }) =>
-          l.setStyle(parcelVisibleStyle)
+          l.setStyle(getParcelVisibleStyle())
         );
         // Highlight selected parcel
         layer.setStyle({
@@ -93,7 +94,7 @@ function AdminBoundaries() {
       const municipalVisible =
         zoom >= municipalMin &&
         zoom <= municipalMax &&
-        municipalCheckbox?.checked;
+        (municipalCheckbox?.checked ?? true);
 
       if (municipalVisible) {
         if (!map.hasLayer(municipalBoundary)) map.addLayer(municipalBoundary);
@@ -107,7 +108,7 @@ function AdminBoundaries() {
 
       // --- Section visibility ---
       if (window.sectionLayers) {
-        const show = visible && sectionCheckbox?.checked;
+        const show = visible && (sectionCheckbox?.checked ?? true);
         window.sectionLayers.forEach(({ layer }) => {
           if (layer._lastVisible !== show) {
             layer._lastVisible = show;
@@ -118,17 +119,22 @@ function AdminBoundaries() {
 
       // --- Parcel visibility ---
       if (window.parcelLayers) {
-        const show = visible && parcelCheckbox?.checked;
+        const show = visible && (parcelCheckbox?.checked ?? true);
+        const currentStyle = getParcelVisibleStyle(); // ✅ Get fresh style with current color
+        
         window.parcelLayers.forEach(({ feature, layer }) => {
           if (layer._lastVisible !== show) {
             layer._lastVisible = show;
             if (show) {
-              layer.setStyle(parcelVisibleStyle);
+              layer.setStyle(currentStyle);
               bindParcelClick(feature, layer);
             } else {
               layer.setStyle(hiddenStyle);
               layer.off("click");
             }
+          } else if (show) {
+            // ✅ Always update color even if visibility didn't change
+            layer.setStyle(currentStyle);
           }
         });
       }
@@ -140,74 +146,26 @@ function AdminBoundaries() {
     map.on("zoomend", updateVisibility);
     window.onParcelsLoaded = updateVisibility;
 
+    // ✅ Expose updateVisibility and state setters for external use
+    window._updateBoundaryVisibility = updateVisibility;
+    window._setShowBarangay = setShowBarangay;
+    window._setShowSection = setShowSection;
+
     // --- Initial run ---
     updateVisibility();
 
     window._boundaryLayers = { municipalBoundary };
 
-    // --- Control Panel UI ---
-    const BoundaryControl = L.Control.extend({
-      onAdd: () => {
-        const container = L.DomUtil.create("div", "leaflet-bar boundary-control");
-        const button = L.DomUtil.create("button", "boundary-toggle-button", container);
-        button.innerHTML = "🏘️";
-
-        const panel = L.DomUtil.create("div", "boundary-panel hidden", container);
-        panel.innerHTML = `
-          <h4>Admin Boundaries</h4>
-          <div><input type="checkbox" id="municipal" checked/> <label for="municipal">Municipal Boundary</label></div>
-          <div><input type="checkbox" id="barangay" checked/> <label for="barangay">Barangay Boundary</label></div>
-          <div><input type="checkbox" id="section" checked/> <label for="section">Section Boundary</label></div>
-          <hr/>
-          <div><input type="checkbox" id="parcels" checked/> <label for="parcels">Parcels</label></div>
-          <div style="margin-top:6px;">
-            <label for="parcelColor">Outline:</label>
-            <select id="parcelColor">
-              <option value="red">Red</option>
-              <option value="orange">Orange</option>
-              <option value="yellow">Yellow</option>
-              <option value="green">Green</option>
-              <option value="blue">Blue</option>
-              <option value="violet">Violet</option>
-              <option value="black">Black</option>
-              <option value="white">White</option>
-            </select>
-          </div>
-        `;
-
-        L.DomEvent.disableClickPropagation(panel);
-        L.DomEvent.disableScrollPropagation(panel);
-        button.onclick = () => panel.classList.toggle("hidden");
-
-        panel.querySelector("#municipal").onchange = updateVisibility;
-        panel.querySelector("#barangay").onchange = (e) =>
-          setShowBarangay(e.target.checked);
-        panel.querySelector("#section").onchange = (e) =>
-          setShowSection(e.target.checked);
-        panel.querySelector("#parcels").onchange = updateVisibility;
-
-        const colorSelect = panel.querySelector("#parcelColor");
-        colorSelect.value = window.parcelOutlineColor;
-        colorSelect.onchange = (e) => {
-          window.parcelOutlineColor = e.target.value;
-          updateVisibility();
-        };
-
-        return container;
-      },
-    });
-
-    const control = new BoundaryControl({ position: "bottomright" });
-    map.addControl(control);
-
     return () => {
-      map.removeControl(control);
       map.off("zoomend", updateVisibility);
       if (map.hasLayer(municipalBoundary)) map.removeLayer(municipalBoundary);
       delete window._boundaryLayers;
       delete window.onParcelsLoaded;
+      delete window._updateBoundaryVisibility;
+      delete window._setShowBarangay;
+      delete window._setShowSection;
     };
-  }, [map]);
+  }, [map, setShowBarangay, setShowSection]);
 
   // ✅ Smooth zoom animation
   useEffect(() => {
