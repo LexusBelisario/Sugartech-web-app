@@ -8,3 +8,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+.leaflet-map-container * {
+  z-index: 0 !important;
+}
+
+.leaflet-control-container {
+  z-index: 10 !important;
+}
+
+.schema-selector-container {
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
