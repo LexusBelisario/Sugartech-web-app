@@ -6,6 +6,7 @@ import TBThematicMaps from "./TBThematicMaps.jsx";
 import TBLabelTools from "./TBLabelTools.jsx";
 import TBLandmarkTools from "./TBLandmarkTools.jsx";
 import TBAIModelTools from "./TBAIModelTools.jsx";
+import { useSchema } from "../SchemaContext.jsx"; // ✅ added
 
 const tabs = [
   { id: "parcel", label: "Parcel Main Toolbar" },
@@ -28,6 +29,7 @@ const Toolbar = ({
   const [visible, setVisible] = useState(false);
   const [activeTool, setActiveTool] = useState(null);
   const [activeTab, setActiveTab] = useState("parcel");
+  const { schema } = useSchema(); // ✅ get current schema
 
   const handleToggle = () => {
     setVisible((prev) => !prev);
@@ -115,7 +117,39 @@ const Toolbar = ({
         </select>
 
         {/* === Tools Grid === */}
-        <div className="toolbar-grid">{renderButtons()}</div>
+        <div className="toolbar-grid" style={{ position: "relative" }}>
+          {renderButtons()}
+
+          {/* === Blur overlay if no schema selected === */}
+          {!schema && (
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                backdropFilter: "blur(5px)",
+                backgroundColor: "rgba(0, 0, 0, 0.35)",
+                zIndex: 5,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                color: "white",
+                fontSize: "14px",
+                fontWeight: "500",
+                borderRadius: "6px",
+                pointerEvents: "auto",
+              }}
+            >
+              <div>
+                <p>No Mun/City selected yet.</p>
+                <p>Please select a Mun/City first.</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );

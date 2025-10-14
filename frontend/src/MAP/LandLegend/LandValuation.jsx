@@ -9,8 +9,8 @@ import { useMap } from "react-leaflet";
 let landValuationLayer = null;
 
 const LandValuation = () => {
-  const map = useMap(); // ✅ get map from context
-  const { schema } = useSchema(); // ✅ get schema from context
+  const map = useMap();
+  const { schema } = useSchema();
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [selectedColumn, setSelectedColumn] = useState("value");
 
@@ -56,7 +56,6 @@ const LandValuation = () => {
       },
     }).addTo(map);
 
-    // ✅ Legend as fragment so gray wrapper shows
     window.addLandInfoLegend?.(
       "landvaluation",
       <>
@@ -80,7 +79,7 @@ const LandValuation = () => {
     if (!schema) return;
 
     const geoUrl = `${API}/all-barangays?schemas=${schema}`;
-    const attrUrl = `${API}/attribute-table?schema=${schema}`;
+    const attrUrl = `${API}/search/attribute-table?schema=${schema}`; // ✅ updated path
 
     Promise.all([fetch(geoUrl), fetch(attrUrl)])
       .then(([geoRes, attrRes]) => Promise.all([geoRes.json(), attrRes.json()]))
@@ -116,7 +115,7 @@ const LandValuation = () => {
       }
 
       const geoUrl = `${API}/all-barangays?schemas=${schema}`;
-      const attrUrl = `${API}/attribute-table?schema=${schema}`;
+      const attrUrl = `${API}/search/attribute-table?schema=${schema}`; // ✅ updated path
 
       Promise.all([fetch(geoUrl), fetch(attrUrl)])
         .then(([geoRes, attrRes]) =>
@@ -177,7 +176,7 @@ const LandValuation = () => {
       {showColumnSelector && (
         <Table_Column
           schema={schema}
-          table="JoinedTable" // ✅ use attribute table
+          table="JoinedTable"
           onApply={handleColumnApply}
           onClose={() => setShowColumnSelector(false)}
         />

@@ -9,8 +9,8 @@ import { useMap } from "react-leaflet";
 let landOwnershipLayer = null;
 
 const LandOwnership = () => {
-  const map = useMap(); // ✅ get map from context
-  const { schema } = useSchema(); // ✅ get schema from context
+  const map = useMap();
+  const { schema } = useSchema();
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [selectedColumn, setSelectedColumn] = useState("ownership");
 
@@ -59,7 +59,6 @@ const LandOwnership = () => {
       },
     }).addTo(map);
 
-    // ✅ legend uses fragment so gray wrapper shows
     window.addLandInfoLegend?.(
       "landownership",
       <>
@@ -83,7 +82,7 @@ const LandOwnership = () => {
     if (!schema) return;
 
     const geoUrl = `${API}/all-barangays?schemas=${schema}`;
-    const attrUrl = `${API}/attribute-table?schema=${schema}`;
+    const attrUrl = `${API}/search/attribute-table?schema=${schema}`; // ✅ updated
 
     Promise.all([fetch(geoUrl), fetch(attrUrl)])
       .then(([geoRes, attrRes]) => Promise.all([geoRes.json(), attrRes.json()]))
@@ -103,7 +102,7 @@ const LandOwnership = () => {
 
         renderLayer(mergedFeatures, col);
       })
-      .catch((err) => console.error("❌ Failed to reload:", err));
+      .catch((err) => console.error("❌ Failed to reload LandOwnership:", err));
   };
 
   useEffect(() => {
@@ -119,7 +118,7 @@ const LandOwnership = () => {
       }
 
       const geoUrl = `${API}/all-barangays?schemas=${schema}`;
-      const attrUrl = `${API}/attribute-table?schema=${schema}`;
+      const attrUrl = `${API}/search/attribute-table?schema=${schema}`; // ✅ updated
 
       Promise.all([fetch(geoUrl), fetch(attrUrl)])
         .then(([geoRes, attrRes]) =>
@@ -180,7 +179,7 @@ const LandOwnership = () => {
       {showColumnSelector && (
         <Table_Column
           schema={schema}
-          table="JoinedTable" // ✅ always attribute table
+          table="JoinedTable"
           onApply={handleColumnApply}
           onClose={() => setShowColumnSelector(false)}
         />

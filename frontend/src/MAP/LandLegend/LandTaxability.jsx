@@ -9,8 +9,8 @@ import { useMap } from "react-leaflet";
 let taxabilityLayer = null;
 
 const LandTaxability = () => {
-  const map = useMap(); // ✅ get map from context
-  const { schema } = useSchema(); // ✅ get schema from context
+  const map = useMap();
+  const { schema } = useSchema();
   const [column, setColumn] = useState("taxability");
   const [showSelector, setShowSelector] = useState(false);
 
@@ -54,7 +54,6 @@ const LandTaxability = () => {
       },
     }).addTo(map);
 
-    // ✅ fragment so wrapper gray shows
     window.addLandInfoLegend?.(
       "taxability",
       <>
@@ -78,7 +77,7 @@ const LandTaxability = () => {
     if (!schema) return;
 
     const geoUrl = `${API}/all-barangays?schemas=${schema}`;
-    const attrUrl = `${API}/attribute-table?schema=${schema}`;
+    const attrUrl = `${API}/search/attribute-table?schema=${schema}`; // ✅ updated path
 
     Promise.all([fetch(geoUrl), fetch(attrUrl)])
       .then(([geoRes, attrRes]) => Promise.all([geoRes.json(), attrRes.json()]))
@@ -114,7 +113,7 @@ const LandTaxability = () => {
       }
 
       const geoUrl = `${API}/all-barangays?schemas=${schema}`;
-      const attrUrl = `${API}/attribute-table?schema=${schema}`;
+      const attrUrl = `${API}/search/attribute-table?schema=${schema}`; // ✅ updated path
 
       Promise.all([fetch(geoUrl), fetch(attrUrl)])
         .then(([geoRes, attrRes]) =>
@@ -175,7 +174,7 @@ const LandTaxability = () => {
       {showSelector && (
         <Table_Column
           schema={schema}
-          table="JoinedTable" // ✅ use attribute table
+          table="JoinedTable"
           onApply={handleColumnApply}
           onClose={() => setShowSelector(false)}
         />
