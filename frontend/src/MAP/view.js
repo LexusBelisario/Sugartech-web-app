@@ -36,12 +36,18 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
     const toggleBtn = document.getElementById("toggleToolbarBtn");
     if (toggleBtn) toggleBtn.style.display = "block";
 
-    // 🔑 clear existing parcel layers from map
+    // 🧹 clear existing parcel layers from map
     parcelLayers.forEach(({ layer }) => map.removeLayer(layer));
     parcelLayers.length = 0;
 
-    // create new layer but don't zoom automatically
+    // 🆕 create new layer with proper style and NO auto-zoom
     const newLayer = L.geoJSON(data, {
+      style: {
+        color: "black",
+        weight: 1,
+        fillColor: "white",
+        fillOpacity: 0.1,
+      },
       onEachFeature: (feature, layer) => {
         parcelLayers.push({ feature, layer });
       },
@@ -49,17 +55,8 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
 
     newLayer.addTo(map);
 
-    // ✅ only zoom to bounds if schemas were explicitly provided
-    if (selectedSchemas && selectedSchemas.length > 0) {
-      try {
-        const bounds = newLayer.getBounds();
-        if (bounds.isValid()) {
-          map.fitBounds(bounds);
-        }
-      } catch (err) {
-        console.warn("⚠️ Could not fit bounds:", err);
-      }
-    }
+    // ❌ removed fitBounds here — we don't want zoom changes
+    // (if you ever need it, wrap it under a manual flag)
 
     // 🔔 notify AdminBoundaries that parcels are ready
     if (window.onParcelsLoaded) {
@@ -85,6 +82,7 @@ export async function loadGeoTable(map, schema, table) {
     const token =
       localStorage.getItem("access_token") ||
       localStorage.getItem("accessToken");
+
     const response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
@@ -98,8 +96,7 @@ export async function loadGeoTable(map, schema, table) {
 
     const data = await response.json();
 
-    
-
+    // 🧹 remove existing layers for this schema/table
     const toRemove = parcelLayers.filter(
       (p) =>
         p.feature.properties.source_table === table &&
@@ -114,8 +111,14 @@ export async function loadGeoTable(map, schema, table) {
       }
     }
 
-    // create new layer but don't zoom automatically
+    // 🆕 create new layer with correct parcel style (no blue)
     const newLayer = L.geoJSON(data, {
+      style: {
+        color: "black",
+        weight: 1,
+        fillColor: "white",
+        fillOpacity: 0.1,
+      },
       onEachFeature: (feature, layer) => {
         parcelLayers.push({ feature, layer });
       },
@@ -123,17 +126,10 @@ export async function loadGeoTable(map, schema, table) {
 
     newLayer.addTo(map);
 
-    // ✅ zoom to updated table bounds
-    try {
-      const bounds = newLayer.getBounds();
-      if (bounds.isValid()) {
-        map.fitBounds(bounds);
-      }
-    } catch (err) {
-      console.warn("⚠️ Could not fit bounds:", err);
-    }
+    // ❌ removed fitBounds — keep existing view
+    // No zoom or panning after reload
 
-    // 🔔 notify AdminBoundaries that parcels are ready
+    // 🔔 notify other modules
     if (window.onParcelsLoaded) {
       window.onParcelsLoaded();
     }

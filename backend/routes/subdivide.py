@@ -1,12 +1,20 @@
-from fastapi import APIRouter, Request
-from db import get_connection
+from fastapi import APIRouter, Request, Depends
+from sqlalchemy.orm import Session
 from datetime import datetime
+from psycopg2.extras import RealDictCursor
 import json
+
+from auth.dependencies import get_user_main_db, get_current_user
+from auth.models import User
 
 router = APIRouter()
 
 @router.post("/subdivide")
-async def subdivide_parcel(request: Request):
+async def subdivide_parcel(
+    request: Request,
+    db: Session = Depends(get_user_main_db),
+    current_user: User = Depends(get_current_user)
+):
     data = await request.json()
     pin = data.get("pin")
     table = data.get("table")
@@ -17,13 +25,17 @@ async def subdivide_parcel(request: Request):
     if not schema or not table or not split_lines:
         return {"status": "error", "message": "Missing required input (schema, table, or split lines)."}
 
-    full_table = f'"{schema}"."{table}"'             # Geometry table (PIN + geom only)
-    attr_table = f'"{schema}"."JoinedTable"'      # Attribute-only table
+    full_table = f'"{schema}"."{table}"'
+    attr_table = f'"{schema}"."JoinedTable"'
     log_table = f'"{schema}"."parcel_transaction_log"'
 
     try:
-        conn = get_connection()
-        with conn.cursor() as cur:
+        # Get psycopg2 connection from the current user's scoped SQLAlchemy session
+        conn = db.connection().connection
+
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            print(f"🧩 Subdivide request by {current_user.user_name}: schema={schema}, table={table}, pin={pin}")
+
             # === Step 1: Get original parcel geometry ===
             cur.execute(f'''
                 SELECT pin, ST_AsGeoJSON(geom)::json AS geometry
@@ -44,7 +56,7 @@ async def subdivide_parcel(request: Request):
                 WHERE pin = %s
             ''', (pin,))
             attr_row = cur.fetchone() or {}
-            merged_props = attr_row.copy()  # All attributes from JoinedTable
+            merged_props = attr_row.copy()
 
             # === Step 2: Prepare split lines with SRID 4326 ===
             line_geoms = [
@@ -91,11 +103,8 @@ async def subdivide_parcel(request: Request):
                 raw_geom = geom["geom"]
 
                 # Start fresh for new parcels: only keep pin, others blank
-                # Remove both id and geom from attribute copy
                 new_props = {k: None for k in merged_props.keys() if k.lower() not in ("id", "geom")}
                 new_props["pin"] = new_pin
-
-
 
                 # --- Geometry table insert (PIN only) ---
                 cur.execute(f'''
@@ -118,6 +127,7 @@ async def subdivide_parcel(request: Request):
                 ''', [table, "new (subdivide)", transaction_date] + list(new_props.values()) + [raw_geom])
 
             conn.commit()
+            print(f"✅ Subdivision successful for {current_user.user_name}: Created {len(parts)} parts.")
             return {"status": "success", "message": f"Created {len(parts)} subdivisions."}
 
     except Exception as e:
@@ -125,5 +135,5 @@ async def subdivide_parcel(request: Request):
             conn.rollback()
         except:
             pass
-        print("❌ Subdivision error:", str(e))
+        print(f"❌ Subdivision error for {current_user.user_name}: {str(e)}")
         return {"status": "error", "message": str(e)}

@@ -1,198 +1,305 @@
-import React, {
-  useEffect,
-  useRef,
-  forwardRef,
-  useImperativeHandle,
-} from "react";
+import React, { useEffect, useState, useRef } from "react";
 import L from "leaflet";
-import "leaflet-geometryutil";
+import API from "../../api.js";
+import { loadGeoTable } from "../view";
+import { useSchema } from "../SchemaContext";
 
-const AddLine = forwardRef(({
-  map,
-  activeTab,
-  drawing,
-  setDrawing,
-  error,
-  selectedParcel,
-  locked,
-  handleUndo,
-  handleSubdivide,
-  handleCancel,
-  lines,
-  setLines,
-  allPoints,
-  setAllPoints,
-  renderParcelControls,
-  handleExportPoints,
-  pointMarkers,
-  suggestedPins,
-  setSuggestedPins
-}, ref) => {
-  const ghostLine = useRef(null);
-  const currentPoints = useRef([]);
-  const drawnLayers = useRef([]);
+const AddLine = ({ map }) => {
+  const { schema } = useSchema();
+  const [selectedParcel, setSelectedParcel] = useState(null);
+  const [locked, setLocked] = useState(false);
+  const lockedRef = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasValidLine, setHasValidLine] = useState(false);
+  const activePoints = useRef([]);
+  const currentLine = useRef(null);
+  const pointMarkers = useRef([]);
+  const allLines = useRef([]);
+  const clickHandlers = useRef({});
 
-  // Expose cleanup method to parent
-  useImperativeHandle(ref, () => ({
-    clearDrawnLines: () => {
-      drawnLayers.current.forEach(line => {
-        if (map.hasLayer(line)) map.removeLayer(line);
-      });
-      drawnLayers.current = [];
-
-      pointMarkers.current.forEach(marker => {
-        if (map.hasLayer(marker)) map.removeLayer(marker);
-      });
-      pointMarkers.current = [];
-
-      setLines([]);
-      setAllPoints([]);
-    }
-  }));
-
+  // keep ref synced with state
   useEffect(() => {
-    if (!map || !drawing || !selectedParcel || activeTab !== "line") return;
+    lockedRef.current = locked;
+  }, [locked]);
 
-    currentPoints.current = [];
-    const ghost = L.polyline([], { color: "gray", dashArray: "5,5" }).addTo(map);
-    ghostLine.current = ghost;
+  // Allow selecting parcel only when not locked
+  useEffect(() => {
+    window.setSelectedParcelForSubdivide = (parcel) => {
+      if (!lockedRef.current) setSelectedParcel(parcel);
+    };
+  }, []);
 
-    const onClick = (e) => {
-      const lat = e.latlng.lat;
-      const lng = e.latlng.lng;
+  // === Lock parcel and enable drawing
+  const handleChooseParcel = () => {
+    if (!selectedParcel) {
+      alert("Click a parcel on the map first before choosing it.");
+      return;
+    }
+    setLocked(true);
+    lockedRef.current = true;
+    window.subdivideLocked = true;
+    enableDrawing();
+  };
 
-      currentPoints.current.push([lng, lat]);
-      ghost.setLatLngs(currentPoints.current.map(([lng, lat]) => [lat, lng]));
+  // === Drawing logic
+  const enableDrawing = () => {
+    if (!map) return;
 
+    // Remove any old listeners
+    if (clickHandlers.current.left) map.off("click", clickHandlers.current.left);
+    if (clickHandlers.current.right) map.off("contextmenu", clickHandlers.current.right);
+
+    activePoints.current = [];
+    pointMarkers.current.forEach((m) => map.removeLayer(m));
+    pointMarkers.current = [];
+
+    if (currentLine.current) {
+      map.removeLayer(currentLine.current);
+      currentLine.current = null;
+    }
+
+    currentLine.current = L.polyline([], {
+      color: "blue",
+      weight: 2,
+      dashArray: "5, 5",
+    }).addTo(map);
+
+    const handleLeftClick = (e) => {
+      if (!lockedRef.current) return;
+      const { lat, lng } = e.latlng;
+      activePoints.current.push([lng, lat]);
       const marker = L.circleMarker([lat, lng], {
-        radius: 5,
+        radius: 4,
         color: "red",
         fillColor: "red",
-        fillOpacity: 0.9
+        fillOpacity: 1,
       }).addTo(map);
       pointMarkers.current.push(marker);
+      const latlngs = activePoints.current.map(([lng, lat]) => [lat, lng]);
+      currentLine.current.setLatLngs(latlngs);
     };
 
-    const onMouseMove = (e) => {
-      if (currentPoints.current.length === 0) return;
-      const temp = [...currentPoints.current, [e.latlng.lng, e.latlng.lat]];
-      ghost.setLatLngs(temp.map(([lng, lat]) => [lat, lng]));
-    };
-
-    const onRightClick = (e) => {
+    const handleRightClick = (e) => {
+      if (!lockedRef.current) return;
       e.originalEvent.preventDefault();
-      if (currentPoints.current.length > 1) {
-        const finalLine = [...currentPoints.current];
-        const poly = L.polyline(finalLine.map(([lng, lat]) => [lat, lng]), {
-          color: "blue",
-          weight: 2,
-          dashArray: "4, 6"
-        }).addTo(map);
-
-        drawnLayers.current.push(poly);
-        setLines(prev => [...prev, finalLine]);
-        setAllPoints(prev => [...prev, ...finalLine]);
+      if (activePoints.current.length > 1) {
+        allLines.current.push({
+          points: [...activePoints.current],
+          layer: currentLine.current,
+          markers: [...pointMarkers.current],
+        });
+        setHasValidLine(true);
+      } else {
+        map.removeLayer(currentLine.current);
       }
 
-      ghost.remove();
-      ghostLine.current = null;
-      currentPoints.current = [];
-      setDrawing(false);
-
-      map.off("click", onClick);
-      map.off("mousemove", onMouseMove);
-      map.off("contextmenu", onRightClick);
+      activePoints.current = [];
+      pointMarkers.current = [];
+      currentLine.current = L.polyline([], {
+        color: "blue",
+        weight: 2,
+        dashArray: "5, 5",
+      }).addTo(map);
     };
 
-    map.on("click", onClick);
-    map.on("mousemove", onMouseMove);
-    map.on("contextmenu", onRightClick);
+    map.on("click", handleLeftClick);
+    map.on("contextmenu", handleRightClick);
 
+    clickHandlers.current.left = handleLeftClick;
+    clickHandlers.current.right = handleRightClick;
+  };
+
+  // === Clear all drawn lines and points
+  const clearDrawings = () => {
+    allLines.current.forEach((line) => {
+      map.removeLayer(line.layer);
+      line.markers?.forEach((m) => map.removeLayer(m));
+    });
+    pointMarkers.current.forEach((m) => map.removeLayer(m));
+    if (currentLine.current) map.removeLayer(currentLine.current);
+
+    allLines.current = [];
+    pointMarkers.current = [];
+    activePoints.current = [];
+    currentLine.current = null;
+    setHasValidLine(false);
+  };
+
+  // === Undo last completed line
+  const undoLastLine = () => {
+    const last = allLines.current.pop();
+    if (last) {
+      map.removeLayer(last.layer);
+      last.markers?.forEach((m) => map.removeLayer(m));
+      if (allLines.current.length === 0) setHasValidLine(false);
+    }
+  };
+
+  // === Cancel & discard everything (keep tool open)
+  const handleCancelAndDiscard = () => {
+    clearDrawings();
+    if (lockedRef.current && map) enableDrawing();
+  };
+
+  // === Reload only the affected table (no zoom/pan)
+  const reloadSingleTable = (schema, table) => {
+    if (!schema || !table || !map) return;
+    console.log(`🔄 Reloading ${schema}.${table}`);
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+
+    if (window.parcelLayers && Array.isArray(window.parcelLayers)) {
+      const oldLayers = window.parcelLayers.filter(
+        (p) =>
+          p.feature.properties.source_table === table &&
+          p.feature.properties.source_schema === schema
+      );
+      oldLayers.forEach((p) => map.removeLayer(p.layer));
+
+      window.parcelLayers = window.parcelLayers.filter(
+        (p) =>
+          p.feature.properties.source_table !== table ||
+          p.feature.properties.source_schema !== schema
+      );
+    }
+
+    loadGeoTable(map, schema, table);
+    map.setView(center, zoom);
+  };
+
+  // === Save subdivision
+  const handleSubdivideSave = async () => {
+    if (!lockedRef.current || !selectedParcel) {
+      alert("Select and lock a parcel first.");
+      return;
+    }
+    if (!schema) {
+      alert("No schema selected.");
+      return;
+    }
+    if (allLines.current.length === 0) {
+      alert("Draw at least one split line before saving.");
+      return;
+    }
+
+    setIsSaving(true);
+    const splitLines = allLines.current.map((l) => l.points);
+    const payload = {
+      schema,
+      table: selectedParcel.source_table || "LandParcels",
+      pin: selectedParcel.pin,
+      split_lines: splitLines,
+      new_pins: [],
+    };
+
+    try {
+      const res = await fetch(`${API}/subdivide`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        alert(`✅ Subdivision complete: ${data.message}`);
+        reloadSingleTable(schema, payload.table);
+        clearDrawings();
+        setLocked(false);
+        lockedRef.current = false;
+        setSelectedParcel(null);
+        window.subdivideLocked = false;
+      } else {
+        alert(`❌ Subdivision failed: ${data.message || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("❌ Subdivision error:", err);
+      alert("Subdivision request failed. Check console for details.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // === TOOL CLEANUP (when closed)
+  useEffect(() => {
     return () => {
-      map.off("click", onClick);
-      map.off("mousemove", onMouseMove);
-      map.off("contextmenu", onRightClick);
-      if (ghostLine.current) ghostLine.current.remove();
+      console.log("🧹 Subdivide tool closed — cleaning up");
+      if (map) {
+        if (clickHandlers.current.left)
+          map.off("click", clickHandlers.current.left);
+        if (clickHandlers.current.right)
+          map.off("contextmenu", clickHandlers.current.right);
+      }
+      clearDrawings();
+      setLocked(false);
+      lockedRef.current = false;
+      setSelectedParcel(null);
+      window.subdivideLocked = false;
     };
-  }, [drawing, map, selectedParcel, activeTab]);
+  }, [map]);
 
   return (
     <>
       <div className="subdivide-instructions">
-        <p><strong>1.</strong> Click a parcel on the map to select it.</p>
-        <p><strong>2.</strong> Click <strong>Choose This Parcel</strong> to choose the parcel for subdividing.</p>
-        <p><strong>3.</strong> Press <strong>Add a Line</strong> to start drawing lines.</p>
-        <p><strong>4.</strong> Left-click to add points, right-click to finish a line.</p>
-        <p><strong>5.</strong> Assign PINs and click <strong>Subdivide and Save</strong> to finish.</p>
+        <p><strong>1.</strong> Click a parcel to select it.</p>
+        <p><strong>2.</strong> Click <strong>Choose This Parcel</strong> to lock it in.</p>
+        <p><strong>3.</strong> After locking, parcel clicks are disabled.</p>
+        <p><strong>4.</strong> Left-click adds red dots; they connect with a dashed blue line.</p>
+        <p><strong>5.</strong> Right-click ends the current line; the next click starts a new one.</p>
       </div>
 
-      {error && <div style={{ color: "red", fontSize: "13px" }}>{error}</div>}
+      <div className="parcel-selection-controls">
+        {!selectedParcel && (
+          <p style={{ fontSize: "13px", color: "#aaa" }}>
+            Click a parcel on the map to enable selection.
+          </p>
+        )}
 
-      {renderParcelControls()}
-
-      <div className="subdivide-controls-grid">
-        <button className="subdivide-btn" onClick={() => setDrawing(true)} disabled={!selectedParcel || !locked}>
-          Add a Line
-        </button>
-        <button className="subdivide-btn" onClick={handleUndo} disabled={lines.length === 0}>
-          Undo Last Line
-        </button>
-        <button className="subdivide-btn" onClick={handleCancel}>
-          Cancel and Discard
-        </button>
-      </div>
-
-      {allPoints.length > 0 && (
-        <div style={{ marginTop: "12px" }}>
-          <button className="subdivide-btn" onClick={() => handleExportPoints("txt")} style={{ marginBottom: "8px" }}>
-            Export Points (.txt)
+        {selectedParcel && !locked && (
+          <button className="subdivide-btn" onClick={handleChooseParcel}>
+            Choose This Parcel
           </button>
-          <button className="subdivide-btn" onClick={() => handleExportPoints("csv")}>
-            Export Points (.csv)
-          </button>
-        </div>
-      )}
+        )}
 
-      {allPoints.length > 0 && (
-        <ul className="subdivide-pin-list" style={{ marginTop: "12px" }}>
-          {allPoints.map(([lng, lat], idx) => (
-            <li key={idx} className="manual-point-item">
-              {`Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {suggestedPins.length > 0 && (
-        <div style={{ marginTop: "16px", padding: "0 12px" }}>
-          <h4>Assign PINs to Subdivided Parcels</h4>
-          {suggestedPins.map((pin, idx) => (
-            <div key={idx} style={{ marginBottom: "8px" }}>
-              <label style={{ fontWeight: "bold" }}>PIN #{idx + 1}:</label>
-              <input
-                type="text"
-                value={pin}
-                onChange={(e) => {
-                  const updated = [...suggestedPins];
-                  updated[idx] = e.target.value;
-                  setSuggestedPins(updated);
-                }}
-                style={{ marginLeft: "8px", padding: "4px", width: "75%" }}
-              />
+        {selectedParcel && locked && (
+          <>
+            <div style={{ fontSize: "13px", marginBottom: "6px" }}>
+              Selected Parcel: <strong>{selectedParcel.pin}</strong> (Locked)
             </div>
-          ))}
-          <button
-            className="subdivide-btn"
-            onClick={handleSubdivide}
-            disabled={suggestedPins.some(pin => !pin)}
-            style={{ marginTop: "12px" }}
-          >
-            Subdivide and Save
-          </button>
-        </div>
-      )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <button
+                className="subdivide-btn"
+                onClick={handleSubdivideSave}
+                disabled={isSaving || !hasValidLine}
+              >
+                {isSaving
+                  ? "Saving..."
+                  : hasValidLine
+                  ? "Subdivide and Save"
+                  : "Draw a Line First"}
+              </button>
+
+              <button
+                className="subdivide-btn"
+                style={{ backgroundColor: "#777" }}
+                onClick={undoLastLine}
+              >
+                Undo Last Line
+              </button>
+
+              <button
+                className="subdivide-btn"
+                style={{ backgroundColor: "#b33", color: "white" }}
+                onClick={handleCancelAndDiscard}
+              >
+                Cancel & Discard
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </>
   );
-});
+};
 
 export default AddLine;
