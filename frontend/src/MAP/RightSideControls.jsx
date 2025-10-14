@@ -12,24 +12,31 @@ import {
 import { useSchema } from "./SchemaContext.jsx";
 import AdminBoundariesPanel from "./AdminBoundaries/AdminBoundariesPanel.jsx";
 import SchemaSelectorPanel from "./SchemaSelector/SchemaSelectorPanel.jsx";
+import OrthophotoPanel from "./Orthophoto/OrthophotoPanel.jsx";
 
 function RightControls({ activeTool, setActiveTool }) {
   const map = useMap();
   const { selectedSchemaBounds } = useSchema();
 
-  // ✅ Initialize with proper default state
-  const [schemaData, setSchemaData] = useState(() => {
-    // Check if data already exists on mount
-    return window._schemaSelectorData || {
-      schemas: [],
-      selectedSchema: "",
-      loading: true,
-      error: null,
-      userAccess: null,
-    };
+  // Schema selector data
+  const [schemaData, setSchemaData] = useState({
+    schemas: [],
+    selectedSchema: "",
+    loading: true,
+    error: null,
+    userAccess: null,
   });
 
-  // ✅ Sync with global state
+  // Orthophoto data
+  const [orthophotoData, setOrthophotoData] = useState({
+    Gsrvr_URL: "",
+    Layer_Name: "",
+    loading: false,
+    message: "",
+    schema: null,
+  });
+
+  // ✅ Sync schema selector data
   useEffect(() => {
     const syncData = () => {
       if (window._schemaSelectorData) {
@@ -37,12 +44,21 @@ function RightControls({ activeTool, setActiveTool }) {
       }
     };
 
-    // Initial sync
     syncData();
-
-    // Poll for updates
     const interval = setInterval(syncData, 100);
+    return () => clearInterval(interval);
+  }, []);
 
+  // ✅ Sync orthophoto data
+  useEffect(() => {
+    const syncOrthoData = () => {
+      if (window._orthophotoData) {
+        setOrthophotoData({ ...window._orthophotoData });
+      }
+    };
+
+    syncOrthoData();
+    const interval = setInterval(syncOrthoData, 100);
     return () => clearInterval(interval);
   }, []);
 
@@ -68,6 +84,13 @@ function RightControls({ activeTool, setActiveTool }) {
     if (window._handleSchemaChange) {
       window._handleSchemaChange(schema);
     }
+  };
+
+  const handleOrthophotoSave = async (data) => {
+    if (window._handleOrthophotoSave) {
+      return await window._handleOrthophotoSave(data);
+    }
+    return { success: false, message: "Save handler not available" };
   };
 
   const panelClass =
@@ -164,6 +187,14 @@ function RightControls({ activeTool, setActiveTool }) {
         loading={schemaData.loading}
         error={schemaData.error}
         userAccess={schemaData.userAccess}
+      />
+
+      {/* 🛰️ Orthophoto Panel */}
+      <OrthophotoPanel
+        isVisible={activeTool === "ortho"}
+        onClose={() => setActiveTool(null)}
+        initialData={orthophotoData}
+        onSave={handleOrthophotoSave}
       />
 
       {/* 🗺️ Admin Boundaries Panel */}

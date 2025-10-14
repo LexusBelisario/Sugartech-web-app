@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
 import { useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import "./Orthophoto.css";
 import { ApiService } from "../../api_service";
 import { useSchema } from "../SchemaContext";
 
@@ -11,7 +8,6 @@ function Orthophoto() {
   const { schema } = useSchema();
 
   const [orthoData, setOrthoData] = useState({ Gsrvr_URL: "", Layer_Name: "" });
-  const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -19,7 +15,11 @@ function Orthophoto() {
   // 🧭 Load configuration when schema changes
   // ==========================================================
   useEffect(() => {
-    if (!schema) return;
+    if (!schema) {
+      setOrthoData({ Gsrvr_URL: "", Layer_Name: "" });
+      setMessage("");
+      return;
+    }
 
     const fetchConfig = async () => {
       setLoading(true);
@@ -48,96 +48,57 @@ function Orthophoto() {
   // ==========================================================
   // 💾 Save configuration to backend
   // ==========================================================
-  const handleSave = async () => {
-    if (!schema || !orthoData.Gsrvr_URL || !orthoData.Layer_Name) {
-      alert("Please fill in both fields before saving.");
-      return;
+  const handleSave = async (data) => {
+    if (!schema || !data.Gsrvr_URL || !data.Layer_Name) {
+      setMessage("Please fill in both fields before saving.");
+      return { success: false, message: "Please fill in both fields." };
     }
 
     try {
       setLoading(true);
-      const payload = { schema, ...orthoData };
+      setMessage("Saving...");
+      const payload = { schema, ...data };
       const res = await ApiService.post("/orthophoto-config", payload);
-      if (res.status === "success") setMessage("Configuration saved successfully!");
-      else setMessage("Error saving configuration.");
-    } catch {
+      
+      if (res.status === "success") {
+        setMessage("Configuration saved successfully!");
+        setOrthoData(data);
+        return { success: true, message: "Configuration saved successfully!" };
+      } else {
+        setMessage("Error saving configuration.");
+        return { success: false, message: "Error saving configuration." };
+      }
+    } catch (err) {
+      console.error("Save failed:", err);
       setMessage("Save failed.");
+      return { success: false, message: "Save failed." };
     } finally {
       setLoading(false);
     }
   };
 
   // ==========================================================
-  // 🛰️ Create Leaflet control (bottom-right, above AdminBoundaries)
+  // ✅ Expose state and handlers to window for UI panel
   // ==========================================================
   useEffect(() => {
-    if (!map) return;
+    window._orthophotoData = {
+      Gsrvr_URL: orthoData.Gsrvr_URL,
+      Layer_Name: orthoData.Layer_Name,
+      loading,
+      message,
+      schema,
+    };
+  }, [orthoData, loading, message, schema]);
 
-    const container = L.DomUtil.create("div", "leaflet-bar ortho-control");
-    container.style.marginBottom = "70px"; // move above AdminBoundaries
-    container.style.marginRight = "0px";
+  useEffect(() => {
+    window._handleOrthophotoSave = handleSave;
+    return () => {
+      delete window._handleOrthophotoSave;
+      delete window._orthophotoData;
+    };
+  }, [schema]);
 
-    const button = L.DomUtil.create("button", "ortho-toggle-button", container);
-    button.innerHTML = "🛰️";
-    button.title = "Orthophoto Configuration";
-
-    L.DomEvent.on(button, "click", (e) => {
-      L.DomEvent.stopPropagation(e);
-      L.DomEvent.preventDefault(e);
-      setIsOpen((prev) => !prev);
-    });
-
-    const control = L.control({ position: "bottomright" });
-    control.onAdd = () => container;
-    control.addTo(map);
-
-    return () => map.removeControl(control);
-  }, [map]);
-
-  // ==========================================================
-  // 🧩 Configuration Panel
-  // ==========================================================
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="ortho-panel"
-      style={{
-        position: "absolute",
-        bottom: "120px", // place panel slightly above control
-        right: "10px",
-        zIndex: 9999,
-      }}
-    >
-      <h4>Orthophoto Configuration</h4>
-
-      <label>GeoServer URL</label>
-      <input
-        type="text"
-        value={orthoData.Gsrvr_URL}
-        onChange={(e) =>
-          setOrthoData({ ...orthoData, Gsrvr_URL: e.target.value })
-        }
-        placeholder="http://your-geoserver/geoserver/gwc/service/wmts"
-      />
-
-      <label>Layer Name</label>
-      <input
-        type="text"
-        value={orthoData.Layer_Name}
-        onChange={(e) =>
-          setOrthoData({ ...orthoData, Layer_Name: e.target.value })
-        }
-        placeholder="workspace:layername"
-      />
-
-      <button onClick={handleSave} disabled={loading}>
-        {loading ? "Saving..." : "Save"}
-      </button>
-
-      {message && <p className="ortho-message">{message}</p>}
-    </div>
-  );
+  return null; // No UI, logic only
 }
 
 export default Orthophoto;
