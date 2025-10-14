@@ -1,4 +1,5 @@
 import { useMap } from "react-leaflet";
+import { useState, useEffect } from "react";
 import {
   Plus,
   Minus,
@@ -10,10 +11,40 @@ import {
 } from "lucide-react";
 import { useSchema } from "./SchemaContext.jsx";
 import AdminBoundariesPanel from "./AdminBoundaries/AdminBoundariesPanel.jsx";
+import SchemaSelectorPanel from "./SchemaSelector/SchemaSelectorPanel.jsx";
 
 function RightControls({ activeTool, setActiveTool }) {
   const map = useMap();
   const { selectedSchemaBounds } = useSchema();
+
+  // ✅ Initialize with proper default state
+  const [schemaData, setSchemaData] = useState(() => {
+    // Check if data already exists on mount
+    return window._schemaSelectorData || {
+      schemas: [],
+      selectedSchema: "",
+      loading: true,
+      error: null,
+      userAccess: null,
+    };
+  });
+
+  // ✅ Sync with global state
+  useEffect(() => {
+    const syncData = () => {
+      if (window._schemaSelectorData) {
+        setSchemaData({ ...window._schemaSelectorData });
+      }
+    };
+
+    // Initial sync
+    syncData();
+
+    // Poll for updates
+    const interval = setInterval(syncData, 100);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleZoomIn = () => map.zoomIn();
   const handleZoomOut = () => map.zoomOut();
@@ -31,6 +62,12 @@ function RightControls({ activeTool, setActiveTool }) {
 
   const toggleTool = (toolName) => {
     setActiveTool((prev) => (prev === toolName ? null : toolName));
+  };
+
+  const handleSchemaChange = (schema) => {
+    if (window._handleSchemaChange) {
+      window._handleSchemaChange(schema);
+    }
   };
 
   const panelClass =
@@ -116,6 +153,18 @@ function RightControls({ activeTool, setActiveTool }) {
           </button>
         </div>
       </div>
+
+      {/* 🗺️ Schema Selector Panel */}
+      <SchemaSelectorPanel
+        isVisible={activeTool === "schema"}
+        onClose={() => setActiveTool(null)}
+        schemas={schemaData.schemas}
+        selectedSchema={schemaData.selectedSchema}
+        onSchemaChange={handleSchemaChange}
+        loading={schemaData.loading}
+        error={schemaData.error}
+        userAccess={schemaData.userAccess}
+      />
 
       {/* 🗺️ Admin Boundaries Panel */}
       <AdminBoundariesPanel

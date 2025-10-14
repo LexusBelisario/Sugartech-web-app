@@ -1,4 +1,3 @@
-// BoundaryLayers.jsx
 import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
@@ -21,16 +20,15 @@ const BoundaryLayers = ({ showBarangay, showSection }) => {
     "#aaffc3", "#808000", "#ffd8b1", "#000075", "#808080"
   ];
 
-    const barangayMin = 12;
-    const barangayMax = 15;
-    const sectionMin = 16;
-    const sectionMax = 25;
-
+  const barangayMin = 12;
+  const barangayMax = 15;
+  const sectionMin = 16;
+  const sectionMax = 25;
 
   useEffect(() => {
     if (!map || !schema) return;
 
-    window._debugMap = map; // optional for debugging
+    window._debugMap = map;
     const url = `${API}/municipal-boundaries?schema=${schema}`;
     console.log(`📡 Fetching boundaries for schema=${schema}`);
 
@@ -42,16 +40,20 @@ const BoundaryLayers = ({ showBarangay, showSection }) => {
           return;
         }
 
-        // 🧹 Remove old layers
+        // 🧹 Remove old layers safely
         const removeOld = (ref) => {
           if (ref.current) {
             try {
+              if (map.hasLayer(ref.current)) {
+                map.removeLayer(ref.current);
+              }
               ref.current.eachLayer((child) => {
                 try { child.remove(); } catch {}
               });
               ref.current.clearLayers();
-              map.removeLayer(ref.current);
-            } catch {}
+            } catch (e) {
+              console.warn("Error removing layer:", e);
+            }
             ref.current = null;
           }
         };
@@ -98,6 +100,10 @@ const BoundaryLayers = ({ showBarangay, showSection }) => {
           interactive: false,
         });
 
+        // ✅ Store references in window (do NOT overwrite parcels)
+        if (!window.barangayLayers) window.barangayLayers = [];
+        if (!window.sectionLayers) window.sectionLayers = [];
+
         // --- Visibility toggle ---
         const updateVisibility = () => {
           const zoom = map.getZoom();
@@ -108,19 +114,31 @@ const BoundaryLayers = ({ showBarangay, showSection }) => {
             showSection && zoom >= sectionMin && zoom <= sectionMax;
 
           // Barangay toggle
-          if (barangayVisible) {
-            if (!map.hasLayer(barangayLayerRef.current))
-              map.addLayer(barangayLayerRef.current);
-          } else if (map.hasLayer(barangayLayerRef.current)) {
-            map.removeLayer(barangayLayerRef.current);
+          if (barangayLayerRef.current) {
+            if (barangayVisible) {
+              if (!map.hasLayer(barangayLayerRef.current)) {
+                map.addLayer(barangayLayerRef.current);
+                barangayLayerRef.current.bringToFront();
+              }
+            } else {
+              if (map.hasLayer(barangayLayerRef.current)) {
+                map.removeLayer(barangayLayerRef.current);
+              }
+            }
           }
 
           // Section toggle
-          if (sectionVisible) {
-            if (!map.hasLayer(sectionLayerRef.current))
-              map.addLayer(sectionLayerRef.current);
-          } else if (map.hasLayer(sectionLayerRef.current)) {
-            map.removeLayer(sectionLayerRef.current);
+          if (sectionLayerRef.current) {
+            if (sectionVisible) {
+              if (!map.hasLayer(sectionLayerRef.current)) {
+                map.addLayer(sectionLayerRef.current);
+                sectionLayerRef.current.bringToBack();
+              }
+            } else {
+              if (map.hasLayer(sectionLayerRef.current)) {
+                map.removeLayer(sectionLayerRef.current);
+              }
+            }
           }
         };
 
@@ -130,44 +148,35 @@ const BoundaryLayers = ({ showBarangay, showSection }) => {
       })
       .catch(err => console.error("❌ Boundary fetch error:", err));
 
-    // 🧹 Deep cleanup
+    // 🧹 Cleanup - only remove barangay and section layers
     return () => {
-      // Remove event listener
-      if (updateVisibilityRef.current)
+      if (updateVisibilityRef.current) {
         map.off("zoomend", updateVisibilityRef.current);
+      }
 
-      // Destroy GeoJSON layers and sublayers
       const destroyGeoJsonLayer = (layerRef) => {
         const layer = layerRef.current;
         if (!layer) return;
         try {
+          if (map.hasLayer(layer)) {
+            map.removeLayer(layer);
+          }
           layer.eachLayer((child) => {
             try { child.remove(); } catch {}
           });
           layer.clearLayers();
-          map.removeLayer(layer);
-        } catch {}
+        } catch (e) {
+          console.warn("Error destroying layer:", e);
+        }
         layerRef.current = null;
       };
 
       destroyGeoJsonLayer(barangayLayerRef);
       destroyGeoJsonLayer(sectionLayerRef);
 
-      // Reset global caches
-      window.sectionLayers = [];
-      window.barangayLayers = [];
-      window.parcelLayers = [];
-
-      // Hard purge orphaned layers still tracked internally
-      for (const key in map._layers) {
-        const l = map._layers[key];
-        if (l instanceof L.Path || l instanceof L.GeoJSON) {
-          try { map.removeLayer(l); } catch {}
-        }
-      }
-
-      console.log("🧹 Deep purge complete. Layer count:",
-        Object.keys(map._layers).length);
+      // ✅ DO NOT reset parcel layers here
+      // window.parcelLayers should remain intact
+      console.log("🧹 Barangay/Section cleanup complete");
     };
   }, [map, schema, showBarangay, showSection]);
 
