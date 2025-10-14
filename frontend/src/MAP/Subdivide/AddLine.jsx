@@ -1,35 +1,36 @@
 import React, { useEffect, useState, useRef } from "react";
 import L from "leaflet";
 import API from "../../api.js";
-import { loadGeoTable } from "../view";
 import { useSchema } from "../SchemaContext";
+import SubdividePinEditor from "./SubdividePinEditor";
 
 const AddLine = ({ map }) => {
   const { schema } = useSchema();
   const [selectedParcel, setSelectedParcel] = useState(null);
   const [locked, setLocked] = useState(false);
   const lockedRef = useRef(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [hasValidLine, setHasValidLine] = useState(false);
+  const [previewData, setPreviewData] = useState(null); // contains preview parts + pins
+
   const activePoints = useRef([]);
   const currentLine = useRef(null);
   const pointMarkers = useRef([]);
   const allLines = useRef([]);
   const clickHandlers = useRef({});
 
-  // keep ref synced with state
+  // Sync lock ref
   useEffect(() => {
     lockedRef.current = locked;
   }, [locked]);
 
-  // Allow selecting parcel only when not locked
+  // Allow parcel selection only when not locked
   useEffect(() => {
     window.setSelectedParcelForSubdivide = (parcel) => {
       if (!lockedRef.current) setSelectedParcel(parcel);
     };
   }, []);
 
-  // === Lock parcel and enable drawing
+  // === Lock parcel and start drawing ===
   const handleChooseParcel = () => {
     if (!selectedParcel) {
       alert("Click a parcel on the map first before choosing it.");
@@ -41,13 +42,15 @@ const AddLine = ({ map }) => {
     enableDrawing();
   };
 
-  // === Drawing logic
+  // === Drawing logic (left/right click)
   const enableDrawing = () => {
     if (!map) return;
 
-    // Remove any old listeners
-    if (clickHandlers.current.left) map.off("click", clickHandlers.current.left);
-    if (clickHandlers.current.right) map.off("contextmenu", clickHandlers.current.right);
+    // Remove old listeners
+    if (clickHandlers.current.left)
+      map.off("click", clickHandlers.current.left);
+    if (clickHandlers.current.right)
+      map.off("contextmenu", clickHandlers.current.right);
 
     activePoints.current = [];
     pointMarkers.current.forEach((m) => map.removeLayer(m));
@@ -93,6 +96,7 @@ const AddLine = ({ map }) => {
         map.removeLayer(currentLine.current);
       }
 
+      // Reset for next line
       activePoints.current = [];
       pointMarkers.current = [];
       currentLine.current = L.polyline([], {
@@ -104,71 +108,48 @@ const AddLine = ({ map }) => {
 
     map.on("click", handleLeftClick);
     map.on("contextmenu", handleRightClick);
-
     clickHandlers.current.left = handleLeftClick;
     clickHandlers.current.right = handleRightClick;
   };
 
-  // === Clear all drawn lines and points
+  // === Undo last line ===
+  const handleUndo = () => {
+    const last = allLines.current.pop();
+    if (last) {
+      map.removeLayer(last.layer);
+      last.markers?.forEach((m) => map.removeLayer(m));
+      setHasValidLine(allLines.current.length > 0);
+    }
+  };
+
+  // === Clear all drawings ===
   const clearDrawings = () => {
-    allLines.current.forEach((line) => {
-      map.removeLayer(line.layer);
-      line.markers?.forEach((m) => map.removeLayer(m));
+    allLines.current.forEach((l) => {
+      map.removeLayer(l.layer);
+      l.markers?.forEach((m) => map.removeLayer(m));
     });
     pointMarkers.current.forEach((m) => map.removeLayer(m));
     if (currentLine.current) map.removeLayer(currentLine.current);
 
     allLines.current = [];
-    pointMarkers.current = [];
     activePoints.current = [];
+    pointMarkers.current = [];
     currentLine.current = null;
     setHasValidLine(false);
   };
 
-  // === Undo last completed line
-  const undoLastLine = () => {
-    const last = allLines.current.pop();
-    if (last) {
-      map.removeLayer(last.layer);
-      last.markers?.forEach((m) => map.removeLayer(m));
-      if (allLines.current.length === 0) setHasValidLine(false);
-    }
-  };
-
-  // === Cancel & discard everything (keep tool open)
-  const handleCancelAndDiscard = () => {
+  // === Cancel entire subdivision process ===
+  const handleCancel = () => {
     clearDrawings();
-    if (lockedRef.current && map) enableDrawing();
+    setPreviewData(null);
+    setLocked(false);
+    lockedRef.current = false;
+    window.subdivideLocked = false;
+    setSelectedParcel(null);
   };
 
-  // === Reload only the affected table (no zoom/pan)
-  const reloadSingleTable = (schema, table) => {
-    if (!schema || !table || !map) return;
-    console.log(`🔄 Reloading ${schema}.${table}`);
-    const center = map.getCenter();
-    const zoom = map.getZoom();
-
-    if (window.parcelLayers && Array.isArray(window.parcelLayers)) {
-      const oldLayers = window.parcelLayers.filter(
-        (p) =>
-          p.feature.properties.source_table === table &&
-          p.feature.properties.source_schema === schema
-      );
-      oldLayers.forEach((p) => map.removeLayer(p.layer));
-
-      window.parcelLayers = window.parcelLayers.filter(
-        (p) =>
-          p.feature.properties.source_table !== table ||
-          p.feature.properties.source_schema !== schema
-      );
-    }
-
-    loadGeoTable(map, schema, table);
-    map.setView(center, zoom);
-  };
-
-  // === Save subdivision
-  const handleSubdivideSave = async () => {
+  // === Trigger preview (no save yet) ===
+  const handlePreview = async () => {
     if (!lockedRef.current || !selectedParcel) {
       alert("Select and lock a parcel first.");
       return;
@@ -178,51 +159,48 @@ const AddLine = ({ map }) => {
       return;
     }
     if (allLines.current.length === 0) {
-      alert("Draw at least one split line before saving.");
+      alert("Draw at least one line before preview.");
       return;
     }
 
-    setIsSaving(true);
     const splitLines = allLines.current.map((l) => l.points);
     const payload = {
       schema,
       table: selectedParcel.source_table || "LandParcels",
       pin: selectedParcel.pin,
       split_lines: splitLines,
-      new_pins: [],
     };
 
     try {
-      const res = await fetch(`${API}/subdivide`, {
+      const res = await fetch(`${API}/subdivide-preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
 
-      if (data.status === "success") {
-        alert(`✅ Subdivision complete: ${data.message}`);
-        reloadSingleTable(schema, payload.table);
-        clearDrawings();
-        setLocked(false);
-        lockedRef.current = false;
-        setSelectedParcel(null);
-        window.subdivideLocked = false;
+      if (data.status === "success" && data.parts?.length) {
+        clearDrawings(); // remove blue lines
+        setPreviewData({
+          schema,
+          table: selectedParcel.source_table || "LandParcels",
+          basePin: selectedParcel.pin,
+          splitLines,
+          parts: data.parts,
+          suggestedPins: data.suggested_pins,
+        });
       } else {
-        alert(`❌ Subdivision failed: ${data.message || "Unknown error"}`);
+        alert(`❌ Preview failed: ${data.message || "Unexpected error"}`);
       }
     } catch (err) {
-      console.error("❌ Subdivision error:", err);
-      alert("Subdivision request failed. Check console for details.");
-    } finally {
-      setIsSaving(false);
+      console.error("❌ Preview error:", err);
+      alert("Subdivision preview failed. Check console for details.");
     }
   };
 
-  // === TOOL CLEANUP (when closed)
+  // === Cleanup when unmounting ===
   useEffect(() => {
     return () => {
-      console.log("🧹 Subdivide tool closed — cleaning up");
       if (map) {
         if (clickHandlers.current.left)
           map.off("click", clickHandlers.current.left);
@@ -230,10 +208,6 @@ const AddLine = ({ map }) => {
           map.off("contextmenu", clickHandlers.current.right);
       }
       clearDrawings();
-      setLocked(false);
-      lockedRef.current = false;
-      setSelectedParcel(null);
-      window.subdivideLocked = false;
     };
   }, [map]);
 
@@ -241,63 +215,77 @@ const AddLine = ({ map }) => {
     <>
       <div className="subdivide-instructions">
         <p><strong>1.</strong> Click a parcel to select it.</p>
-        <p><strong>2.</strong> Click <strong>Choose This Parcel</strong> to lock it in.</p>
-        <p><strong>3.</strong> After locking, parcel clicks are disabled.</p>
-        <p><strong>4.</strong> Left-click adds red dots; they connect with a dashed blue line.</p>
-        <p><strong>5.</strong> Right-click ends the current line; the next click starts a new one.</p>
+        <p><strong>2.</strong> Click <strong>Choose This Parcel</strong> to lock it for subdividing.</p>
+        <p><strong>3.</strong> Left-click adds points. Two or more points draws a line. Right-click finishes a line.</p>
+        <p><strong>4.</strong> Click <strong>Subdivide (Preview)</strong> to see result before saving.</p>
+        <p><strong>5</strong> Assign <strong>PINs</strong> for the newly-made parcels.</p>
+        <p><strong>6.</strong> Click <strong>Subdivide (Save)</strong> to save the subdivision.</p>
       </div>
 
-      <div className="parcel-selection-controls">
-        {!selectedParcel && (
-          <p style={{ fontSize: "13px", color: "#aaa" }}>
-            Click a parcel on the map to enable selection.
-          </p>
-        )}
+      {/* === Drawing Mode === */}
+      {!previewData && (
+        <div className="parcel-selection-controls">
+          {!selectedParcel && (
+            <p style={{ fontSize: "13px", color: "#aaa" }}>
+              Click a parcel on the map to enable selection.
+            </p>
+          )}
 
-        {selectedParcel && !locked && (
-          <button className="subdivide-btn" onClick={handleChooseParcel}>
-            Choose This Parcel
-          </button>
-        )}
+          {selectedParcel && !locked && (
+            <button className="subdivide-btn" onClick={handleChooseParcel}>
+              Choose This Parcel
+            </button>
+          )}
 
-        {selectedParcel && locked && (
-          <>
-            <div style={{ fontSize: "13px", marginBottom: "6px" }}>
-              Selected Parcel: <strong>{selectedParcel.pin}</strong> (Locked)
-            </div>
+          {locked && (
+            <>
+              <div style={{ marginBottom: "6px", fontSize: "13px" }}>
+                Locked Parcel: <strong>{selectedParcel.pin}</strong>
+              </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <button
-                className="subdivide-btn"
-                onClick={handleSubdivideSave}
-                disabled={isSaving || !hasValidLine}
-              >
-                {isSaving
-                  ? "Saving..."
-                  : hasValidLine
-                  ? "Subdivide and Save"
-                  : "Draw a Line First"}
-              </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <button
+                  className="subdivide-btn"
+                  onClick={handlePreview}
+                  disabled={!hasValidLine}
+                >
+                  Subdivide (Preview)
+                </button>
 
-              <button
-                className="subdivide-btn"
-                style={{ backgroundColor: "#777" }}
-                onClick={undoLastLine}
-              >
-                Undo Last Line
-              </button>
+                <button
+                  className="subdivide-btn"
+                  style={{ backgroundColor: "#777" }}
+                  onClick={handleUndo}
+                >
+                  Undo Last Line
+                </button>
 
-              <button
-                className="subdivide-btn"
-                style={{ backgroundColor: "#b33", color: "white" }}
-                onClick={handleCancelAndDiscard}
-              >
-                Cancel & Discard
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+                <button
+                  className="subdivide-btn"
+                  style={{ backgroundColor: "#b33", color: "white" }}
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* === Preview Mode === */}
+      {previewData && (
+        <SubdividePinEditor
+          map={map}
+          {...previewData}
+          onCancel={handleCancel}
+          onDone={() => {
+            setPreviewData(null);
+            setLocked(false);
+            window.subdivideLocked = false;
+          }}
+        />
+      )}
     </>
   );
 };
