@@ -50,21 +50,17 @@ const TBMainToolbar = ({ activeTool, setActiveTool }) => {
 
   // === Handle Search open/close ===
   const openSearch = () => {
-    // 🩵 Enforce correct parcel visibility and stacking order before opening Search
     if (window.onParcelsLoaded) window.onParcelsLoaded();
     if (window.enforceLayerOrder) window.enforceLayerOrder();
-
-    setToolbarVisible(false); // hide toolbar
+    setToolbarVisible(false);
     setShowSearch(true);
     setActiveTool("search");
   };
 
   const closeSearch = () => {
     setShowSearch(false);
-    setToolbarVisible(true); // show toolbar again
+    setToolbarVisible(true);
     setActiveTool(null);
-
-    // 🩵 Re-apply visibility/order when closing Search
     if (window.onParcelsLoaded) window.onParcelsLoaded();
     if (window.enforceLayerOrder) window.enforceLayerOrder();
   };
@@ -151,25 +147,12 @@ const TBMainToolbar = ({ activeTool, setActiveTool }) => {
         </>
       )}
 
-      {/* === Search Panel (portal-based, replaces toolbar) === */}
+      {/* === Search Panel === */}
       {showSearch &&
         createPortal(
           <Search visible={showSearch} onClose={closeSearch} />,
           document.body
         )}
-
-      {/* === TMCR and Matching Report === */}
-      {showTMCR && (
-        <div className="tmcr-sidebar">
-          <BarangaySectionTable onClose={() => setShowTMCR(false)} />
-        </div>
-      )}
-
-      {showMismatchChecker && (
-        <div className="tmcr-sidebar">
-          <ExactMismatchChecker onClose={() => setShowMismatchChecker(false)} />
-        </div>
-      )}
 
       {/* === Consolidate Tool === */}
       {activeTool === "consolidate" &&
@@ -178,11 +161,11 @@ const TBMainToolbar = ({ activeTool, setActiveTool }) => {
           document.body
         )}
 
-      {/* === Subdivide Tool === */}
+      {/* === Subdivide Tool (Popup Now Visible) === */}
       {activeTool === "subdivide" &&
         createPortal(
           <Subdivide
-            map={window.leafletMap}
+            visible={activeTool === "subdivide"}
             onClose={() => setActiveTool(null)}
           />,
           document.body
@@ -205,7 +188,7 @@ const TBMainToolbar = ({ activeTool, setActiveTool }) => {
             onClose={() => setActiveTool(null)}
             data={infoProps}
             editable={activeTool === "edit"}
-            position={infoProps?.fromSearch ? "right" : "left"} // ✅ dynamic positioning
+            position={infoProps?.fromSearch ? "right" : "left"}
           />,
           document.body
         )}

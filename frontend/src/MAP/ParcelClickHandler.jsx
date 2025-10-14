@@ -14,20 +14,18 @@ const ParcelClickHandler = ({
 
   useEffect(() => {
     // === Deactivate mode: unbind and reset styles ===
-    if (!["info", "edit", "consolidate"].includes(activeTool)) {
+    if (!["info", "edit", "consolidate", "subdivide"].includes(activeTool)) {
       console.log("⛔ ParcelClickHandler inactive:", activeTool);
 
-      // ✅ Apply zoom-based style logic from AdminBoundaries
       const map = window.map;
       const zoom = map?.getZoom?.() ?? 0;
-      const visible = zoom >= 16; // match AdminBoundaries parcel threshold
+      const visible = zoom >= 16;
 
       if (window.parcelLayers?.length) {
         window.parcelLayers.forEach(({ layer }) => {
           layer.off("click");
 
           if (visible) {
-            // Parcels are allowed to be seen at this zoom
             layer.setStyle?.({
               stroke: true,
               color: "black",
@@ -38,7 +36,6 @@ const ParcelClickHandler = ({
               fillOpacity: 0.1,
             });
           } else {
-            // 🔒 Keep parcels fully hidden when zoom < 16
             layer.setStyle?.({
               stroke: true,
               color: "black",
@@ -52,15 +49,13 @@ const ParcelClickHandler = ({
         });
       }
 
-      // ✅ Re-enforce AdminBoundaries visibility + order
       if (window.onParcelsLoaded) window.onParcelsLoaded();
       if (window.enforceLayerOrder) window.enforceLayerOrder();
-
       return;
     }
 
     // ============================================================
-    // ✅ Active tools: info, edit, consolidate
+    // ✅ Active tools: info, edit, consolidate, subdivide
     // ============================================================
     const bindClicks = () => {
       if (!window.parcelLayers?.length) {
@@ -85,8 +80,8 @@ const ParcelClickHandler = ({
           // === Consolidate Mode ===
           if (activeTool === "consolidate") {
             console.log("🔵 Consolidate click:", pin);
-
             const isSelected = layer.options.fillColor === "blue";
+
             if (isSelected) {
               layer.setStyle({
                 stroke: true,
@@ -114,6 +109,57 @@ const ParcelClickHandler = ({
             return;
           }
 
+          // === Subdivide Mode ===
+          if (activeTool === "subdivide") {
+            // 🔒 if locked, ignore further parcel clicks
+            if (window.subdivideLocked) {
+              console.log("🔒 Subdivide locked – parcel clicks ignored.");
+              return;
+            }
+
+            console.log("🟢 Subdivide mode click:", pin);
+
+            // Reset previous highlights
+            window.parcelLayers.forEach(({ layer }) => {
+              layer.setStyle?.({
+                stroke: true,
+                color: "black",
+                weight: 1,
+                opacity: 1,
+                fill: true,
+                fillColor: "white",
+                fillOpacity: 0.1,
+              });
+            });
+
+            // Highlight the selected parcel
+            layer.setStyle?.({
+              stroke: true,
+              color: "black",
+              weight: 2,
+              opacity: 1,
+              fill: true,
+              fillColor: "green",
+              fillOpacity: 0.4,
+            });
+            layer.bringToFront();
+
+            // Store globally so AddLine.jsx can access it
+            const selectedParcel = {
+              ...feature.properties,
+              pin,
+              source_table: feature.properties?.source_table || "LandParcels",
+              source_schema: schema,
+            };
+
+            window.selectedParcelForSubdivide = selectedParcel;
+            if (window.setSelectedParcelForSubdivide)
+              window.setSelectedParcelForSubdivide(selectedParcel);
+
+            console.log("✅ Selected parcel for subdivide:", selectedParcel);
+            return;
+          }
+
           // === Info/Edit Mode ===
           if (activeTool === "info" || activeTool === "edit") {
             console.log("🟡 Info/Edit click:", pin);
@@ -127,7 +173,6 @@ const ParcelClickHandler = ({
               const json = await res.json();
 
               if (json.status === "success") {
-                // Reset all highlights first
                 window.parcelLayers.forEach(({ layer }) => {
                   layer.setStyle?.({
                     stroke: true,
@@ -140,7 +185,6 @@ const ParcelClickHandler = ({
                   });
                 });
 
-                // Highlight selected parcel
                 layer.setStyle?.({
                   stroke: true,
                   color: "black",
