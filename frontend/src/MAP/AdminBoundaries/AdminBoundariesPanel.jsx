@@ -26,9 +26,8 @@ const AdminBoundariesPanel = ({ isVisible, onClose }) => {
   // Handle municipal checkbox change
   const handleMunicipalChange = (e) => {
     setMunicipalChecked(e.target.checked);
-    // Trigger the original updateVisibility logic
     if (window._updateBoundaryVisibility) {
-      window._updateBoundaryVisibility();
+      window._updateBoundaryVisibility(false);
     }
   };
 
@@ -36,7 +35,6 @@ const AdminBoundariesPanel = ({ isVisible, onClose }) => {
   const handleBarangayChange = (e) => {
     const checked = e.target.checked;
     setBarangayChecked(checked);
-    // Call the original setShowBarangay from AdminBoundaries
     if (window._setShowBarangay) {
       window._setShowBarangay(checked);
     }
@@ -46,13 +44,12 @@ const AdminBoundariesPanel = ({ isVisible, onClose }) => {
   const handleSectionChange = (e) => {
     const checked = e.target.checked;
     setSectionChecked(checked);
-    // Call the original setShowSection from AdminBoundaries
     if (window._setShowSection) {
       window._setShowSection(checked);
     }
-    // Also trigger visibility update for section layers
+    // ✅ Also update section layer visibility
     if (window._updateBoundaryVisibility) {
-      window._updateBoundaryVisibility();
+      window._updateBoundaryVisibility(false);
     }
   };
 
@@ -60,7 +57,7 @@ const AdminBoundariesPanel = ({ isVisible, onClose }) => {
   const handleParcelsChange = (e) => {
     setParcelsChecked(e.target.checked);
     if (window._updateBoundaryVisibility) {
-      window._updateBoundaryVisibility();
+      window._updateBoundaryVisibility(false);
     }
   };
 
@@ -70,7 +67,8 @@ const AdminBoundariesPanel = ({ isVisible, onClose }) => {
     setParcelColor(newColor);
     window.parcelOutlineColor = newColor;
     if (window._updateBoundaryVisibility) {
-      window._updateBoundaryVisibility();
+      // ✅ Force refresh to apply new color
+      window._updateBoundaryVisibility(true);
     }
   };
 
@@ -163,7 +161,7 @@ const AdminBoundariesPanel = ({ isVisible, onClose }) => {
             <option value="green">Green</option>
             <option value="blue">Blue</option>
             <option value="violet">Violet</option>
-            <option value="black" selected>Black</option>
+            <option value="black">Black</option>
             <option value="white">White</option>
           </select>
         </div>
