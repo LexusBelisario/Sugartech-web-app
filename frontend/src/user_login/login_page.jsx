@@ -102,7 +102,7 @@ function LoginPage() {
             <div className="w-20 h-20 bg-gradient-to-br from-[#F2C300] to-[#D4AF37] rounded-full p-[2px] shadow-lg">
               <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
                 <div className="text-3xl font-bold bg-gradient-to-br from-[#0B4EA2] to-[#702082] text-transparent bg-clip-text">
-                  RP
+                  RPT
                 </div>
               </div>
             </div>

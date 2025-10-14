@@ -46,7 +46,6 @@ const LandActualUse = () => {
       },
     }).addTo(map);
 
-    // ✅ No anonymous <div>, just fragment
     window.addLandInfoLegend?.(
       "actualuse",
       <>
@@ -73,7 +72,7 @@ const LandActualUse = () => {
     }
 
     const geoUrl = `${API}/all-barangays?schemas=${schema}`;
-    const attrUrl = `${API}/attribute-table?schema=${schema}`;
+    const attrUrl = `${API}/search/attribute-table?schema=${schema}`; // ✅ updated path
 
     Promise.all([fetch(geoUrl), fetch(attrUrl)])
       .then(([geoRes, attrRes]) => Promise.all([geoRes.json(), attrRes.json()]))
