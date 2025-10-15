@@ -2,6 +2,7 @@ from typing import List, Dict, Optional
 from auth.models import User
 import re
 
+
 class AccessControl:
     @staticmethod
     def normalize_code(code: str) -> str:
@@ -11,7 +12,7 @@ class AccessControl:
         """
         if not code:
             return ""
-        match = re.match(r"^(PH\d+)", code)
+        match = re.match(r"^(PH\\d+)", code)
         return match.group(1) if match else code.strip()
 
     # =====================================================
@@ -74,10 +75,14 @@ class AccessControl:
         return schema_code.startswith(mun_code)
 
     # =====================================================
-    # ✅ HUMAN DESCRIPTION
+    # ✅ HUMAN DESCRIPTION (UPDATED)
     # =====================================================
     @staticmethod
     def get_access_description(user: User) -> str:
+        """
+        Generates a human-readable description of the user's access level.
+        Dynamically fetches the actual provincial database name if access is 'All'.
+        """
         if not user.provincial_access and not user.municipal_access:
             return "No access assigned"
 
@@ -85,7 +90,22 @@ class AccessControl:
             return f"Provincial access {user.provincial_access} only (no municipal access)"
 
         if user.municipal_access.strip().lower() == "all":
-            return f"Full access to all municipalities under {user.provincial_access}"
+            # ✅ Dynamically get the connected provincial DB name
+            try:
+                from sqlalchemy import text
+                # Delayed import to avoid circular dependency
+                from auth.dependencies import get_user_database_session
+
+                db = get_user_database_session(user.provincial_access)
+                result = db.execute(text("SELECT current_database()")).scalar()
+                db_name = result or user.provincial_access
+            except Exception:
+                db_name = user.provincial_access
+            finally:
+                if "db" in locals():
+                    db.close()
+
+            return f"Full access to all municipalities under {db_name}"
 
         return f"Access limited to municipality {user.municipal_access}"
 
