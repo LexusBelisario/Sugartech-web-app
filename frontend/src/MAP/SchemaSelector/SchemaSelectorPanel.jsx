@@ -26,20 +26,6 @@ const SchemaSelectorPanel = ({
     };
   }, []);
 
-  // 🧭 Text formatting helper
-  const formatSchemaName = (schema) => {
-    if (schema.includes(", ")) return schema;
-    const parts = schema.split("_");
-    if (parts.length >= 2) {
-      const municipality = parts.slice(0, -1).join(" ");
-      const province = parts[parts.length - 1];
-      return `${
-        municipality.charAt(0).toUpperCase() + municipality.slice(1)
-      }, ${province.charAt(0).toUpperCase() + province.slice(1)}`;
-    }
-    return schema;
-  };
-
   if (!isVisible) return null;
 
   return (
@@ -92,9 +78,7 @@ const SchemaSelectorPanel = ({
                       onChange={(e) => onSchemaChange(e.target.value)}
                       className="accent-[#F7C800]"
                     />
-                    <span className="schema-name">
-                      {formatSchemaName(schema)}
-                    </span>
+                    <span className="schema-name">{schema}</span>
                   </label>
                 </li>
               ))}
@@ -104,7 +88,7 @@ const SchemaSelectorPanel = ({
               <div className="text-xs text-gray-300 border-t border-[#2A2E35] pt-2 mt-2">
                 Current:{" "}
                 <span className="font-semibold text-[#F7C800]">
-                  {formatSchemaName(selectedSchema)}
+                  {selectedSchema}
                 </span>
               </div>
             )}

@@ -47,6 +47,10 @@ def list_schemas(
         allowed_schemas = AccessControl.filter_schemas_by_access(all_schemas, current_user)
         print(f"Allowed schemas for user: {allowed_schemas}")
 
+        # ✅ Normalize schema names to ensure underscores remain (avoid accidental commas)
+        allowed_schemas = [s.replace(", ", "_").replace(",", "_") for s in allowed_schemas]
+        print(f"🚀 Normalized allowed schemas: {allowed_schemas}")
+
         # ✅ Get readable access description
         access_description = AccessControl.get_access_description(current_user)
 
