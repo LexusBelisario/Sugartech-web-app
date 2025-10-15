@@ -1,106 +1,111 @@
 from typing import List, Dict, Optional
 from auth.models import User
-
+import re
 
 class AccessControl:
     @staticmethod
-    def check_user_access(user: User) -> Dict:
+    def normalize_code(code: str) -> str:
         """
-        Check user's access level and return status + allowed schemas (for users only).
+        Normalize PSA code by stripping non-alphanumeric chars and removing suffixes.
+        Example: "PH0403419_Pagsanjan" -> "PH0403419"
         """
+        if not code:
+            return ""
+        match = re.match(r"^(PH\d+)", code)
+        return match.group(1) if match else code.strip()
 
-        # 🚫 Case 1: No provincial & no municipal
+    # =====================================================
+    # ✅ MAIN ACCESS CHECK
+    # =====================================================
+    @staticmethod
+    def check_user_access(user: User) -> Dict:
         if not user.provincial_access and not user.municipal_access:
             return {
                 "status": "pending_approval",
-                "message": "Your account needs admin approval. Please contact the administrator to assign your provincial and municipal access.",
+                "message": "Your account needs admin approval. Please contact the administrator.",
                 "allowed_schemas": []
             }
 
-        # 🚫 Case 2: Provincial access but no municipal access → BLOCK LOGIN
         if user.provincial_access and not user.municipal_access:
             return {
                 "status": "pending_approval",
-                "message": f"You have provincial access to {user.provincial_access}, but no municipal access assigned. Please contact the administrator to enable municipal access.",
+                "message": f"You have provincial access to {user.provincial_access}, but no municipal access assigned.",
                 "allowed_schemas": []
             }
 
-        # ✅ Case 3: Both provincial + municipal access → allow
         return {
             "status": "approved",
             "message": "Access granted",
             "allowed_schemas": AccessControl.get_allowed_schemas(user)
         }
 
+    # =====================================================
+    # ✅ FILTER SCHEMAS BASED ON USER ACCESS
+    # =====================================================
     @staticmethod
     def filter_schemas_by_access(all_schemas: List[str], user: User) -> List[str]:
-        """
-        Filter available schemas (all_schemas) based on user's PSGC codes.
-        Schema names in DB may have suffixes (e.g. PH0403406_Calauan).
-        """
         if not user.provincial_access or not user.municipal_access:
             return []
 
-        # Special case: "ALL" → allow all municipalities under this province
+        prov_code = AccessControl.normalize_code(user.provincial_access)
+        mun_code = AccessControl.normalize_code(user.municipal_access)
+
+        # Allow all municipalities under province
         if user.municipal_access.strip().lower() == "all":
-            return sorted([s for s in all_schemas if s.startswith(user.provincial_access)])
+            return sorted([s for s in all_schemas if s.startswith(prov_code)])
 
-        # Otherwise, check by prefix (municipal code matches schema prefix)
-        wanted_prefix = user.municipal_access
-        matched = [s for s in all_schemas if s.startswith(wanted_prefix)]
-        return sorted(matched)
+        # Otherwise match by municipal prefix (ignoring suffix)
+        return sorted([s for s in all_schemas if s.startswith(mun_code)])
 
+    # =====================================================
+    # ✅ VALIDATE SPECIFIC SCHEMA
+    # =====================================================
     @staticmethod
     def validate_schema_access(schema: str, user: User) -> bool:
-        """
-        Check if user can access the given schema.
-        Schema names may have suffixes (e.g. PH0403406_Calauan).
-        """
         if not user.provincial_access or not user.municipal_access:
             return False
 
-        # "ALL" → allow any schema under this province
+        schema_code = AccessControl.normalize_code(schema)
+        prov_code = AccessControl.normalize_code(user.provincial_access)
+        mun_code = AccessControl.normalize_code(user.municipal_access)
+
         if user.municipal_access.strip().lower() == "all":
-            return schema.startswith(user.provincial_access)
+            return schema_code.startswith(prov_code)
+        return schema_code.startswith(mun_code)
 
-        # Prefix-based match
-        return schema.startswith(user.municipal_access)
-
+    # =====================================================
+    # ✅ HUMAN DESCRIPTION
+    # =====================================================
     @staticmethod
     def get_access_description(user: User) -> str:
-        """
-        Human-readable description of user's access level.
-        """
         if not user.provincial_access and not user.municipal_access:
             return "No access assigned"
 
         if user.provincial_access and not user.municipal_access:
             return f"Provincial access {user.provincial_access} only (no municipal access)"
 
-        if user.municipal_access and user.municipal_access.strip().lower() == "all":
+        if user.municipal_access.strip().lower() == "all":
             return f"Full access to all municipalities under {user.provincial_access}"
 
-        if user.municipal_access:
-            return f"Access limited to municipality {user.municipal_access}"
+        return f"Access limited to municipality {user.municipal_access}"
 
-        return "Invalid access configuration"
-
+    # =====================================================
+    # ✅ RETURN ALLOWED SCHEMAS
+    # =====================================================
     @staticmethod
     def get_allowed_schemas(user: User, all_schemas: Optional[List[str]] = None) -> List[str]:
-        """
-        Return a list of schemas this user is allowed to access.
-        If municipal_access is "ALL", return all available schemas under that province.
-        """
         if not user.provincial_access or not user.municipal_access:
             return []
 
+        prov_code = AccessControl.normalize_code(user.provincial_access)
+        mun_code = AccessControl.normalize_code(user.municipal_access)
+
         if user.municipal_access.strip().lower() == "all":
             if all_schemas is not None:
-                return sorted([s for s in all_schemas if s.startswith(user.provincial_access)])
-            return ["*"]  # wildcard marker
+                return sorted([s for s in all_schemas if s.startswith(prov_code)])
+            return ["*"]
 
-        # Return only schemas starting with the municipal PSA code
         if all_schemas is not None:
-            return sorted([s for s in all_schemas if s.startswith(user.municipal_access)])
+            return sorted([s for s in all_schemas if s.startswith(mun_code)])
 
         return [user.municipal_access]
