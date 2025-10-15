@@ -11,17 +11,16 @@ const Consolidate = ({ onClose }) => {
   const map = useMap();
   const [selected, setSelected] = useState([]);
   const [newPin, setNewPin] = useState("");
+  const [showInstructions, setShowInstructions] = useState(true);
+  const [lastCreatedPin, setLastCreatedPin] = useState(null);
 
-  // ✅ Callback from ParcelClickHandler
+  // === Parcel selection callback
   const handleParcelSelect = (pin, feature, isSelected) => {
-    if (isSelected) {
-      setSelected((prev) => [...prev, feature]);
-    } else {
-      setSelected((prev) => prev.filter((f) => f.properties.pin !== pin));
-    }
+    if (isSelected) setSelected((prev) => [...prev, feature]);
+    else setSelected((prev) => prev.filter((f) => f.properties.pin !== pin));
   };
 
-  // === Suggest new PIN ===
+  // === Suggest next PIN based on prefix
   useEffect(() => {
     if (selected.length < 2) {
       setNewPin("");
@@ -53,54 +52,75 @@ const Consolidate = ({ onClose }) => {
 
   const removeFromList = (pin) => {
     setSelected((prev) => prev.filter((f) => f.properties.pin !== pin));
-    // let ParcelClickHandler handle style reset automatically
   };
 
+  // === Highlight the newly created parcel
+  const highlightNewParcel = (pin, schema, table) => {
+    if (!window.parcelLayers?.length) {
+      setTimeout(() => highlightNewParcel(pin, schema, table), 500);
+      return;
+    }
+
+    const target = window.parcelLayers.find(
+      (p) =>
+        p.feature?.properties?.pin === pin &&
+        p.feature?.properties?.source_schema === schema &&
+        p.feature?.properties?.source_table === table
+    );
+
+    if (target?.layer) {
+      window.parcelLayers.forEach(({ layer }) => {
+        layer.setStyle?.({
+          color: "black",
+          weight: 1,
+          fillColor: "white",
+          fillOpacity: 0.1,
+        });
+      });
+
+      target.layer.setStyle?.({
+        color: "black",
+        weight: 2,
+        fillColor: "yellow",
+        fillOpacity: 0.4,
+      });
+
+      map.fitBounds(target.layer.getBounds(), { maxZoom: 18 });
+    } else {
+      setTimeout(() => highlightNewParcel(pin, schema, table), 500);
+    }
+  };
+
+  // === Perform merge
   const mergeAndSend = async () => {
-    if (selected.length < 2) {
-      alert("Please select at least two parcels.");
-      return;
-    }
-    if (!schema) {
-      alert("No schema selected.");
-      return;
-    }
+    if (selected.length < 2 || !schema) return;
 
     try {
       const validGeometries = selected
         .map((f) => f.geometry)
         .filter((g) => g?.type && g?.coordinates);
-      if (validGeometries.length < 2) {
-        alert("Must have at least 2 valid geometries.");
-        return;
-      }
+      if (validGeometries.length < 2) return;
 
       const table = selected[0].properties.source_table;
       const firstPin = selected[0].properties.pin;
 
-      const fullInfoRes = await fetch(
+      const infoRes = await fetch(
         `${API}/parcel-info?pin=${encodeURIComponent(
           firstPin
         )}&schema=${encodeURIComponent(schema)}`
       );
-      const fullInfoJson = await fullInfoRes.json();
-
-      if (fullInfoJson.status !== "success") {
-        alert("Failed to fetch full parcel attributes.");
-        return;
-      }
+      const infoJson = await infoRes.json();
+      if (infoJson.status !== "success") return;
 
       const baseProps = {
-        ...fullInfoJson.data,
+        ...infoJson.data,
         pin: newPin,
         parcel: "",
         section: "",
       };
 
       Object.keys(baseProps).forEach((k) => {
-        if (baseProps[k] === null || baseProps[k] === undefined) {
-          baseProps[k] = "";
-        }
+        if (baseProps[k] === null || baseProps[k] === undefined) baseProps[k] = "";
       });
 
       const res = await fetch(`${API}/merge-parcels-postgis`, {
@@ -116,33 +136,36 @@ const Consolidate = ({ onClose }) => {
       });
 
       const json = await res.json();
+      if (json.status !== "success") return;
 
-      if (json.status === "success") {
-        window.parcelLayers
-          .filter(
-            (p) =>
-              p.feature.properties.source_table === table &&
-              p.feature.properties.source_schema === schema
-          )
-          .forEach((p) => map.removeLayer(p.layer));
+      const createdPin = json.new_pin || newPin;
+      setLastCreatedPin(createdPin);
 
-        for (let i = window.parcelLayers.length - 1; i >= 0; i--) {
-          const f = window.parcelLayers[i].feature.properties;
-          if (f.source_table === table && f.source_schema === schema) {
-            window.parcelLayers.splice(i, 1);
-          }
+      // Remove old layers
+      window.parcelLayers
+        .filter(
+          (p) =>
+            p.feature.properties.source_table === table &&
+            p.feature.properties.source_schema === schema
+        )
+        .forEach((p) => map.removeLayer(p.layer));
+
+      for (let i = window.parcelLayers.length - 1; i >= 0; i--) {
+        const f = window.parcelLayers[i].feature.properties;
+        if (f.source_table === table && f.source_schema === schema) {
+          window.parcelLayers.splice(i, 1);
         }
-
-        loadGeoTable(map, schema, table);
-        setSelected([]);
-        setNewPin("");
-        onClose();
-      } else {
-        alert("Consolidation failed: " + json.message);
       }
+
+      // Reload updated parcels and highlight new one
+      await loadGeoTable(map, schema, table);
+      highlightNewParcel(createdPin, schema, table);
+
+      // Keep the tool open and ready for next consolidation
+      setSelected([]);
+      setNewPin("");
     } catch (err) {
       console.error("Consolidate error:", err);
-      alert("Unexpected error during consolidation.");
     }
   };
 
@@ -153,7 +176,6 @@ const Consolidate = ({ onClose }) => {
 
   return (
     <>
-      {/* ✅ Consolidate now reuses ParcelClickHandler */}
       <ParcelClickHandler
         activeTool="consolidate"
         onConsolidateSelect={handleParcelSelect}
@@ -167,25 +189,36 @@ const Consolidate = ({ onClose }) => {
           </button>
         </div>
 
-        <div className="consolidate-instructions">
-          <p>1. Click parcels on the map to select them.</p>
-          <p>
-            2. Selected parcels will be highlighted in <b>blue</b> and listed
-            below.
-          </p>
-          <p>3. A new PIN is suggested below but you can edit it.</p>
-          <p>
-            4. Click <strong>Consolidate and Save</strong> to merge and store
-            the result.
-          </p>
+        <div className="collapsible-header">
+          <button
+            className="toggle-instructions-btn"
+            onClick={() => setShowInstructions(!showInstructions)}
+          >
+            {showInstructions ? "Hide Instructions ▲" : "Show Instructions ▼"}
+          </button>
         </div>
+
+        {showInstructions && (
+          <div className="consolidate-instructions">
+            <p>1. Click parcels on the map to select them.</p>
+            <p>
+              2. Selected parcels will be highlighted in <b>blue</b> and listed
+              below.
+            </p>
+            <p>3. A new PIN is suggested below but you can edit it.</p>
+            <p>
+              4. Click <strong>Consolidate and Save</strong> to merge. The new
+              parcel will be highlighted automatically.
+            </p>
+          </div>
+        )}
 
         {selected.length > 0 && (
           <div className="consolidate-selected-label">
             Parcels selected for consolidation (PIN):
           </div>
         )}
-        {selected.length === 0 && (
+        {selected.length === 0 && !lastCreatedPin && (
           <p style={{ color: "gray", fontSize: "12px" }}>
             No parcels selected yet.
           </p>
@@ -225,6 +258,12 @@ const Consolidate = ({ onClose }) => {
               }}
             />
           </div>
+        )}
+
+        {lastCreatedPin && (
+          <p style={{ fontSize: "13px", marginTop: "10px", color: "#006400" }}>
+            Last created parcel: <b>{lastCreatedPin}</b>
+          </p>
         )}
 
         <div className="consolidate-popup-buttons">
