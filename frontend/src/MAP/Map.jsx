@@ -11,10 +11,9 @@ import Toolbar from "./Toolbar/toolbar.jsx";
 import { SchemaProvider } from "./SchemaContext.jsx";
 import CoordinatesDisplay from "./CoordinatesDisplay/CoordinatesDisplay.jsx";
 import MapRefRegisterer from "./MapRefRegister.jsx";
-import RightControls from "./RightSideControls.jsx"; // ✅ new import
+import RightControls from "./RightSideControls.jsx";
 
 function MapView() {
-  // 🧭 State to track which right-side tool is open
   const [activeTool, setActiveTool] = useState(null);
 
   return (
@@ -22,6 +21,8 @@ function MapView() {
       <MapContainer
         center={[12.8797, 121.774]}
         zoom={6}
+        zoomControl={false}        // ✅ Remove default zoom controls
+        attributionControl={false} // ✅ Remove Leaflet attribution
         style={{ height: "100vh", width: "100%", position: "relative", zIndex: 0 }}
         className="leaflet-map-container"
       >
