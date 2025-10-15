@@ -27,9 +27,11 @@ function AdminBoundaries() {
 
     // --- Zoom thresholds ---
     const municipalMin = 4;
-    const municipalMax = 14;
-    const sectionParcelMinZoom = 16;
-    const sectionParcelMaxZoom = 25;
+    const municipalMax = 13;
+    const sectionMinZoom = 12;
+    const sectionMaxZoom = 25;
+    const parcelMinZoom = 16;
+    const parcelMaxZoom = 25;
 
     // --- Parcel outline color ---
     window.parcelOutlineColor = window.parcelOutlineColor || "black";
@@ -56,7 +58,7 @@ function AdminBoundaries() {
     function bindParcelClick(feature, layer) {
       layer.off("click");
       layer.on("click", () => {
-        // Reset all parcel styles with current color
+        // Reset all parcel styles
         const currentStyle = getParcelVisibleStyle();
         if (window.parcelLayers && Array.isArray(window.parcelLayers)) {
           window.parcelLayers.forEach(({ layer: l }) => {
@@ -95,7 +97,7 @@ function AdminBoundaries() {
           }
         });
       }
-      
+
       // Parcels to front
       if (window.parcelLayers && Array.isArray(window.parcelLayers)) {
         window.parcelLayers.forEach(({ layer }) => {
@@ -106,13 +108,13 @@ function AdminBoundaries() {
           }
         });
       }
-      
-      // Municipal boundary
+
+      // Municipal boundary to top
       if (map.hasLayer(municipalBoundary)) {
         municipalBoundary.bringToFront();
       }
-      
-      // Barangay to front
+
+      // Barangay to top
       if (window.barangayLayers && Array.isArray(window.barangayLayers)) {
         window.barangayLayers.forEach(({ layer }) => {
           if (layer && layer.bringToFront) {
@@ -124,11 +126,11 @@ function AdminBoundaries() {
       }
     }
 
-    // --- Optimized visibility logic ---
+    // --- Visibility logic ---
     function updateVisibility(forceRefresh = false) {
       const zoom = map.getZoom();
 
-      // Municipal visibility
+      // Municipal boundary visibility
       const municipalCheckbox = document.getElementById("municipal");
       const municipalVisible =
         zoom >= municipalMin &&
@@ -143,11 +145,13 @@ function AdminBoundaries() {
 
       const sectionCheckbox = document.getElementById("section");
       const parcelCheckbox = document.getElementById("parcels");
-      const visible = zoom >= sectionParcelMinZoom && zoom <= sectionParcelMaxZoom;
 
-      // --- Section visibility (from window.sectionLayers, not BoundaryLayers) ---
+      const sectionVisible = zoom >= sectionMinZoom && zoom <= sectionMaxZoom;
+      const parcelVisible = zoom >= parcelMinZoom && zoom <= parcelMaxZoom;
+
+      // --- Section visibility ---
       if (window.sectionLayers && Array.isArray(window.sectionLayers)) {
-        const show = visible && (sectionCheckbox?.checked ?? true);
+        const show = sectionVisible && (sectionCheckbox?.checked ?? true);
         window.sectionLayers.forEach(({ layer }) => {
           if (!layer || !layer.setStyle) return;
           try {
@@ -163,12 +167,11 @@ function AdminBoundaries() {
 
       // --- Parcel visibility ---
       if (window.parcelLayers && Array.isArray(window.parcelLayers)) {
-        const show = visible && (parcelCheckbox?.checked ?? true);
+        const show = parcelVisible && (parcelCheckbox?.checked ?? true);
         const currentStyle = getParcelVisibleStyle();
-        
+
         window.parcelLayers.forEach(({ feature, layer }) => {
           if (!layer || !layer.setStyle) return;
-          
           try {
             if (forceRefresh || layer._lastVisible !== show) {
               layer._lastVisible = show;
@@ -180,7 +183,6 @@ function AdminBoundaries() {
                 layer.off("click");
               }
             } else if (show && forceRefresh) {
-              // Update color even if already visible
               layer.setStyle(currentStyle);
             }
           } catch (e) {
@@ -197,7 +199,7 @@ function AdminBoundaries() {
     map.on("zoomend", handleZoomEnd);
     window.onParcelsLoaded = () => updateVisibility(false);
 
-    // ✅ Expose functions for external UI
+    // ✅ Expose for external UI
     window._updateBoundaryVisibility = (forceRefresh = false) => updateVisibility(forceRefresh);
     window._setShowBarangay = setShowBarangay;
     window._setShowSection = setShowSection;
@@ -252,7 +254,6 @@ function AdminBoundaries() {
     };
   }, [map]);
 
-  // ✅ Inject schema-based Barangay + Section boundaries
   return <BoundaryLayers showBarangay={showBarangay} showSection={showSection} />;
 }
 

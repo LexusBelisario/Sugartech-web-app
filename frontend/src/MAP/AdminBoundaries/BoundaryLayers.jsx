@@ -21,8 +21,8 @@ const BoundaryLayers = ({ showBarangay, showSection }) => {
   ];
 
   const barangayMin = 12;
-  const barangayMax = 15;
-  const sectionMin = 16;
+  const barangayMax = 14;
+  const sectionMin = 12;
   const sectionMax = 25;
 
   useEffect(() => {
@@ -85,7 +85,7 @@ const BoundaryLayers = ({ showBarangay, showSection }) => {
             color: "#000000",
             weight: 1.5,
             fillColor: barangayColors[f.properties.barangay] || "#999",
-            fillOpacity: 0.8,
+            fillOpacity: 0.5,
           }),
           interactive: false,
         });
@@ -93,9 +93,9 @@ const BoundaryLayers = ({ showBarangay, showSection }) => {
         sectionLayerRef.current = L.geoJSON(data.section || null, {
           style: (f) => ({
             color: "#202020",
-            weight: 1.0,
+            weight: 2.0,
             fillColor: sectionColors[f.properties.barangay] || "#999",
-            fillOpacity: 0.1,
+            fillOpacity: 0.15,
           }),
           interactive: false,
         });

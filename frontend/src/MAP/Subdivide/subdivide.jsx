@@ -19,7 +19,7 @@ const Subdivide = ({ visible, onClose }) => {
     <div id="subdividePopup" className={visible ? "visible" : ""}>
       {/* === Header === */}
       <div className="subdivide-header">
-        <h3>Subdivision Tool</h3>
+        <h3>Subdivide Tool</h3>
         <button className="subdivide-close-btn" onClick={onClose}>
           ✕
         </button>

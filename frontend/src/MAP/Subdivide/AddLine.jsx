@@ -10,7 +10,8 @@ const AddLine = ({ map }) => {
   const [locked, setLocked] = useState(false);
   const lockedRef = useRef(false);
   const [hasValidLine, setHasValidLine] = useState(false);
-  const [previewData, setPreviewData] = useState(null); // contains preview parts + pins
+  const [previewData, setPreviewData] = useState(null);
+  const [showInstructions, setShowInstructions] = useState(true);
 
   const activePoints = useRef([]);
   const currentLine = useRef(null);
@@ -18,35 +19,27 @@ const AddLine = ({ map }) => {
   const allLines = useRef([]);
   const clickHandlers = useRef({});
 
-  // Sync lock ref
   useEffect(() => {
     lockedRef.current = locked;
   }, [locked]);
 
-  // Allow parcel selection only when not locked
   useEffect(() => {
     window.setSelectedParcelForSubdivide = (parcel) => {
       if (!lockedRef.current) setSelectedParcel(parcel);
     };
   }, []);
 
-  // === Lock parcel and start drawing ===
   const handleChooseParcel = () => {
-    if (!selectedParcel) {
-      alert("Click a parcel on the map first before choosing it.");
-      return;
-    }
+    if (!selectedParcel) return;
     setLocked(true);
     lockedRef.current = true;
     window.subdivideLocked = true;
     enableDrawing();
   };
 
-  // === Drawing logic (left/right click)
   const enableDrawing = () => {
     if (!map) return;
 
-    // Remove old listeners
     if (clickHandlers.current.left)
       map.off("click", clickHandlers.current.left);
     if (clickHandlers.current.right)
@@ -96,7 +89,6 @@ const AddLine = ({ map }) => {
         map.removeLayer(currentLine.current);
       }
 
-      // Reset for next line
       activePoints.current = [];
       pointMarkers.current = [];
       currentLine.current = L.polyline([], {
@@ -112,7 +104,6 @@ const AddLine = ({ map }) => {
     clickHandlers.current.right = handleRightClick;
   };
 
-  // === Undo last line ===
   const handleUndo = () => {
     const last = allLines.current.pop();
     if (last) {
@@ -122,7 +113,6 @@ const AddLine = ({ map }) => {
     }
   };
 
-  // === Clear all drawings ===
   const clearDrawings = () => {
     allLines.current.forEach((l) => {
       map.removeLayer(l.layer);
@@ -130,7 +120,6 @@ const AddLine = ({ map }) => {
     });
     pointMarkers.current.forEach((m) => map.removeLayer(m));
     if (currentLine.current) map.removeLayer(currentLine.current);
-
     allLines.current = [];
     activePoints.current = [];
     pointMarkers.current = [];
@@ -138,7 +127,6 @@ const AddLine = ({ map }) => {
     setHasValidLine(false);
   };
 
-  // === Cancel entire subdivision process ===
   const handleCancel = () => {
     clearDrawings();
     setPreviewData(null);
@@ -148,20 +136,9 @@ const AddLine = ({ map }) => {
     setSelectedParcel(null);
   };
 
-  // === Trigger preview (no save yet) ===
   const handlePreview = async () => {
-    if (!lockedRef.current || !selectedParcel) {
-      alert("Select and lock a parcel first.");
-      return;
-    }
-    if (!schema) {
-      alert("No schema selected.");
-      return;
-    }
-    if (allLines.current.length === 0) {
-      alert("Draw at least one line before preview.");
-      return;
-    }
+    if (!lockedRef.current || !selectedParcel || !schema) return;
+    if (allLines.current.length === 0) return;
 
     const splitLines = allLines.current.map((l) => l.points);
     const payload = {
@@ -180,7 +157,7 @@ const AddLine = ({ map }) => {
       const data = await res.json();
 
       if (data.status === "success" && data.parts?.length) {
-        clearDrawings(); // remove blue lines
+        clearDrawings();
         setPreviewData({
           schema,
           table: selectedParcel.source_table || "LandParcels",
@@ -189,16 +166,57 @@ const AddLine = ({ map }) => {
           parts: data.parts,
           suggestedPins: data.suggested_pins,
         });
-      } else {
-        alert(`❌ Preview failed: ${data.message || "Unexpected error"}`);
       }
     } catch (err) {
-      console.error("❌ Preview error:", err);
-      alert("Subdivision preview failed. Check console for details.");
+      console.error("Preview error:", err);
     }
   };
 
-  // === Cleanup when unmounting ===
+  // === Highlight all new parcels after Subdivide(Save)
+  const highlightNewParcels = (pins, schema, table) => {
+    if (!window.parcelLayers?.length) {
+      setTimeout(() => highlightNewParcels(pins, schema, table), 600);
+      return;
+    }
+
+    // Reset all styles
+    window.parcelLayers.forEach(({ layer }) => {
+      layer.setStyle?.({
+        color: "black",
+        weight: 1,
+        fillColor: "white",
+        fillOpacity: 0.1,
+      });
+    });
+
+    // Highlight new parcels
+    pins.forEach((pin) => {
+      const match = window.parcelLayers.find(
+        (p) =>
+          p.feature?.properties?.pin === pin &&
+          p.feature?.properties?.source_schema === schema &&
+          p.feature?.properties?.source_table === table
+      );
+      if (match?.layer) {
+        match.layer.setStyle?.({
+          color: "black",
+          weight: 2,
+          fillColor: "yellow",
+          fillOpacity: 0.4,
+        });
+      }
+    });
+
+    // Zoom to include all highlighted parcels
+    const layersToFit = window.parcelLayers.filter((p) =>
+      pins.includes(p.feature?.properties?.pin)
+    );
+    if (layersToFit.length > 0) {
+      const group = L.featureGroup(layersToFit.map((l) => l.layer));
+      map.fitBounds(group.getBounds(), { maxZoom: 18 });
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (map) {
@@ -213,14 +231,26 @@ const AddLine = ({ map }) => {
 
   return (
     <>
-      <div className="subdivide-instructions">
-        <p><strong>1.</strong> Click a parcel to select it.</p>
-        <p><strong>2.</strong> Click <strong>Choose This Parcel</strong> to lock it for subdividing.</p>
-        <p><strong>3.</strong> Left-click adds points. Two or more points draws a line. Right-click finishes a line.</p>
-        <p><strong>4.</strong> Click <strong>Subdivide (Preview)</strong> to see result before saving.</p>
-        <p><strong>5</strong> Assign <strong>PINs</strong> for the newly-made parcels.</p>
-        <p><strong>6.</strong> Click <strong>Subdivide (Save)</strong> to save the subdivision.</p>
+      {/* === Collapsible Instructions === */}
+      <div className="collapsible-header">
+        <button
+          className="toggle-instructions-btn"
+          onClick={() => setShowInstructions(!showInstructions)}
+        >
+          {showInstructions ? "Hide Instructions ▲" : "Show Instructions ▼"}
+        </button>
       </div>
+
+      {showInstructions && (
+        <div className="subdivide-instructions">
+          <p><strong>1.</strong> Click a parcel to select it.</p>
+          <p><strong>2.</strong> Click <strong>Choose This Parcel</strong> to lock it for subdividing.</p>
+          <p><strong>3.</strong> Left-click adds points. Right-click finishes a line.</p>
+          <p><strong>4.</strong> Click <strong>Subdivide (Preview)</strong> to see result before saving.</p>
+          <p><strong>5.</strong> Assign <strong>PINs</strong> for new parcels.</p>
+          <p><strong>6.</strong> Click <strong>Subdivide (Save)</strong> to save and highlight new parcels.</p>
+        </div>
+      )}
 
       {/* === Drawing Mode === */}
       {!previewData && (
@@ -279,10 +309,19 @@ const AddLine = ({ map }) => {
           map={map}
           {...previewData}
           onCancel={handleCancel}
-          onDone={() => {
+          onDone={(createdPins) => {
             setPreviewData(null);
             setLocked(false);
             window.subdivideLocked = false;
+
+            // ✅ Highlight newly created parcels after Subdivide(Save)
+            if (Array.isArray(createdPins) && createdPins.length > 0) {
+              highlightNewParcels(
+                createdPins,
+                previewData.schema,
+                previewData.table
+              );
+            }
           }}
         />
       )}

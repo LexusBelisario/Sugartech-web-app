@@ -45,9 +45,9 @@ export async function loadAllGeoTables(map, selectedSchemas = []) {
     const newLayer = L.geoJSON(data, {
       style: {
         color: "black",
-        weight: 1,
+        weight: 0.5,
         fillColor: "white",
-        fillOpacity: 0.1,
+        fillOpacity: 0,
       },
       onEachFeature: (feature, layer) => {
         parcelLayers.push({ feature, layer });
