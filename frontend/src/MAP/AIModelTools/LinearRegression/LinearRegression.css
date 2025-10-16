@@ -746,3 +746,10 @@ select:focus {
   box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
 }
 
+
+.graph-card {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}

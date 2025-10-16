@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./LinearRegression.css";
-import API from "../../../api.js"; // ✅ Unified backend endpoint
+import Plot from "react-plotly.js";
+import API from "../../../api.js";
 
 const LinearRegression = ({ onClose }) => {
   const [files, setFiles] = useState([]);
@@ -9,13 +10,12 @@ const LinearRegression = ({ onClose }) => {
   const [dependentVar, setDependentVar] = useState("");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
-
   const [showRunModal, setShowRunModal] = useState(false);
   const [modelFile, setModelFile] = useState(null);
   const [runFiles, setRunFiles] = useState([]);
-
   const [showResultsPanel, setShowResultsPanel] = useState(false);
   const [selectedGraph, setSelectedGraph] = useState(null);
+  const [fullscreenGraph, setFullscreenGraph] = useState(null);
 
   // === Handle file upload ===
   const handleFileChange = async (e) => {
@@ -63,12 +63,9 @@ const LinearRegression = ({ onClose }) => {
     }
   };
 
-  // === Toggle independent variable ===
   const toggleIndependentVar = (field) => {
     setIndependentVars((prev) =>
-      prev.includes(field)
-        ? prev.filter((f) => f !== field)
-        : [...prev, field]
+      prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]
     );
   };
 
@@ -140,7 +137,6 @@ const LinearRegression = ({ onClose }) => {
         body: formData,
       });
       const data = await res.json();
-
       if (!res.ok) {
         console.error("Run Model Error:", data);
         alert(`Error: ${data.error || res.statusText}`);
@@ -156,6 +152,24 @@ const LinearRegression = ({ onClose }) => {
     }
   };
 
+  // === Plotly defaults ===
+  const plotConfig = (filename) => ({
+    responsive: true,
+    displayModeBar: true,
+    displaylogo: false,
+    scrollZoom: true,
+    toImageButtonOptions: { format: "png", filename },
+    modeBarButtonsToRemove: ["select2d", "lasso2d"],
+  });
+
+  const plotLayoutBase = {
+    paper_bgcolor: "#000",
+    plot_bgcolor: "#000",
+    font: { color: "white" },
+    hoverlabel: { bgcolor: "#111", bordercolor: "#00ff9d", font: { color: "white" } },
+    margin: { l: 60, r: 30, t: 60, b: 60 },
+  };
+
   return (
     <div className="lr-overlay">
       <div className="lr-panel">
@@ -165,7 +179,7 @@ const LinearRegression = ({ onClose }) => {
         </div>
 
         <div className="lr-content">
-          {/* === File upload === */}
+          {/* === Upload + Variables === */}
           <label>Upload Shapefile (.shp, .dbf, .shx, .prj) or ZIP</label>
           <div className="file-upload">
             <input
@@ -176,33 +190,27 @@ const LinearRegression = ({ onClose }) => {
               style={{ display: "none" }}
               onChange={handleFileChange}
             />
-            <button
-              className="choose-file-btn"
-              onClick={() => document.getElementById("shpInput").click()}
-            >
+            <button className="choose-file-btn" onClick={() => document.getElementById("shpInput").click()}>
               Choose Files
             </button>
             <span className="file-name">
-              {files.length > 0
-                ? files.map((f) => f.name).join(", ")
-                : "No files chosen"}
+              {files.length > 0 ? files.map((f) => f.name).join(", ") : "No files chosen"}
             </span>
           </div>
 
           <hr className="divider" />
 
-          {/* === Variable selectors === */}
-          <label>Independent Variables (Select multiple)</label>
+          <label>Independent Variables</label>
           <div className="checkbox-list">
             {fields.length > 0 ? (
-              fields.map((field) => (
-                <label key={field} className="checkbox-item">
+              fields.map((f) => (
+                <label key={f} className="checkbox-item">
                   <input
                     type="checkbox"
-                    checked={independentVars.includes(field)}
-                    onChange={() => toggleIndependentVar(field)}
+                    checked={independentVars.includes(f)}
+                    onChange={() => toggleIndependentVar(f)}
                   />
-                  {field}
+                  {f}
                 </label>
               ))
             ) : (
@@ -210,11 +218,8 @@ const LinearRegression = ({ onClose }) => {
             )}
           </div>
 
-          <label>Dependent Variable (Select one)</label>
-          <select
-            value={dependentVar}
-            onChange={(e) => setDependentVar(e.target.value)}
-          >
+          <label>Dependent Variable</label>
+          <select value={dependentVar} onChange={(e) => setDependentVar(e.target.value)}>
             <option value="">-- Select --</option>
             {fields.map((f) => (
               <option key={f} value={f}>{f}</option>
@@ -230,7 +235,7 @@ const LinearRegression = ({ onClose }) => {
               onClick={() => setShowRunModal(true)}
               disabled={loading}
             >
-              {loading ? "Processing..." : "Run Saved Model"}
+              Run Saved Model
             </button>
           </div>
 
@@ -238,52 +243,27 @@ const LinearRegression = ({ onClose }) => {
           {result && (
             <div className="model-summary-box">
               <h3 className="summary-title">🧠 Model Summary</h3>
-              <p className="summary-sub">
-                Dependent Variable: <span>{result.dependent_var}</span>
-              </p>
-
+              <p className="summary-sub">Dependent Variable: <span>{result.dependent_var}</span></p>
               <table className="summary-table">
-                <thead>
-                  <tr>
-                    <th>Metric</th>
-                    <th>Value</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Metric</th><th>Value</th></tr></thead>
                 <tbody>
-                  {Object.entries(result.metrics || {}).map(([key, value]) => (
-                    <tr key={key}>
-                      <td>{key}</td>
-                      <td>{value.toFixed(6)}</td>
-                    </tr>
+                  {Object.entries(result.metrics || {}).map(([k, v]) => (
+                    <tr key={k}><td>{k}</td><td>{v.toFixed(6)}</td></tr>
                   ))}
                 </tbody>
               </table>
-
               <h4 className="coef-header">Regression Coefficients</h4>
               <table className="coef-table">
-                <thead>
-                  <tr>
-                    <th>Variable</th>
-                    <th>Coefficient</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>Variable</th><th>Coefficient</th></tr></thead>
                 <tbody>
-                  {Object.entries(result.coefficients || {}).map(
-                    ([varName, coef]) => (
-                      <tr key={varName}>
-                        <td>{varName}</td>
-                        <td>{coef.toFixed(6)}</td>
-                      </tr>
-                    )
-                  )}
+                  {Object.entries(result.coefficients || {}).map(([v, c]) => (
+                    <tr key={v}><td>{v}</td><td>{c.toFixed(6)}</td></tr>
+                  ))}
                 </tbody>
               </table>
+              <p className="intercept-line">Intercept: {result.intercept.toFixed(6)}</p>
 
-              <p className="intercept-line">
-                Intercept: {result.intercept.toFixed(6)}
-              </p>
-
-              {/* === Downloads === */}
+              {/* Downloads */}
               <div className="download-links">
                 <h4>Downloads</h4>
                 <ul>
@@ -294,10 +274,7 @@ const LinearRegression = ({ onClose }) => {
               </div>
 
               <div className="graphs-button-container">
-                <button
-                  className="show-graphs-btn"
-                  onClick={() => setShowResultsPanel(!showResultsPanel)}
-                >
+                <button className="show-graphs-btn" onClick={() => setShowResultsPanel(!showResultsPanel)}>
                   {showResultsPanel ? "Hide Graphs & Tables" : "Show Graphs & Tables"}
                 </button>
               </div>
@@ -311,68 +288,143 @@ const LinearRegression = ({ onClose }) => {
         <div className="graphs-modal">
           <div className="graphs-modal-content">
             <button className="graphs-close" onClick={() => setShowResultsPanel(false)}>✕</button>
-
             <h2 className="graphs-title">📊 Linear Regression Results</h2>
-            <p className="graphs-subtitle">
-              Model performance overview, feature importance, and data diagnostics
-            </p>
+            <p className="graphs-subtitle">Interactive model performance & diagnostics dashboard</p>
 
-            {/* === Graphs Grid === */}
+            {/* === Graph Grid === */}
             <div className="graphs-grid">
-              {result.plots ? (
-                Object.entries(result.plots).map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="graph-card"
-                    onClick={() => setSelectedGraph({ title: key.replace(/_/g, " "), src: value })}
-                  >
-                    <h4>{key.replace(/_/g, " ")}</h4>
-                    <img src={value} alt={key} loading="lazy" />
-                  </div>
-                ))
-              ) : (
-                <p className="placeholder-text">
-                  No graph data available. Please train a model first.
-                </p>
-              )}
+              {[
+                { key: "importance", title: "Feature Importance" },
+                { key: "residuals", title: "Residual Distribution" },
+                { key: "actual_pred", title: "Actual vs Predicted" },
+                { key: "resid_pred", title: "Residuals vs Predicted" },
+              ].map((g) => (
+                <div key={g.key} className="graph-card" onClick={() => setFullscreenGraph(g.key)}>
+                  <h4>{g.title}</h4>
+                  {g.key === "importance" && (
+                    <Plot
+                      data={[{ x: Object.keys(result.interactive_data.importance),
+                               y: Object.values(result.interactive_data.importance),
+                               type: "bar", marker: { color: "#00ff9d" } }]}
+                      layout={{ ...plotLayoutBase, title: g.title }}
+                      config={plotConfig(g.key)}
+                      useResizeHandler
+                      style={{ width: "100%", height: "100%" }}
+                    />
+                  )}
+                  {g.key === "residuals" && (
+  <Plot
+    data={[
+      {
+        type: "bar",
+        x: result.interactive_data.residual_bins,
+        y: result.interactive_data.residual_counts,
+        marker: {
+          color: "#00ff9d",
+          opacity: 0.85,
+          line: { color: "#0f0f0f", width: 1.2 },
+        },
+        // 🟩 Slightly thinner bars to give visible spacing even on zoom
+        width: 0.6 *
+          ((Math.max(...result.interactive_data.residual_bins) -
+            Math.min(...result.interactive_data.residual_bins)) /
+            result.interactive_data.residual_bins.length),
+      },
+    ]}
+    layout={{
+      ...plotLayoutBase,
+      title: {
+        text: "Residual Distribution (with spacing)",
+        font: { color: "#00ff9d" },
+      },
+      xaxis: { title: "Residual", showgrid: true, gridcolor: "#222" },
+      yaxis: { title: "Frequency" },
+      bargap: 0.35, // 💡 slightly wider gaps between bars
+      bargroupgap: 0.25,
+      autosize: true,
+      responsive: true,
+    }}
+    config={{
+      ...plotConfig("residual_distribution"),
+      scrollZoom: true,
+    }}
+    useResizeHandler
+    style={{ width: "100%", height: "100%" }}
+  />
+)}
+
+                  {g.key === "actual_pred" && (
+                    <Plot
+                      data={[
+                        { x: result.interactive_data.y_test,
+                          y: result.interactive_data.preds,
+                          mode: "markers", type: "scatter",
+                          marker: { color: "#00ff9d", size: 8, opacity: 0.8 } },
+                        { x: result.interactive_data.y_test,
+                          y: result.interactive_data.y_test,
+                          mode: "lines", line: { color: "white", dash: "dash" } },
+                      ]}
+                      layout={{ ...plotLayoutBase, title: g.title }}
+                      config={plotConfig(g.key)}
+                      useResizeHandler
+                      style={{ width: "100%", height: "100%" }}
+                    />
+                  )}
+                  {g.key === "resid_pred" && (
+                    <Plot
+                      data={[
+                        { x: result.interactive_data.preds,
+                          y: result.interactive_data.residuals,
+                          mode: "markers", type: "scatter",
+                          marker: { color: "#ff6363", size: 8, opacity: 0.8 } },
+                        { x: result.interactive_data.preds,
+                          y: Array(result.interactive_data.preds?.length).fill(0),
+                          mode: "lines", line: { color: "white", dash: "dash" } },
+                      ]}
+                      layout={{ ...plotLayoutBase, title: g.title }}
+                      config={plotConfig(g.key)}
+                      useResizeHandler
+                      style={{ width: "100%", height: "100%" }}
+                    />
+                  )}
+                </div>
+              ))}
             </div>
 
-            {/* === CAMA TABLE PREVIEW === */}
+            {/* === CAMA PREVIEW === */}
             {result.cama_preview && (
               <div className="cama-preview-modal">
                 <h3 className="cama-header-modal">🏠 CAMA Attribute Table (Preview)</h3>
                 <p className="graphs-subtitle">
-                  Below is a sample (first 10 rows). Click any column name to see its data distribution.
+                  Click a column name to see its data distribution.
                 </p>
-
                 <div className="cama-table-wrapper-modal">
                   <table className="cama-table-modal">
                     <thead>
                       <tr>
                         {Object.keys(result.cama_preview[0] || {}).map((col) => (
                           <th
-                            key={col}
-                            className={col === "prediction" ? "prediction-col" : ""}
-                            onClick={() => {
-                              if (result.distributions && result.distributions[col]) {
-                                setSelectedGraph({
-                                  title: `Distribution of ${col}`,
-                                  src: result.distributions[col],
-                                });
-                              }
-                            }}
-                            style={{
-                              cursor:
-                                result.distributions && result.distributions[col]
-                                  ? "pointer"
-                                  : "default",
-                            }}
-                          >
+  key={col}
+  onClick={() => {
+    const columnValues = result.cama_preview
+      .map((row) => parseFloat(row[col]))
+      .filter((v) => !isNaN(v)); // only numeric
+    if (columnValues.length > 0) {
+      setSelectedGraph({
+        title: `Distribution of ${col}`,
+        column: col,
+        values: columnValues,
+      });
+    } else {
+      alert(`No numeric data found for column: ${col}`);
+    }
+  }}
+  style={{ cursor: "pointer" }}
+>
+
                             {col}
-                            {result.distributions && result.distributions[col] && (
-                              <span style={{ fontSize: "12px", color: "#00ff9d" }}>
-                                &nbsp;📊
-                              </span>
+                            {result.distributions?.[col] && (
+                              <span style={{ fontSize: "12px", color: "#00ff9d" }}> 📊</span>
                             )}
                           </th>
                         ))}
@@ -381,11 +433,8 @@ const LinearRegression = ({ onClose }) => {
                     <tbody>
                       {result.cama_preview.map((row, i) => (
                         <tr key={i}>
-                          {Object.entries(row).map(([col, val], j) => (
-                            <td
-                              key={j}
-                              className={col === "prediction" ? "prediction-col" : ""}
-                            >
+                          {Object.entries(row).map(([col, val]) => (
+                            <td key={col} className={col === "prediction" ? "prediction-col" : ""}>
                               {val !== "" ? val : "—"}
                             </td>
                           ))}
@@ -395,7 +444,6 @@ const LinearRegression = ({ onClose }) => {
                   </table>
                 </div>
 
-                {/* ✅ Download CSV Button */}
                 <div className="cama-download-container">
                   <a
                     className="download-csv-btn"
@@ -403,42 +451,113 @@ const LinearRegression = ({ onClose }) => {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    ⬇️ Download Full CAMA Table ({result.lgu_name || "CSV"})
+                    ⬇️ Download Full CAMA Table (CSV)
                   </a>
                 </div>
               </div>
             )}
 
-            {/* === Fullscreen Graph Viewer === */}
+            {/* === Popup distribution viewer === */}
             {selectedGraph && (
-              <div className="graph-viewer-overlay" onClick={() => setSelectedGraph(null)}>
-                <div className="graph-viewer-box" onClick={(e) => e.stopPropagation()}>
-                  <button className="graph-viewer-close" onClick={() => setSelectedGraph(null)}>✕</button>
-                  <h3>{selectedGraph.title}</h3>
-                  <img src={selectedGraph.src} alt={selectedGraph.title} />
-                </div>
-              </div>
-            )}
+  <div className="graph-viewer-overlay" onClick={() => setSelectedGraph(null)}>
+    <div className="graph-viewer-box" onClick={(e) => e.stopPropagation()}>
+      <button className="graph-viewer-close" onClick={() => setSelectedGraph(null)}>✕</button>
+      <h3 style={{ color: "#00ff9d" }}>{selectedGraph.title}</h3>
+      {/* 🧠 Render Plotly histogram dynamically */}
+      <Plot
+        data={[
+          {
+            x: selectedGraph.values,
+            type: "histogram",
+            histnorm: "probability density",
+            marker: { color: "#00ff9d", opacity: 0.75 },
+          },
+        ]}
+        layout={{
+          paper_bgcolor: "#000",
+          plot_bgcolor: "#000",
+          font: { color: "white" },
+          hoverlabel: { bgcolor: "#111", bordercolor: "#00ff9d", font: { color: "white" } },
+          margin: { l: 50, r: 30, t: 60, b: 60 },
+          xaxis: { title: selectedGraph.column },
+          yaxis: { title: "Density" },
+          bargap: 0.3,
+        }}
+        config={{
+          responsive: true,
+          displaylogo: false,
+          scrollZoom: true,
+          toImageButtonOptions: { format: "png", filename: selectedGraph.column },
+        }}
+        useResizeHandler
+        style={{ width: "100%", height: "70vh" }}
+      />
+    </div>
+  </div>
+)}
+
           </div>
         </div>
       )}
 
-      {/* === Run Saved Model Modal === */}
+      {/* === Fullscreen Chart === */}
+      {fullscreenGraph && (
+        <div className="graph-viewer-overlay" onClick={() => setFullscreenGraph(null)}>
+          <div className="graph-viewer-box" onClick={(e) => e.stopPropagation()}>
+            <button className="graph-viewer-close" onClick={() => setFullscreenGraph(null)}>✕</button>
+            <h3 style={{ color: "#00ff9d" }}>
+              {fullscreenGraph.replace("_", " ").toUpperCase()}
+            </h3>
+            <Plot
+              data={
+                fullscreenGraph === "importance"
+                  ? [{ x: Object.keys(result.interactive_data.importance),
+                       y: Object.values(result.interactive_data.importance),
+                       type: "bar", marker: { color: "#00ff9d" } }]
+                  : fullscreenGraph === "residuals"
+? [{
+    type: "bar",
+    x: result.interactive_data.residual_bins,
+    y: result.interactive_data.residual_counts,
+    marker: {
+      color: "#00ff9d",
+      opacity: 0.85,
+      line: { color: "#0f0f0f", width: 1.2 },
+    },
+    // ✅ keep the same width ratio and spacing
+    width: 0.6 *
+      ((Math.max(...result.interactive_data.residual_bins) -
+        Math.min(...result.interactive_data.residual_bins)) /
+        result.interactive_data.residual_bins.length),
+  }]
+                  : fullscreenGraph === "actual_pred"
+                  ? [
+                      { x: result.interactive_data.y_test, y: result.interactive_data.preds, mode: "markers", type: "scatter", marker: { color: "#00ff9d", size: 10 } },
+                      { x: result.interactive_data.y_test, y: result.interactive_data.y_test, mode: "lines", line: { color: "white", dash: "dash" } },
+                    ]
+                  : [
+                      { x: result.interactive_data.preds, y: result.interactive_data.residuals, mode: "markers", type: "scatter", marker: { color: "#ff6363", size: 10 } },
+                      { x: result.interactive_data.preds, y: Array(result.interactive_data.preds?.length).fill(0), mode: "lines", line: { color: "white", dash: "dash" } },
+                    ]
+              }
+              layout={{ ...plotLayoutBase, title: `${fullscreenGraph.replace("_", " ").toUpperCase()} (Fullscreen)` }}
+              config={plotConfig(`${fullscreenGraph}_full`)}
+              useResizeHandler
+              style={{ width: "100%", height: "80vh" }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* === Run Model Modal === */}
       {showRunModal && (
         <div className="lr-modal">
           <div className="lr-modal-content">
             <h4>Run Saved Model</h4>
             <label>Upload Model (.pkl)</label>
             <input type="file" accept=".pkl" onChange={(e) => setModelFile(e.target.files[0])} />
-
             <label>Upload Shapefile (.zip or .shp/.dbf/.shx/.prj)</label>
-            <input
-              type="file"
-              accept=".zip,.shp,.dbf,.shx,.prj"
-              multiple
-              onChange={(e) => setRunFiles(Array.from(e.target.files))}
-            />
-
+            <input type="file" accept=".zip,.shp,.dbf,.shx,.prj" multiple onChange={(e) => setRunFiles(Array.from(e.target.files))} />
             <div className="lr-modal-buttons">
               <button onClick={handleRunModel} disabled={loading}>
                 {loading ? "Running..." : "Run"}
