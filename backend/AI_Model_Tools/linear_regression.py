@@ -288,6 +288,7 @@ async def train_linear_regression(
 
                 # --- T-test on residuals (table) ---
                 t_stat, p_val = stats.ttest_1samp(residuals, 0)
+                t_test_result = {"t_stat": float(t_stat), "p_value": float(p_val)}
                 fig, ax = plt.subplots(figsize=(6, 2))
                 ax.axis("off")
                 ax.text(0.5, 0.5, f"T-test on Residuals:\nT-statistic = {t_stat:.4f}\nP-value = {p_val:.4f}",
@@ -297,6 +298,22 @@ async def train_linear_regression(
                 fig.savefig(ttest_png, bbox_inches="tight")
                 plt.close(fig)
                 png_paths["t_test_residuals"] = ttest_png
+
+                for col in independent_vars:
+                    try:
+                        fig, ax = plt.subplots(figsize=(6, 4))
+                        sns.histplot(df_valid[col].dropna(), kde=True, ax=ax, color="#00ff9d", edgecolor="black")
+                        ax.set_title(f"Distribution of {col}", fontsize=12, color="#00ff9d")
+                        ax.set_xlabel(col, color="white")
+                        ax.set_ylabel("Frequency", color="white")
+                        ax.tick_params(colors="white")
+                        ax.set_facecolor("black")
+                        fig.patch.set_facecolor("black")
+                        plt.tight_layout()
+                        pp.savefig(fig)  # ✅ Add to PDF directly
+                        plt.close(fig)
+                    except Exception as e:
+                         print(f"⚠️ Could not add {col} distribution to PDF: {e}")
 
             # ✅ Predict on full dataset
             df_full["prediction"] = np.nan
@@ -381,6 +398,7 @@ async def train_linear_regression(
                 "cama_preview": cama_preview,
                 "distributions": dist_plots,
                 "lgu_name": clean_name,
+                "t_test": t_test_result,
                 "downloads": {
                     "model": f"{base_url}?file={model_path}",
                     "report": f"{base_url}?file={pdf_path}",
@@ -582,6 +600,7 @@ async def train_linear_regression_zip(
 
                 # --- T-test on residuals (table) ---
                 t_stat, p_val = stats.ttest_1samp(residuals, 0)
+                t_test_result = {"t_stat": float(t_stat), "p_value": float(p_val)}
                 fig, ax = plt.subplots(figsize=(6, 2))
                 ax.axis("off")
                 ax.text(0.5, 0.5, f"T-test on Residuals:\nT-statistic = {t_stat:.4f}\nP-value = {p_val:.4f}",
@@ -591,6 +610,22 @@ async def train_linear_regression_zip(
                 fig.savefig(ttest_png, bbox_inches="tight")
                 plt.close(fig)
                 png_paths["t_test_residuals"] = ttest_png
+
+                for col in independent_vars:
+                    try:
+                        fig, ax = plt.subplots(figsize=(6, 4))
+                        sns.histplot(df_valid[col].dropna(), kde=True, ax=ax, color="#00ff9d", edgecolor="black")
+                        ax.set_title(f"Distribution of {col}", fontsize=12, color="#00ff9d")
+                        ax.set_xlabel(col, color="white")
+                        ax.set_ylabel("Frequency", color="white")
+                        ax.tick_params(colors="white")
+                        ax.set_facecolor("black")
+                        fig.patch.set_facecolor("black")
+                        plt.tight_layout()
+                        pp.savefig(fig)  # ✅ Add to PDF directly
+                        plt.close(fig)
+                    except Exception as e:
+                         print(f"⚠️ Could not add {col} distribution to PDF: {e}")
 
             # ✅ Predict on full dataset
             df_full["prediction"] = np.nan
@@ -675,6 +710,7 @@ async def train_linear_regression_zip(
                 "cama_preview": cama_preview,
                 "distributions": dist_plots,
                 "lgu_name": clean_name,
+                "t_test": t_test_result,
                 "downloads": {
                     "model": f"{base_url}?file={model_path}",
                     "report": f"{base_url}?file={pdf_path}",

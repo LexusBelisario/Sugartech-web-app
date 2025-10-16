@@ -261,7 +261,39 @@ const LinearRegression = ({ onClose }) => {
                   ))}
                 </tbody>
               </table>
+              
               <p className="intercept-line">Intercept: {result.intercept.toFixed(6)}</p>
+              {result?.t_test && (
+  <div className="t-test-section mt-4">
+    <h3 className="text-green-400 text-lg font-semibold mb-1">
+      🧮 T-test on Residuals
+    </h3>
+    <table className="w-full border-collapse text-sm bg-black/30 text-white">
+      <thead>
+        <tr className="bg-black/50 text-green-300">
+          <th className="border border-green-700 p-1">Metric</th>
+          <th className="border border-green-700 p-1">Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td className="border border-green-700 p-1">T-statistic</td>
+          <td className="border border-green-700 p-1">
+            {result.t_test.t_stat?.toFixed(4)}
+          </td>
+        </tr>
+        <tr>
+          <td className="border border-green-700 p-1">P-value</td>
+          <td className="border border-green-700 p-1">
+            {result.t_test.p_value?.toFixed(4)}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+)}
+
+
 
               {/* Downloads */}
               <div className="download-links">
