@@ -1,10 +1,12 @@
 // src/components/TBLabelTools.jsx
 import React from "react";
+import LabelTools from "../LabelTools/LabelTools.jsx";
 import "./toolbar.css";
 
 const TBLabelTools = () => {
   return (
     <>
+      {/* === Label Toggle Buttons === */}
       <button
         className="tool-button"
         id="btnBrgyLabel"
@@ -28,8 +30,8 @@ const TBLabelTools = () => {
       <button
         className="tool-button"
         id="btnBldgLabel"
-        title="Toggles ON and OFF the labels of buildings"
         onClick={() => window.toggleBldgLabel?.()}
+        title="Toggle Building Labels"
       >
         <img src="/icons/bldg_label_icon.png" alt="Building Label" />
         <span>Bldg Count Label</span>
@@ -38,8 +40,8 @@ const TBLabelTools = () => {
       <button
         className="tool-button"
         id="btnMachLabel"
-        title="Toggles ON and OFF the labels of machinery"
         onClick={() => window.toggleMachLabel?.()}
+        title="Toggle Machinery Labels"
       >
         <img src="/icons/machinery_label_icon.png" alt="Machinery Label" />
         <span>Mach. Count Label</span>
@@ -49,11 +51,14 @@ const TBLabelTools = () => {
         className="tool-button"
         id="btnLandmarkLabel"
         onClick={() => window.toggleLandmarkLabel?.()}
-        title="Toggles on and off labels for Landmarks"
+        title="Toggle Landmark Labels"
       >
         <img src="/icons/landmark_label_icon.png" alt="Landmark Label" />
         <span>Landmark Label</span>
       </button>
+
+      {/* === Mount dynamic label logic === */}
+      <LabelTools />
     </>
   );
 };
