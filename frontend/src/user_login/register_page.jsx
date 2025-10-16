@@ -246,41 +246,41 @@ function RegisterPage() {
 
           {/* Province Dropdown */}
           <div>
-            <label className="text-sm font-semibold text-gray-700">Requested Province Access</label>
-            <select
-              name="tentativeProvince"
-              value={formData.tentativeProvince}
-              onChange={handleChange}
-              className="w-full border rounded-lg py-2 px-3"
-            >
-              <option value="">Select Province</option>
-              {provinces.map((p) => (
-                <option key={p.code} value={p.code}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
+  <label className="text-sm font-semibold text-gray-700">Requested Province Access</label>
+  <select
+    name="tentativeProvince"
+    value={formData.tentativeProvince}
+    onChange={handleChange}
+    className="w-full border rounded-lg py-2 px-3 bg-white text-gray-900"
+  >
+    <option value="">Select Province</option>
+    {provinces.map((p) => (
+      <option key={p.code} value={p.code}>
+        {p.name}
+      </option>
+    ))}
+  </select>
+</div>
 
           {/* Municipality Dropdown */}
           <div>
-            <label className="text-sm font-semibold text-gray-700">Requested Municipality Access</label>
-            <select
-              name="tentativeMunicipal"
-              value={formData.tentativeMunicipal}
-              onChange={handleChange}
-              className="w-full border rounded-lg py-2 px-3"
-              disabled={!formData.tentativeProvince}
-            >
-              <option value="">Select Municipality</option>
-              <option value="ALL">All Municipalities</option> {/* ✅ Added option */}
-              {municipalitiesByProvince[formData.tentativeProvince]?.map((m) => (
-                <option key={m.code} value={m.code}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </div>
+  <label className="text-sm font-semibold text-gray-700">Requested Municipality Access</label>
+  <select
+    name="tentativeMunicipal"
+    value={formData.tentativeMunicipal}
+    onChange={handleChange}
+    className="w-full border rounded-lg py-2 px-3 bg-white text-gray-900"
+    disabled={!formData.tentativeProvince}
+  >
+    <option value="">Select Municipality</option>
+    <option value="ALL">All Municipalities</option>
+    {municipalitiesByProvince[formData.tentativeProvince]?.map((m) => (
+      <option key={m.code} value={m.code}>
+        {m.name}
+      </option>
+    ))}
+  </select>
+</div>
 
           <button
             type="submit"
