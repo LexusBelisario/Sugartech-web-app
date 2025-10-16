@@ -3,71 +3,63 @@ import { ChevronRight } from "lucide-react";
 
 const AdminBoundariesPanel = ({ isVisible, onClose }) => {
   const containerRef = useRef(null);
-  
+
+  // === Boundary Toggles ===
   const [municipalChecked, setMunicipalChecked] = useState(true);
   const [barangayChecked, setBarangayChecked] = useState(true);
   const [sectionChecked, setSectionChecked] = useState(true);
   const [parcelsChecked, setParcelsChecked] = useState(true);
   const [parcelColor, setParcelColor] = useState("black");
 
-  // 🧩 Prevent map zoom & drag interference inside panel
+  // === Prevent Scroll / Zoom Interference ===
   useEffect(() => {
     if (!containerRef.current) return;
-    const stopEvent = (e) => e.stopPropagation();
     const el = containerRef.current;
-    el.addEventListener("wheel", stopEvent);
-    el.addEventListener("dblclick", stopEvent);
+    const stop = (e) => e.stopPropagation();
+    el.addEventListener("wheel", stop);
+    el.addEventListener("dblclick", stop);
     return () => {
-      el.removeEventListener("wheel", stopEvent);
-      el.removeEventListener("dblclick", stopEvent);
+      el.removeEventListener("wheel", stop);
+      el.removeEventListener("dblclick", stop);
     };
   }, []);
 
-  // Handle municipal checkbox change
-  const handleMunicipalChange = (e) => {
-    setMunicipalChecked(e.target.checked);
-    if (window._updateBoundaryVisibility) {
-      window._updateBoundaryVisibility(false);
-    }
-  };
-
-  // Handle barangay checkbox change
-  const handleBarangayChange = (e) => {
+  // === Toggle Handlers (Instant Reaction) ===
+  const handleToggle = (type, setter) => (e) => {
     const checked = e.target.checked;
-    setBarangayChecked(checked);
-    if (window._setShowBarangay) {
-      window._setShowBarangay(checked);
+    setter(checked);
+
+    // call the corresponding setter on AdminBoundaries
+    const setStateFn = window[`_setShow${type}`];
+    const updateMap = window._updateBoundaryVisibility;
+
+    if (setStateFn) setStateFn(checked);
+
+    // pass override instantly for real-time toggle
+    if (updateMap) {
+      const key =
+        type === "Municipal"
+          ? "showMunicipal"
+          : type === "Barangay"
+          ? "showBarangay"
+          : "showSection";
+      updateMap(true, { [key]: checked });
     }
   };
 
-  // Handle section checkbox change
-  const handleSectionChange = (e) => {
+  const handleParcelToggle = (e) => {
     const checked = e.target.checked;
-    setSectionChecked(checked);
-    if (window._setShowSection) {
-      window._setShowSection(checked);
-    }
-    // ✅ Also update section layer visibility
+    setParcelsChecked(checked);
     if (window._updateBoundaryVisibility) {
-      window._updateBoundaryVisibility(false);
+      window._updateBoundaryVisibility(true);
     }
   };
 
-  // Handle parcels checkbox change
-  const handleParcelsChange = (e) => {
-    setParcelsChecked(e.target.checked);
-    if (window._updateBoundaryVisibility) {
-      window._updateBoundaryVisibility(false);
-    }
-  };
-
-  // Handle color change
   const handleColorChange = (e) => {
-    const newColor = e.target.value;
-    setParcelColor(newColor);
-    window.parcelOutlineColor = newColor;
+    const color = e.target.value;
+    setParcelColor(color);
+    window.parcelOutlineColor = color;
     if (window._updateBoundaryVisibility) {
-      // ✅ Force refresh to apply new color
       window._updateBoundaryVisibility(true);
     }
   };
@@ -97,9 +89,8 @@ const AdminBoundariesPanel = ({ isVisible, onClose }) => {
         <label className="flex items-center gap-2 cursor-pointer hover:text-[#F7C800] transition">
           <input
             type="checkbox"
-            id="municipal"
             checked={municipalChecked}
-            onChange={handleMunicipalChange}
+            onChange={handleToggle("Municipal", setMunicipalChecked)}
             className="accent-[#F7C800] w-4 h-4"
           />
           <span>Municipal Boundary</span>
@@ -109,9 +100,8 @@ const AdminBoundariesPanel = ({ isVisible, onClose }) => {
         <label className="flex items-center gap-2 cursor-pointer hover:text-[#F7C800] transition">
           <input
             type="checkbox"
-            id="barangay"
             checked={barangayChecked}
-            onChange={handleBarangayChange}
+            onChange={handleToggle("Barangay", setBarangayChecked)}
             className="accent-[#F7C800] w-4 h-4"
           />
           <span>Barangay Boundary</span>
@@ -121,30 +111,27 @@ const AdminBoundariesPanel = ({ isVisible, onClose }) => {
         <label className="flex items-center gap-2 cursor-pointer hover:text-[#F7C800] transition">
           <input
             type="checkbox"
-            id="section"
             checked={sectionChecked}
-            onChange={handleSectionChange}
+            onChange={handleToggle("Section", setSectionChecked)}
             className="accent-[#F7C800] w-4 h-4"
           />
           <span>Section Boundary</span>
         </label>
 
-        {/* Divider */}
         <hr className="border-[#2A2E35]" />
 
         {/* Parcels */}
         <label className="flex items-center gap-2 cursor-pointer hover:text-[#F7C800] transition">
           <input
             type="checkbox"
-            id="parcels"
             checked={parcelsChecked}
-            onChange={handleParcelsChange}
+            onChange={handleParcelToggle}
             className="accent-[#F7C800] w-4 h-4"
           />
           <span>Parcels</span>
         </label>
 
-        {/* Parcel Outline Color */}
+        {/* Parcel Color Selector */}
         <div className="space-y-2">
           <label htmlFor="parcelColor" className="block text-gray-300 text-xs">
             Parcel Outline Color:

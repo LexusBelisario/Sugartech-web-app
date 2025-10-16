@@ -1,9 +1,10 @@
+// src/components/Landmarks.jsx
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import API from "../../api.js";
 import ShowLandmarks from "./ShowLandmarks.jsx";
 import RemoveLandmark from "./RemoveLandmark.jsx";
 import LandmarkInfotool from "./LandmarkInfotool.jsx";
-import AddLandmark from "./AddLandmarks.jsx"; // ✅ new import
+import AddLandmark from "./AddLandmarks.jsx";
 import { useSchema } from "../SchemaContext";
 
 const Landmarks = ({ activeTool, setActiveTool, setLandmarksVisible }) => {
@@ -14,13 +15,14 @@ const Landmarks = ({ activeTool, setActiveTool, setLandmarksVisible }) => {
     activeTool === "removeLandmark" ||
     activeTool === "landmarkInfo" ||
     activeTool === "updateLandmark" ||
-    activeTool === "addLandmark"; // ✅ show layer when adding
+    activeTool === "addLandmark";
 
   const [landmarksOnScreen, setLandmarksOnScreen] = useState(false);
   const [removalList, setRemovalList] = useState([]);
   const [selectedLandmark, setSelectedLandmark] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0); // 🔑 used to trigger refresh
+  const [refreshKey, setRefreshKey] = useState(0);
 
+  // Keep external state in sync
   useEffect(() => {
     setLandmarksVisible?.(landmarksOnScreen);
   }, [landmarksOnScreen, setLandmarksVisible]);
@@ -59,7 +61,6 @@ const Landmarks = ({ activeTool, setActiveTool, setLandmarksVisible }) => {
     if (!payload.ids.length) return;
 
     try {
-      // ✅ ADD AUTH HEADERS
       const token =
         localStorage.getItem("access_token") ||
         localStorage.getItem("accessToken");
@@ -72,7 +73,6 @@ const Landmarks = ({ activeTool, setActiveTool, setLandmarksVisible }) => {
         body: JSON.stringify(payload),
       });
 
-      // ✅ CHECK RESPONSE STATUS
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
           console.error("❌ Authentication error");
@@ -88,20 +88,28 @@ const Landmarks = ({ activeTool, setActiveTool, setLandmarksVisible }) => {
       console.log("✅ Deletion result:", data);
 
       setRemovalList([]);
-      setRefreshKey((k) => k + 1); // 🔄 trigger refresh of ShowLandmarks
+      setRefreshKey((k) => k + 1); // 🔄 refresh landmarks
     } catch (err) {
       console.error("❌ Failed to remove landmarks:", err);
     }
   };
 
-  // === INFO TOOL ===
+  // === INFO / UPDATE TOOL ===
   const onClickFeature = useMemo(() => {
     if (activeTool === "removeLandmark") return handleMark;
-    if (activeTool === "landmarkInfo") {
+
+    // ✅ Allow both Info and Update modes to open popup
+    if (activeTool === "landmarkInfo" || activeTool === "updateLandmark") {
       return (feature) => setSelectedLandmark(feature);
     }
+
     return null;
   }, [activeTool, handleMark]);
+
+  // ✅ Trigger refresh after update
+  const handleLandmarkUpdated = () => {
+    setRefreshKey((k) => k + 1);
+  };
 
   return (
     <>
@@ -110,14 +118,14 @@ const Landmarks = ({ activeTool, setActiveTool, setLandmarksVisible }) => {
         visible={showLandmarksVisible}
         onClickFeature={onClickFeature}
         onVisibleChange={setLandmarksOnScreen}
-        refreshKey={refreshKey} // 🔑 pass refresh trigger
+        refreshKey={refreshKey}
       />
 
       {/* === Add Landmark Panel === */}
       <AddLandmark
         visible={activeTool === "addLandmark"}
         onClose={() => setActiveTool(null)}
-        onAdded={() => setRefreshKey((k) => k + 1)} // 🔄 refresh landmarks after add
+        onAdded={() => setRefreshKey((k) => k + 1)}
       />
 
       <RemoveLandmark
@@ -128,6 +136,7 @@ const Landmarks = ({ activeTool, setActiveTool, setLandmarksVisible }) => {
         onRemoveSelected={handleRemoveSelected}
       />
 
+      {/* === Info / Update Popup === */}
       <LandmarkInfotool
         key={activeTool}
         visible={
@@ -137,6 +146,7 @@ const Landmarks = ({ activeTool, setActiveTool, setLandmarksVisible }) => {
         schema={schema}
         startEditable={activeTool === "updateLandmark"}
         onClose={() => setActiveTool(null)}
+        onUpdated={handleLandmarkUpdated} // ✅ refresh map after save
       />
     </>
   );

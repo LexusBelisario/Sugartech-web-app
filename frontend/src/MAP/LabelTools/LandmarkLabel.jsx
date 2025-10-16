@@ -1,58 +1,105 @@
-import { useEffect } from "react";
+// src/components/Labels/LandmarkLabel.jsx
+import { useEffect, useRef } from "react";
 import L from "leaflet";
-import API from "../../api";
+import { API_BASE } from "../../config";
+import { useSchema } from "../SchemaContext.jsx";
 
 const LandmarkLabel = ({ map }) => {
-  useEffect(() => {
-    if (!map || !window.activeSchema) return;
+  const { schema } = useSchema();
+  const layerGroupRef = useRef(L.layerGroup()); // ✅ Create immediately
+  const zoomLimits = [16, 25]; // Same as parcel visibility
 
-    const layerGroup = L.layerGroup().addTo(map);
-    window.landmarkLabelLayer = layerGroup;
+  // === Apply zoom-based visibility ===
+  const updateVisibility = () => {
+    if (!map || !layerGroupRef.current) return;
+    const zoom = map.getZoom();
+    const [min, max] = zoomLimits;
+    const visible = zoom >= min && zoom <= max;
 
-    fetch(`${API}/single-table?schema=${window.activeSchema}&table=Landmarks`)
-      .then(res => res.json())
-      .then(data => {
-        const features = data?.features || [];
+    if (visible) {
+      if (!map.hasLayer(layerGroupRef.current)) map.addLayer(layerGroupRef.current);
+    } else {
+      if (map.hasLayer(layerGroupRef.current)) map.removeLayer(layerGroupRef.current);
+    }
+  };
 
-        features.forEach(feature => {
-          const name = feature.properties?.name;
-          if (!name || !name.trim() || feature.geometry?.type !== "Point") return;
+  // === Fetch and render landmark labels ===
+  const loadLandmarks = async () => {
+    if (!map || !schema) return;
 
-          const [lng, lat] = feature.geometry.coordinates;
+    const token =
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("accessToken");
 
-          const safeName = name.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-          const label = L.divIcon({
-            html: `<div style="
-              font-family: 'Segoe UI', sans-serif;
-              font-size: 11px;
-              font-weight: 500;
-              color: #0d47a1;
-              background: rgba(255, 255, 255, 0.85);
-              padding: 2px 5px;
-              border-radius: 3px;
-              border: 1px solid rgba(0, 0, 0, 0.15);
-              line-height: 1;
-              white-space: nowrap;
-              display: inline-block;
-              box-shadow: none;
-              box-sizing: border-box;
-              text-shadow: none;
-            ">${safeName}</div>`,
-            className: "", // remove default label-icon class
-          });
-
-          const marker = L.marker([lat, lng], { icon: label, interactive: false });
-          layerGroup.addLayer(marker);
-        });
-      })
-      .catch(err => {
-        console.error("❌ Failed to fetch landmarks for labeling:", err);
+    try {
+      const res = await fetch(`${API_BASE}/landmarks/${schema}`, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
       });
 
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const features = data?.features || [];
+
+      if (!features.length) {
+        console.warn(`ℹ️ No landmarks found in schema: ${schema}`);
+        return;
+      }
+
+      const group = layerGroupRef.current;
+      group.clearLayers(); // ✅ Clear before adding new
+
+      features.forEach((f) => {
+        const name = f.properties?.name;
+        if (!name || !f.geometry || f.geometry.type !== "Point") return;
+        const [lng, lat] = f.geometry.coordinates;
+
+        const label = L.divIcon({
+          html: `<div style="
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 0 3px black, 1px 1px 2px black;
+            font-size: 11px;
+            white-space: nowrap;
+            pointer-events: none;
+          ">${name}</div>`,
+          className: "",
+        });
+
+        L.marker([lat, lng], { icon: label, interactive: false }).addTo(group);
+      });
+
+      updateVisibility();
+      console.log(`✅ ${features.length} landmark labels loaded for ${schema}`);
+    } catch (err) {
+      console.error("❌ Failed to load landmark labels:", err);
+    }
+  };
+
+  // === Lifecycle ===
+  useEffect(() => {
+    if (!map || !schema) return;
+
+    const group = layerGroupRef.current;
+    group.addTo(map); // ✅ Ensure the group exists immediately
+
+    loadLandmarks();
+    updateVisibility();
+
+    const handleZoom = () => updateVisibility();
+    map.on("zoomend", handleZoom);
+
     return () => {
-      map.removeLayer(layerGroup);
+      console.log("🧹 Removing landmark labels");
+      map.off("zoomend", handleZoom);
+
+      // ✅ Ensure layer removal even if async fetch didn’t finish
+      if (map.hasLayer(group)) map.removeLayer(group);
+      group.clearLayers();
     };
-  }, [map]);
+  }, [map, schema]);
 
   return null;
 };

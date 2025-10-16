@@ -4,11 +4,12 @@ import API from "../../api.js";
 import "./LandmarkInfotool.css";
 import { useSchema } from "../SchemaContext";
 
-const LandmarkInfoTool = ({
+const LandmarkInfotool = ({
   visible,
   data,
   onClose,
   startEditable = false,
+  onUpdated, // callback from parent to refresh landmarks
 }) => {
   const { schema } = useSchema();
   const [formData, setFormData] = useState({
@@ -27,7 +28,7 @@ const LandmarkInfoTool = ({
         barangay: data.properties?.barangay || "",
         descr: data.properties?.descr || "",
       });
-      setEditable(startEditable); // ✅ same as your old working code
+      setEditable(startEditable);
     }
   }, [data, schema, visible, startEditable]);
 
@@ -39,7 +40,7 @@ const LandmarkInfoTool = ({
   };
 
   const handleSave = async () => {
-    if (!data || !data.properties?.id) {
+    if (!data?.properties?.id) {
       alert("No landmark ID found.");
       return;
     }
@@ -55,10 +56,10 @@ const LandmarkInfoTool = ({
     };
 
     try {
-      // ✅ ADD AUTH HEADERS
       const token =
         localStorage.getItem("access_token") ||
         localStorage.getItem("accessToken");
+
       const res = await fetch(`${API}/landmarks/update-by-fields`, {
         method: "PUT",
         headers: {
@@ -68,7 +69,6 @@ const LandmarkInfoTool = ({
         body: JSON.stringify(payload),
       });
 
-      // ✅ CHECK RESPONSE STATUS
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
           console.error("❌ Authentication error");
@@ -85,8 +85,14 @@ const LandmarkInfoTool = ({
       const result = await res.json();
 
       if (result.status === "success") {
-        alert("Landmark updated successfully.");
+        alert("✅ Landmark updated successfully.");
         setEditable(false);
+
+        // ✅ Refresh landmarks on map, keep popup open
+        if (typeof onUpdated === "function") onUpdated();
+
+        // ❌ Do NOT close or reset popup here
+        // onClose?.();
       } else {
         alert(result.message || "Update failed.");
       }
@@ -213,8 +219,7 @@ const LandmarkInfoTool = ({
     </div>
   );
 
-  // ✅ Render outside toolbar
   return ReactDOM.createPortal(panel, document.body);
 };
 
-export default LandmarkInfoTool;
+export default LandmarkInfotool;

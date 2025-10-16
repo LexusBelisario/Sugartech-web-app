@@ -1,20 +1,147 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./AdminBoundaries.css";
-import BoundaryLayers from "./BoundaryLayers";
+import { useSchema } from "../SchemaContext";
+import API from "../../api";
 
 function AdminBoundaries() {
   const map = useMap();
+  const { schema } = useSchema();
+
+  // === State controls (linked to panel) ===
+  const [showMunicipal, setShowMunicipal] = useState(true);
   const [showBarangay, setShowBarangay] = useState(true);
   const [showSection, setShowSection] = useState(true);
 
+  // === Layer Refs ===
+  const municipalRef = useRef(null);
+  const barangayLayerRef = useRef(null);
+  const sectionLayerRef = useRef(null);
+  const barangayLabelsRef = useRef([]);
+
+  // === Zoom thresholds ===
+  const limits = {
+    municipal: [4, 13],
+    barangay: [12, 14],
+    section: [12, 25],
+    parcel: [16, 25],
+  };
+
+  // === Parcel styling ===
+  const hiddenStyle = { opacity: 0, fillOpacity: 0 };
+  const getParcelStyle = () => ({
+    color: window.parcelOutlineColor || "black",
+    weight: 1.2,
+    opacity: 1,
+    fillColor: "black",
+    fillOpacity: 0.1,
+  });
+
+  // 🧩 Label style once
+  useEffect(() => {
+    if (!document.getElementById("brgy-label-style")) {
+      const style = document.createElement("style");
+      style.id = "brgy-label-style";
+      style.innerHTML = `
+        .leaflet-tooltip.barangay-label {
+          background: none !important;
+          border: none !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
+  // === Unified visibility handler (accepts direct overrides) ===
+  const updateVisibility = useCallback(
+    (force = false, overrides = {}) => {
+      if (!map) return;
+      const zoom = map.getZoom();
+
+      // determine final visibility states (panel may override)
+      const active = {
+        municipal:
+          overrides.showMunicipal !== undefined
+            ? overrides.showMunicipal
+            : showMunicipal,
+        barangay:
+          overrides.showBarangay !== undefined
+            ? overrides.showBarangay
+            : showBarangay,
+        section:
+          overrides.showSection !== undefined
+            ? overrides.showSection
+            : showSection,
+      };
+
+      // === Municipal ===
+      if (municipalRef.current) {
+        const [min, max] = limits.municipal;
+        const visible = active.municipal && zoom >= min && zoom <= max;
+        if (visible) {
+          if (!map.hasLayer(municipalRef.current))
+            map.addLayer(municipalRef.current);
+        } else {
+          if (map.hasLayer(municipalRef.current))
+            map.removeLayer(municipalRef.current);
+        }
+      }
+
+      // === Barangay ===
+      if (barangayLayerRef.current) {
+        const [min, max] = limits.barangay;
+        const visible = active.barangay && zoom >= min && zoom <= max;
+        if (visible) {
+          if (!map.hasLayer(barangayLayerRef.current)) {
+            map.addLayer(barangayLayerRef.current);
+            barangayLabelsRef.current.forEach((label) => map.addLayer(label));
+          }
+        } else {
+          if (map.hasLayer(barangayLayerRef.current)) {
+            map.removeLayer(barangayLayerRef.current);
+            barangayLabelsRef.current.forEach((label) => map.removeLayer(label));
+          }
+        }
+      }
+
+      // === Section ===
+      if (sectionLayerRef.current) {
+        const [min, max] = limits.section;
+        const visible = active.section && zoom >= min && zoom <= max;
+        if (visible) {
+          if (!map.hasLayer(sectionLayerRef.current))
+            map.addLayer(sectionLayerRef.current);
+        } else if (map.hasLayer(sectionLayerRef.current)) {
+          map.removeLayer(sectionLayerRef.current);
+        }
+      }
+
+      // === Parcels ===
+      const [pmin, pmax] = limits.parcel;
+      const parcelVisible =
+        zoom >= pmin &&
+        zoom <= pmax &&
+        (document.getElementById("parcels")?.checked ?? true);
+      if (window.parcelLayers && Array.isArray(window.parcelLayers)) {
+        const style = getParcelStyle();
+        window.parcelLayers.forEach(({ layer }) => {
+          if (!layer || !layer.setStyle) return;
+          layer.setStyle(parcelVisible ? style : hiddenStyle);
+        });
+      }
+    },
+    [map, showMunicipal, showBarangay, showSection]
+  );
+
+  // === Load municipal WMS ===
   useEffect(() => {
     if (!map) return;
-
-    // --- Municipal boundary (WMS)
-    const municipalBoundary = L.tileLayer.wms(
+    municipalRef.current = L.tileLayer.wms(
       "http://104.199.142.35:8080/geoserver/MapBoundaries/wms",
       {
         layers: "MapBoundaries:PH_MunicipalMap",
@@ -24,237 +151,125 @@ function AdminBoundaries() {
         crs: L.CRS.EPSG4326,
       }
     );
+  }, [map]);
 
-    // --- Zoom thresholds ---
-    const municipalMin = 4;
-    const municipalMax = 13;
-    const sectionMinZoom = 12;
-    const sectionMaxZoom = 25;
-    const parcelMinZoom = 16;
-    const parcelMaxZoom = 25;
+  // === Load barangay + section GeoJSON ===
+  useEffect(() => {
+    if (!map || !schema) return;
 
-    // --- Parcel outline color ---
-    window.parcelOutlineColor = window.parcelOutlineColor || "black";
+    const loadData = async () => {
+      const url = `${API}/municipal-boundaries?schema=${schema}`;
+      console.log(`📡 Loading boundaries for schema=${schema}`);
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.status !== "success") return;
 
-    const hiddenStyle = { opacity: 0, fillOpacity: 0 };
+        // Clear old
+        [barangayLayerRef, sectionLayerRef].forEach((ref) => {
+          if (ref.current && map.hasLayer(ref.current)) map.removeLayer(ref.current);
+        });
+        barangayLabelsRef.current.forEach((l) => map.removeLayer(l));
+        barangayLabelsRef.current = [];
 
-    // ✅ Function to get current parcel style (dynamic color)
-    const getParcelVisibleStyle = () => ({
-      color: window.parcelOutlineColor,
-      weight: 1.2,
-      opacity: 1,
-      fillColor: "black",
-      fillOpacity: 0.1,
-    });
+        // Color palette
+        const palette = [
+          "#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231",
+          "#911eb4", "#46f0f0", "#f032e6", "#bcf60c"
+        ];
+        const barangayColors = {};
+        let i = 0;
+        data.barangay?.features?.forEach((f) => {
+          const n = f.properties.barangay;
+          if (n && !barangayColors[n])
+            barangayColors[n] = palette[i++ % palette.length];
+        });
 
-    const sectionVisibleStyle = {
-      color: "#202020",
-      weight: 0.8,
-      opacity: 0.8,
-      fillOpacity: 0.1,
+        // Barangay layer
+        barangayLayerRef.current = L.geoJSON(data.barangay || null, {
+          style: (f) => ({
+            color: "#000",
+            weight: 1.2,
+            fillColor: barangayColors[f.properties.barangay] || "#999",
+            fillOpacity: 0.5,
+          }),
+          onEachFeature: (feature, layer) => {
+            const name = feature.properties?.barangay;
+            if (name) {
+              const center = layer.getBounds().getCenter();
+              const label = L.tooltip({
+                permanent: true,
+                direction: "center",
+                className: "barangay-label",
+              }).setContent(
+                `<div style="
+                  color:white;
+                  font-size:12px;
+                  font-weight:700;
+                  text-shadow:
+                    -1px -1px 0 #000,
+                     1px -1px 0 #000,
+                    -1px  1px 0 #000,
+                     1px  1px 0 #000;">${name}</div>`
+              ).setLatLng(center);
+              barangayLabelsRef.current.push(label);
+            }
+          },
+          interactive: false,
+        });
+
+        // Section layer
+        sectionLayerRef.current = L.geoJSON(data.section || null, {
+          style: {
+            color: "#202020",
+            weight: 1.2,
+            fillColor: "#999",
+            fillOpacity: 0.15,
+          },
+          interactive: false,
+        });
+
+        updateVisibility(true);
+      } catch (err) {
+        console.error("❌ Boundary fetch error:", err);
+      }
     };
 
-    // --- Bind parcel click (once only) ---
-    function bindParcelClick(feature, layer) {
-      layer.off("click");
-      layer.on("click", () => {
-        // Reset all parcel styles
-        const currentStyle = getParcelVisibleStyle();
-        if (window.parcelLayers && Array.isArray(window.parcelLayers)) {
-          window.parcelLayers.forEach(({ layer: l }) => {
-            if (l && l.setStyle) {
-              try {
-                l.setStyle(currentStyle);
-              } catch (e) {
-                console.warn("Error resetting parcel style:", e);
-              }
-            }
-          });
-        }
-        // Highlight selected parcel
-        layer.setStyle({
-          fillColor: "white",
-          color: window.parcelOutlineColor,
-          weight: 2.5,
-          fillOpacity: 0.5,
-        });
-        // Show info popup
-        if (document.getElementById("infoPopup") && window.populateParcelInfo) {
-          window.populateParcelInfo(feature.properties);
-        }
-      });
-    }
+    loadData();
+  }, [map, schema, updateVisibility]);
 
-    // --- Maintain layer order ---
-    function enforceLayerOrder() {
-      // Sections to back
-      if (window.sectionLayers && Array.isArray(window.sectionLayers)) {
-        window.sectionLayers.forEach(({ layer }) => {
-          if (layer && layer.bringToBack) {
-            try {
-              layer.bringToBack();
-            } catch (e) {}
-          }
-        });
-      }
-
-      // Parcels to front
-      if (window.parcelLayers && Array.isArray(window.parcelLayers)) {
-        window.parcelLayers.forEach(({ layer }) => {
-          if (layer && layer.bringToFront) {
-            try {
-              layer.bringToFront();
-            } catch (e) {}
-          }
-        });
-      }
-
-      // Municipal boundary to top
-      if (map.hasLayer(municipalBoundary)) {
-        municipalBoundary.bringToFront();
-      }
-
-      // Barangay to top
-      if (window.barangayLayers && Array.isArray(window.barangayLayers)) {
-        window.barangayLayers.forEach(({ layer }) => {
-          if (layer && layer.bringToFront) {
-            try {
-              layer.bringToFront();
-            } catch (e) {}
-          }
-        });
-      }
-    }
-
-    // --- Visibility logic ---
-    function updateVisibility(forceRefresh = false) {
-      const zoom = map.getZoom();
-
-      // Municipal boundary visibility
-      const municipalCheckbox = document.getElementById("municipal");
-      const municipalVisible =
-        zoom >= municipalMin &&
-        zoom <= municipalMax &&
-        (municipalCheckbox?.checked ?? true);
-
-      if (municipalVisible) {
-        if (!map.hasLayer(municipalBoundary)) map.addLayer(municipalBoundary);
-      } else if (map.hasLayer(municipalBoundary)) {
-        map.removeLayer(municipalBoundary);
-      }
-
-      const sectionCheckbox = document.getElementById("section");
-      const parcelCheckbox = document.getElementById("parcels");
-
-      const sectionVisible = zoom >= sectionMinZoom && zoom <= sectionMaxZoom;
-      const parcelVisible = zoom >= parcelMinZoom && zoom <= parcelMaxZoom;
-
-      // --- Section visibility ---
-      if (window.sectionLayers && Array.isArray(window.sectionLayers)) {
-        const show = sectionVisible && (sectionCheckbox?.checked ?? true);
-        window.sectionLayers.forEach(({ layer }) => {
-          if (!layer || !layer.setStyle) return;
-          try {
-            if (forceRefresh || layer._lastVisible !== show) {
-              layer._lastVisible = show;
-              layer.setStyle(show ? sectionVisibleStyle : hiddenStyle);
-            }
-          } catch (e) {
-            console.warn("Error updating section style:", e);
-          }
-        });
-      }
-
-      // --- Parcel visibility ---
-      if (window.parcelLayers && Array.isArray(window.parcelLayers)) {
-        const show = parcelVisible && (parcelCheckbox?.checked ?? true);
-        const currentStyle = getParcelVisibleStyle();
-
-        window.parcelLayers.forEach(({ feature, layer }) => {
-          if (!layer || !layer.setStyle) return;
-          try {
-            if (forceRefresh || layer._lastVisible !== show) {
-              layer._lastVisible = show;
-              if (show) {
-                layer.setStyle(currentStyle);
-                bindParcelClick(feature, layer);
-              } else {
-                layer.setStyle(hiddenStyle);
-                layer.off("click");
-              }
-            } else if (show && forceRefresh) {
-              layer.setStyle(currentStyle);
-            }
-          } catch (e) {
-            console.warn("Error updating parcel:", e);
-          }
-        });
-      }
-
-      enforceLayerOrder();
-    }
-
-    // --- Event listeners ---
-    const handleZoomEnd = () => updateVisibility(false);
-    map.on("zoomend", handleZoomEnd);
-    window.onParcelsLoaded = () => updateVisibility(false);
-
-    // ✅ Expose for external UI
-    window._updateBoundaryVisibility = (forceRefresh = false) => updateVisibility(forceRefresh);
-    window._setShowBarangay = setShowBarangay;
-    window._setShowSection = setShowSection;
-
-    // --- Initial run ---
-    updateVisibility(false);
-
-    window._boundaryLayers = { municipalBoundary };
-
-    return () => {
-      map.off("zoomend", handleZoomEnd);
-      if (map.hasLayer(municipalBoundary)) map.removeLayer(municipalBoundary);
-      delete window._boundaryLayers;
-      delete window.onParcelsLoaded;
-      delete window._updateBoundaryVisibility;
-      delete window._setShowBarangay;
-      delete window._setShowSection;
-    };
-  }, [map, setShowBarangay, setShowSection]);
-
-  // ✅ Smooth zoom animation
+  // === Apply on zoom change ===
   useEffect(() => {
     if (!map) return;
+    const handler = () => updateVisibility(false);
+    map.on("zoomend", handler);
+    return () => map.off("zoomend", handler);
+  }, [map, updateVisibility]);
 
-    let lastZoom = map.getZoom();
-    let isUserZoom = false;
+  // === Expose global control hooks (used by AdminBoundariesPanel.jsx) ===
+  useEffect(() => {
+    window._updateBoundaryVisibility = (force, overrides) =>
+      updateVisibility(force, overrides);
+    window._setShowMunicipal = setShowMunicipal;
+    window._setShowBarangay = setShowBarangay;
+    window._setShowSection = setShowSection;
+  }, [updateVisibility]);
 
-    const handleUserZoom = () => {
-      isUserZoom = true;
-    };
-
-    const handleZoom = () => {
-      const targetZoom = map.getZoom();
-      if (!isUserZoom && targetZoom !== lastZoom) {
-        const currentCenter = map.getCenter();
-        map.flyTo(currentCenter, targetZoom, {
-          animate: true,
-          duration: 0.6,
-          easeLinearity: 0.25,
-        });
-      }
-      lastZoom = targetZoom;
-      isUserZoom = false;
-    };
-
-    map.on("zoomstart", handleUserZoom);
-    map.on("zoomend", handleZoom);
-
+  // === Cleanup ===
+  useEffect(() => {
     return () => {
-      map.off("zoomstart", handleUserZoom);
-      map.off("zoomend", handleZoom);
+      [barangayLayerRef, sectionLayerRef].forEach((ref) => {
+        if (ref.current && map.hasLayer(ref.current)) map.removeLayer(ref.current);
+        ref.current = null;
+      });
+      barangayLabelsRef.current.forEach((label) => map.removeLayer(label));
+      barangayLabelsRef.current = [];
+      if (municipalRef.current && map.hasLayer(municipalRef.current))
+        map.removeLayer(municipalRef.current);
     };
   }, [map]);
 
-  return <BoundaryLayers showBarangay={showBarangay} showSection={showSection} />;
+  return null;
 }
 
 export default AdminBoundaries;

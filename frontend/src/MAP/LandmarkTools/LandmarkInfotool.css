@@ -9,14 +9,14 @@
   border-radius: 4px 0 0 4px;
   max-height: calc(100vh - 80px);
   overflow-y: auto;
-
-  /* ✅ ensure panel is above Leaflet panes/controls and interactive */
   z-index: 9999;
   pointer-events: auto;
+  isolation: isolate; /* prevent dropdown clipping */
 }
 
 .landmark-info-panel * {
-  pointer-events: auto; /* ✅ force child elements to receive clicks */
+  pointer-events: auto;
+  overflow: visible !important;
 }
 
 .landmark-info-header {
@@ -70,14 +70,56 @@
   color: #555;
 }
 
-.landmark-info-input {
+/* === Editable input / select fields === */
+.landmark-info-input,
+.landmark-info-select {
   font-size: 13px;
   padding: 8px 12px;
   width: 100%;
   border: 1px solid #ddd;
   border-radius: 4px;
   outline: none;
-  transition: border-color 0.2s;
+  background-color: #fff;  /* ✅ white background */
+  color: #000;             /* ✅ black text */
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.landmark-info-input:focus,
+.landmark-info-select:focus {
+  border-color: #360f7e;
+  box-shadow: 0 0 3px rgba(54, 15, 126, 0.4);
+}
+
+/* === Dropdown (Type) fix === */
+.landmark-info-select,
+.landmark-info-select option,
+select.landmark-info-input,
+select.landmark-info-input option {
+  background-color: #fff !important; /* ✅ white dropdown background */
+  color: #000 !important;            /* ✅ black text */
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  position: relative;
+  z-index: 10000;
+}
+
+select.landmark-info-input option:hover {
+  background-color: #eee;
+  color: #000;
+}
+
+/* Add a custom dropdown arrow */
+select.landmark-info-input {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><path fill='black' d='M0 2 L5 7 L10 2 Z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px;
+  padding-right: 25px;
 }
 
 .landmark-info-footer {
@@ -87,32 +129,31 @@
   gap: 8px;
 }
 
-.landmark-info-edit {
-  background-color: #000000;
-  color: white;
+.landmark-info-edit,
+.landmark-info-save,
+.landmark-info-cancel {
   border: none;
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 13px;
+  color: white;
 }
 
+.landmark-info-edit,
 .landmark-info-save {
   background-color: #000000;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
 }
 
 .landmark-info-cancel {
   background-color: #922828;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
+}
+
+.landmark-info-edit:hover,
+.landmark-info-save:hover {
+  background-color: #222;
+}
+
+.landmark-info-cancel:hover {
+  background-color: #7a1f1f;
 }

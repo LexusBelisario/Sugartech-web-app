@@ -1,52 +1,71 @@
+// src/components/Labels/StreetLabel.jsx
 import { useEffect, useRef } from "react";
-import API from "../../api";
+import L from "leaflet";
+import "leaflet-textpath";
+import { API_BASE } from "../../config";
+import { useSchema } from "../SchemaContext.jsx";
 
-const StreetLabel = ({ map, activeSchemas }) => {
-  const labelGroupRef = useRef(null);
+const StreetLabel = ({ map }) => {
+  const { schema } = useSchema();
+  const layerGroupRef = useRef(null);
+  const zoomLimits = [16, 25]; // same as parcel visibility
+
+  // === Visibility handler ===
+  const updateVisibility = () => {
+    if (!map || !layerGroupRef.current) return;
+    const zoom = map.getZoom();
+    const [min, max] = zoomLimits;
+    const visible = zoom >= min && zoom <= max;
+
+    if (visible) {
+      if (!map.hasLayer(layerGroupRef.current)) map.addLayer(layerGroupRef.current);
+    } else {
+      if (map.hasLayer(layerGroupRef.current)) map.removeLayer(layerGroupRef.current);
+    }
+  };
 
   useEffect(() => {
-    if (!map || !activeSchemas.length) return;
+    if (!map || !schema) return;
 
-    const labelGroup = L.layerGroup();
-    labelGroupRef.current = labelGroup;
-    window.streetLayerGroup = labelGroup;
+    const group = L.layerGroup().addTo(map);
+    layerGroupRef.current = group;
+    console.log(`📍 Loading street labels for schema=${schema}`);
 
-    const updateVisibility = () => {
-      if (!labelGroupRef.current) return;
-      const zoom = map.getZoom();
-      if (zoom >= 17 && zoom <= 19) {
-        if (!map.hasLayer(labelGroupRef.current)) {
-          map.addLayer(labelGroupRef.current);
-        }
-      } else {
-        if (map.hasLayer(labelGroupRef.current)) {
-          map.removeLayer(labelGroupRef.current);
-        }
-      }
-    };
-
-    const fetchStreetData = async () => {
+    const fetchStreets = async () => {
       try {
-        const schema = activeSchemas[0];
-        const url = `${API}/single-table?schema=${encodeURIComponent(schema)}&table=RoadNetwork`;
-        const res = await fetch(url);
-        const geojson = await res.json();
+        const token =
+          localStorage.getItem("access_token") ||
+          localStorage.getItem("accessToken");
 
-        if (!geojson || geojson.type !== "FeatureCollection") return;
+        const url = `${API_BASE}/single-table?schema=${encodeURIComponent(schema)}&table=RoadNetwork`;
+        const res = await fetch(url, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const features = data?.features || [];
 
-        geojson.features.forEach(feature => {
+        if (!features.length) {
+          console.warn(`ℹ️ No street data found for ${schema}`);
+          return;
+        }
+
+        features.forEach((f) => {
           const name =
-            feature.properties?.road_name ||
-            feature.properties?.name ||
-            feature.properties?.label ||
-            feature.properties?.roadlabel;
+            f.properties?.road_name ||
+            f.properties?.name ||
+            f.properties?.label ||
+            f.properties?.roadlabel;
+          if (!name || !f.geometry) return;
 
-          let coords = feature.geometry?.coordinates;
-          if (!coords || !name) return;
+          let coords = f.geometry.coordinates;
+          if (f.geometry.type === "MultiLineString") coords = coords[0];
+          if (!coords?.length) return;
 
-          if (feature.geometry.type === "MultiLineString") coords = coords[0];
-          if (!coords || coords.length < 2) return;
-
+          // ensure text direction is readable
           const dx = coords[coords.length - 1][0] - coords[0][0];
           const dy = coords[coords.length - 1][1] - coords[0][1];
           const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
@@ -54,46 +73,46 @@ const StreetLabel = ({ map, activeSchemas }) => {
 
           const latlngs = coords.map(([lng, lat]) => [lat, lng]);
 
-          const polyline = L.polyline(latlngs, { color: "transparent" }).addTo(labelGroup);
-          polyline.setText(name, {
+          // invisible polyline for text path
+          const line = L.polyline(latlngs, { opacity: 0 }).addTo(group);
+
+          // add road name text with strong black outline
+          line.setText(name, {
             repeat: false,
             center: true,
             offset: 0,
             attributes: {
-              fill: "#111",
-              "font-weight": "bold",
+              fill: "white",
               "font-size": "12px",
-              "text-shadow": "1px 1px 2px white",
-              "paint-order": "stroke",
-              "stroke": "#fff",
-              "stroke-width": "2px"
-            }
+              "font-weight": "bold",
+              stroke: "black",            // black outline
+              "stroke-width": "3px",      // outline thickness
+              "paint-order": "stroke",    // ensures stroke is rendered behind text fill
+              "stroke-linejoin": "round", // smoother joins for curved roads
+              "text-shadow": "none",      // remove blur shadows for crisp edges
+            },
           });
         });
 
-        map.on("zoomend", updateVisibility);
         updateVisibility();
-
-        window.updateStreetLabelVisibility = updateVisibility;
+        map.on("zoomend", updateVisibility);
+        console.log(`✅ ${features.length} street labels rendered for ${schema}`);
       } catch (err) {
-        console.error("❌ Street label error:", err);
+        console.error("❌ Failed to load street labels:", err);
       }
     };
 
-    fetchStreetData();
+    fetchStreets();
 
     return () => {
-      const group = labelGroupRef.current;
-      if (group && map.hasLayer(group)) {
-        map.removeLayer(group);
-      }
-
       map.off("zoomend", updateVisibility);
-      delete window.updateStreetLabelVisibility;
-      delete window.streetLayerGroup;
-      labelGroupRef.current = null;
+      if (layerGroupRef.current && map.hasLayer(layerGroupRef.current)) {
+        map.removeLayer(layerGroupRef.current);
+      }
+      layerGroupRef.current = null;
+      console.log("🧹 Street labels removed");
     };
-  }, [map, activeSchemas]);
+  }, [map, schema]);
 
   return null;
 };
