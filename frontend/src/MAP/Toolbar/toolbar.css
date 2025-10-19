@@ -1,3 +1,6 @@
+@import "./PredictiveModelTools.css";
+
+
 /* === TOOLBAR CONTAINER === */
 .toolbar-panel {
   position: absolute;
@@ -121,3 +124,5 @@
 .active-tool:hover {
   background-color: #acacac !important;
 }
+
+
