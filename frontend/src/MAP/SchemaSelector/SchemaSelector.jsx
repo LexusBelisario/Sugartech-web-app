@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ApiService } from "../../api_service.js";
 import { useSchema } from "../SchemaContext";
 import { useMap } from "react-leaflet";
@@ -11,6 +11,7 @@ const SchemaSelector = () => {
   const [error, setError] = useState(null);
   const { setSchema } = useSchema();
   const map = useMap();
+  const hasZoomedToProvince = useRef(false); // ✅ ensure province zoom only happens once
 
   // ======================================================
   // 🔹 Helper: Fetch and zoom to provincial bounds
@@ -22,7 +23,7 @@ const SchemaSelector = () => {
         const [xmin, ymin, xmax, ymax] = res.bounds;
         const bounds = [
           [ymin, xmin],
-          [ymax, xmax]
+          [ymax, xmax],
         ];
         console.log(`🗺️ Smooth zoom to provincial bounds (${res.prov_code}):`, bounds);
 
@@ -38,7 +39,7 @@ const SchemaSelector = () => {
   };
 
   // ======================================================
-  // 🔹 Load schemas from backend
+  // 🔹 Load schemas from backend (with provincial zoom always)
   // ======================================================
   useEffect(() => {
     const loadSchemas = async () => {
@@ -53,16 +54,15 @@ const SchemaSelector = () => {
           setSchemas(data.schemas);
           setUserAccess(data.user_access);
 
-          // ✅ Provincial-level zoom happens automatically if multiple schemas
-          if (data.schemas.length > 1) {
+          // ✅ Always zoom to provincial bounds once on load
+          if (!hasZoomedToProvince.current) {
             await fetchProvincialBoundsAndZoom();
+            hasZoomedToProvince.current = true;
           }
 
-          // ✅ If only one schema → automatically select & zoom to municipal bounds
+          // ❌ Do NOT auto-select even if only one schema — wait for user click
           if (data.schemas.length === 1) {
-            const singleSchema = data.schemas[0];
-            setSelectedSchema(singleSchema);
-            setSchema(singleSchema);
+            console.log("⚠️ Only one schema found. Waiting for manual selection.");
           }
 
           // 🚫 Handle empty schema list
@@ -109,7 +109,7 @@ const SchemaSelector = () => {
           const [xmin, ymin, xmax, ymax] = res.bounds;
           const bounds = [
             [ymin, xmin],
-            [ymax, xmax]
+            [ymax, xmax],
           ];
           console.log(`📦 Smooth zoom to bounds of ${selectedSchema}:`, bounds);
 
@@ -127,7 +127,9 @@ const SchemaSelector = () => {
     fetchBoundsAndZoom();
   }, [selectedSchema, map]);
 
-  // ✅ Expose state and handler to window for UI panel
+  // ======================================================
+  // 🔹 Expose state and handler globally for the UI panel
+  // ======================================================
   useEffect(() => {
     window._schemaSelectorData = {
       schemas,
