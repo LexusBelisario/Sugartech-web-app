@@ -1,0 +1,99 @@
+/* =======================================================
+   🎯 Predictive Model Tools - Linear & XGBoost Side by Side
+   ======================================================= */
+
+/* === Wrapper === */
+.predictive-tools-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  width: 100%;
+}
+
+/* === Section Title === */
+.predictive-tools-wrapper .section-title {
+  color: #f7c800;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: 0.3rem;
+  white-space: nowrap;
+}
+
+/* =======================================================
+   🧠 AI MODEL SECTION — THREE COLUMN GRID
+   ======================================================= */
+.predictive-grid.ai-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+/* Each AI button takes one column in the 3-column grid */
+.predictive-grid.ai-grid .tool-button {
+  height: 80px;
+  background: #1a1a1a;
+  border: 1px solid #555;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.predictive-grid.ai-grid .tool-button:hover {
+  background-color: #333;
+  border-color: #fff;
+}
+
+/* =======================================================
+   🌍 GEO-AI MODEL SECTION — THREE COLUMN GRID
+   ======================================================= */
+.predictive-grid.geo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.predictive-grid.geo-grid .tool-button {
+  height: 80px;
+  background: #1a1a1a;
+  border: 1px solid #555;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.predictive-grid.geo-grid .tool-button:hover {
+  background-color: #333;
+  border-color: #fff;
+}
+
+/* =======================================================
+   🎨 ICON + TEXT INSIDE BUTTONS
+   ======================================================= */
+.predictive-tools-wrapper .tool-button img {
+  width: 28px;
+  height: 28px;
+  margin-bottom: 4px;
+}
+
+.predictive-tools-wrapper .tool-button span {
+  font-size: 10px;
+  color: white;
+  line-height: 1.1;
+  text-align: center;
+  padding: 0 4px;
+  white-space: normal;
+}

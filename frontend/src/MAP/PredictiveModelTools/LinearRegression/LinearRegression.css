@@ -753,3 +753,72 @@ select:focus {
   flex-direction: column;
   justify-content: center;
 }
+
+
+
+
+
+.lr-modal-content .source-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.lr-modal-content .source-buttons button {
+  flex: 1;
+}
+
+
+
+
+
+/* === Database Table Modal (Full Scroll Version) === */
+.db-modal {
+  width: 420px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; /* full modal scroll */
+  scrollbar-gutter: stable;
+}
+
+/* Outer scroll container */
+.db-table-scroll {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #1a1a1a;
+  margin-top: 4px;
+}
+
+/* Individual items */
+.db-table-item {
+  padding: 8px 10px;
+  border-bottom: 1px solid #222;
+  background: #111;
+  color: #ddd;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.db-table-item:hover {
+  background: #00ff9d20;
+  color: #00ff9d;
+}
+
+/* Scrollbar styling (consistent with tool theme) */
+.db-table-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.db-table-scroll::-webkit-scrollbar-track {
+  background: #111;
+}
+.db-table-scroll::-webkit-scrollbar-thumb {
+  background: #00ff9d;
+  border-radius: 10px;
+}

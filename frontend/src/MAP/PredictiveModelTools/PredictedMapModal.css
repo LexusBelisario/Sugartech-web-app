@@ -1,0 +1,101 @@
+/* === Dark background overlay === */
+.predictmap-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+/* === Floating modal box === */
+.predictmap-box {
+  background: #1b1f26;
+  color: white;
+  border-radius: 12px;
+  width: 900px;           /* ✅ fixed width */
+  max-width: 95vw;        /* ✅ responsive limit */
+  height: 80vh;           /* ✅ fixed height */
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 0 25px rgba(0, 255, 157, 0.35);
+  overflow: hidden;
+  animation: fadeIn 0.25s ease-out;
+}
+
+/* === Fade animation === */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === Header === */
+.predictmap-title {
+  color: #00ff9d;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  padding: 10px 40px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* === Close button === */
+.predictmap-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: #ff4d4d;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: 16px;
+  transition: 0.2s;
+}
+.predictmap-close:hover {
+  background: #ff6666;
+  transform: scale(1.05);
+}
+
+/* === Map section === */
+.predictmap-map {
+  flex: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 8px 12px;
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.15);
+}
+.predictmap-box .leaflet-container {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* === Legend area === */
+.predictmap-legend {
+  background: #0f1216;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 14px;
+  max-height: 20vh;       /* ✅ scrollable if too long */
+  overflow-y: auto;
+}
+.predictmap-legend h4 {
+  color: #00ff9d;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin: 3px 0;
+  font-size: 13px;
+}
+.legend-color {
+  width: 25px;
+  height: 12px;
+  margin-right: 8px;
+  border: 1px solid #ccc;
+  border-radius: 2px;
+}
