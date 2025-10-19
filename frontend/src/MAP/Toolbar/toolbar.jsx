@@ -5,7 +5,7 @@ import TBLandLegendTools from "./TBLandLegendTools.jsx";
 import TBThematicMaps from "./TBThematicMaps.jsx";
 import TBLabelTools from "./TBLabelTools.jsx";
 import TBLandmarkTools from "./TBLandmarkTools.jsx";
-import TBAIModelTools from "./TBAIModelTools.jsx";
+import TBPredictiveModelTools from "./TBPredictiveModelTools.jsx";
 import { useSchema } from "../SchemaContext.jsx"; // ✅ added
 
 const tabs = [
@@ -14,7 +14,7 @@ const tabs = [
   { id: "thematic", label: "Thematic Maps" },
   { id: "label", label: "Label Tools" },
   { id: "landmark", label: "Landmark Tools" },
-  { id: "ai", label: "AI Model Tools" },
+  { id: "ai", label: "Predictive Model Tools" },
 ];
 
 const Toolbar = ({
@@ -77,13 +77,10 @@ const Toolbar = ({
 
       case "ai":
         return (
-          <TBAIModelTools
-            onLinearRegressionClick={() =>
-              console.log("Linear Regression clicked")
-            }
-            onRandomForestClick={() =>
-              console.log("Random Forest clicked")
-            }
+          <TBPredictiveModelTools
+            onLinearRegressionClick={() => console.log("Linear Regression clicked")}
+            onXGBoostClick={() => console.log("XGBoost clicked")}
+            onGWRClick={() => console.log("Geographically Weighted Regression clicked")}
           />
         );
 

@@ -12,6 +12,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
+import matplotlib
+matplotlib.use("Agg")  # <-- Add this line
 
 router = APIRouter(prefix="/linear-regression", tags=["AI Model Tools"])
 
@@ -210,15 +212,12 @@ async def train_linear_regression(
 
             # ✅ Save model
             model_path = os.path.join(export_path, "trained_model.pkl")
-            joblib.dump(
-                {
-                    "model": model,
-                    "scaler": scaler,
-                    "features": independent_vars,
-                    "dependent_var": target,
-                },
-                model_path,
-            )
+            joblib.dump({
+                "model": model,
+                "scaler": scaler,
+                "features": [v.lower() for v in independent_vars],  # 👈 normalize to lowercase
+                "dependent_var": target.lower(),                    # 👈 normalize too
+            }, model_path)
 
             # ✅ PDF & plots
             pdf_path = os.path.join(export_path, "regression_report.pdf")
@@ -288,6 +287,7 @@ async def train_linear_regression(
 
                 # --- T-test on residuals (table) ---
                 t_stat, p_val = stats.ttest_1samp(residuals, 0)
+                t_test_result = {"t_stat": float(t_stat), "p_value": float(p_val)}
                 fig, ax = plt.subplots(figsize=(6, 2))
                 ax.axis("off")
                 ax.text(0.5, 0.5, f"T-test on Residuals:\nT-statistic = {t_stat:.4f}\nP-value = {p_val:.4f}",
@@ -297,6 +297,22 @@ async def train_linear_regression(
                 fig.savefig(ttest_png, bbox_inches="tight")
                 plt.close(fig)
                 png_paths["t_test_residuals"] = ttest_png
+
+                for col in independent_vars:
+                    try:
+                        fig, ax = plt.subplots(figsize=(6, 4))
+                        sns.histplot(df_valid[col].dropna(), kde=True, ax=ax, color="#00ff9d", edgecolor="black")
+                        ax.set_title(f"Distribution of {col}", fontsize=12, color="#00ff9d")
+                        ax.set_xlabel(col, color="white")
+                        ax.set_ylabel("Frequency", color="white")
+                        ax.tick_params(colors="white")
+                        ax.set_facecolor("black")
+                        fig.patch.set_facecolor("black")
+                        plt.tight_layout()
+                        pp.savefig(fig)  # ✅ Add to PDF directly
+                        plt.close(fig)
+                    except Exception as e:
+                         print(f"⚠️ Could not add {col} distribution to PDF: {e}")
 
             # ✅ Predict on full dataset
             df_full["prediction"] = np.nan
@@ -381,6 +397,7 @@ async def train_linear_regression(
                 "cama_preview": cama_preview,
                 "distributions": dist_plots,
                 "lgu_name": clean_name,
+                "t_test": t_test_result,
                 "downloads": {
                     "model": f"{base_url}?file={model_path}",
                     "report": f"{base_url}?file={pdf_path}",
@@ -504,15 +521,12 @@ async def train_linear_regression_zip(
 
             # ✅ Save model
             model_path = os.path.join(export_path, "trained_model.pkl")
-            joblib.dump(
-                {
-                    "model": model,
-                    "scaler": scaler,
-                    "features": independent_vars,
-                    "dependent_var": target,
-                },
-                model_path,
-            )
+            joblib.dump({
+                "model": model,
+                "scaler": scaler,
+                "features": [v.lower() for v in independent_vars],  # 👈 normalize to lowercase
+                "dependent_var": target.lower(),                    # 👈 normalize too
+            }, model_path)
 
             # ✅ PDF & plots
             pdf_path = os.path.join(export_path, "regression_report.pdf")
@@ -582,6 +596,7 @@ async def train_linear_regression_zip(
 
                 # --- T-test on residuals (table) ---
                 t_stat, p_val = stats.ttest_1samp(residuals, 0)
+                t_test_result = {"t_stat": float(t_stat), "p_value": float(p_val)}
                 fig, ax = plt.subplots(figsize=(6, 2))
                 ax.axis("off")
                 ax.text(0.5, 0.5, f"T-test on Residuals:\nT-statistic = {t_stat:.4f}\nP-value = {p_val:.4f}",
@@ -591,6 +606,22 @@ async def train_linear_regression_zip(
                 fig.savefig(ttest_png, bbox_inches="tight")
                 plt.close(fig)
                 png_paths["t_test_residuals"] = ttest_png
+
+                for col in independent_vars:
+                    try:
+                        fig, ax = plt.subplots(figsize=(6, 4))
+                        sns.histplot(df_valid[col].dropna(), kde=True, ax=ax, color="#00ff9d", edgecolor="black")
+                        ax.set_title(f"Distribution of {col}", fontsize=12, color="#00ff9d")
+                        ax.set_xlabel(col, color="white")
+                        ax.set_ylabel("Frequency", color="white")
+                        ax.tick_params(colors="white")
+                        ax.set_facecolor("black")
+                        fig.patch.set_facecolor("black")
+                        plt.tight_layout()
+                        pp.savefig(fig)  # ✅ Add to PDF directly
+                        plt.close(fig)
+                    except Exception as e:
+                         print(f"⚠️ Could not add {col} distribution to PDF: {e}")
 
             # ✅ Predict on full dataset
             df_full["prediction"] = np.nan
@@ -675,6 +706,7 @@ async def train_linear_regression_zip(
                 "cama_preview": cama_preview,
                 "distributions": dist_plots,
                 "lgu_name": clean_name,
+                "t_test": t_test_result,
                 "downloads": {
                     "model": f"{base_url}?file={model_path}",
                     "report": f"{base_url}?file={pdf_path}",
@@ -714,7 +746,10 @@ async def run_saved_model(
             with open(model_path, "wb") as out:
                 out.write(await model_file.read())
             model_data = joblib.load(model_path)
-            model, scaler, features = model_data["model"], model_data["scaler"], model_data["features"]
+            model = model_data["model"]
+            scaler = model_data.get("scaler", None)
+            features = [f.lower() for f in model_data.get("features", [])]   # ✅ normalize to lowercase
+            dependent_var = model_data.get("dependent_var", "").lower()      # ✅ normalize target too
 
             # ✅ Step 2: Handle shapefile input (ZIP or individual files)
             if zip_file and shapefiles:
@@ -748,6 +783,8 @@ async def run_saved_model(
             # ✅ Step 3: Read shapefile
             gdf = gpd.read_file(shp_path)
             df = pd.DataFrame(gdf.drop(columns="geometry", errors="ignore"))
+            # ✅ Normalize all dataframe columns to lowercase for case-insensitive matching
+            df.columns = [c.lower() for c in df.columns]
 
             # ✅ Step 4: Check required features
             missing_features = [f for f in features if f not in df.columns]
@@ -755,7 +792,8 @@ async def run_saved_model(
                 return JSONResponse(status_code=400, content={"error": f"Missing features in shapefile: {missing_features}"})
 
             # ✅ Step 5: Prepare and predict
-            df_features = df[features].copy()
+            # ✅ Select columns case-insensitively (already lowercase)
+            df_features = df[[c for c in df.columns if c in features]].copy()
             for col in features:
                 df_features[col] = pd.to_numeric(df_features[col], errors="coerce")
             df_features = df_features.fillna(0)
@@ -765,9 +803,9 @@ async def run_saved_model(
             gdf["prediction"] = preds
 
             # ✅ Optional residuals (if dependent var exists)
-            dependent_var = model_data.get("dependent_var") if "dependent_var" in model_data else None
-            if not dependent_var:
-                possible_targets = [c for c in df.columns if c.lower() not in [f.lower() for f in features]]
+            # ✅ Dependent variable already normalized to lowercase above
+            if not dependent_var or dependent_var not in df.columns:
+                possible_targets = [c for c in df.columns if c not in features]
                 dependent_var = possible_targets[0] if possible_targets else None
 
             residuals = None
@@ -902,6 +940,189 @@ async def run_saved_model(
         print(f"❌ Run Saved Model error: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+@router.post("/run-saved-model-db")
+async def run_saved_model_db(
+    model_file: UploadFile,
+    table_name: str = Form(...),
+):
+    """
+    Apply a saved model (.pkl) to a PostGIS table.
+    Returns shapefile (.zip), GeoJSON, and PDF report — case-insensitive feature handling.
+    """
+    import joblib, geopandas as gpd, pandas as pd, numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+    from sqlalchemy import create_engine
+    from datetime import datetime
+    import tempfile, os, zipfile
+
+    # === DB connection ===
+    DB_CONFIG = {
+        "host": "104.199.142.35",
+        "port": 5432,
+        "database": "PH04021",
+        "user": "postgres",
+        "password": "#IGDIwebapp",
+    }
+    DB_URL = (
+        f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@"
+        f"{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+    )
+    engine = create_engine(DB_URL)
+
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # === 1️⃣ Load model ===
+            model_path = os.path.join(tmpdir, model_file.filename)
+            with open(model_path, "wb") as f:
+                f.write(await model_file.read())
+
+            model_bundle = joblib.load(model_path)
+            model = model_bundle["model"]
+            scaler = model_bundle.get("scaler", None)
+            features = [f.lower() for f in model_bundle.get("features", [])]
+            dependent_var = model_bundle.get("dependent_var", None)
+            if dependent_var:
+                dependent_var = dependent_var.lower()
+
+            # === 2️⃣ Load DB data ===
+            print(f"📊 Fetching table {table_name} from PostGIS…")
+
+            if "." in table_name:
+                schema_part, table_part = table_name.split(".", 1)
+            else:
+                schema_part, table_part = "public", table_name
+
+            sql = f'''
+            SELECT *,
+                ST_Multi(ST_Force2D(ST_MakeValid(geom))) AS geometry
+            FROM "{schema_part}"."{table_part}";
+            '''
+            print(f"📊 Executing SQL:\n{sql}")
+
+            try:
+                gdf = gpd.read_postgis(sql, con=engine, geom_col="geometry")
+            except Exception as e:
+                print(f"⚠️ Geometry load failed: {e}")
+                df = pd.read_sql(f'SELECT * FROM "{schema_part}"."{table_part}"', con=engine)
+                gdf = gpd.GeoDataFrame(df, geometry=None)
+                print("✅ Loaded non-spatial table fallback.")
+
+            if gdf.empty:
+                return {"error": "Selected table is empty."}
+
+            # === 3️⃣ Normalize all column names (case-insensitive)
+            original_cols = gdf.columns.tolist()
+            gdf.columns = [c.lower() for c in gdf.columns]
+
+            print("🧩 Model expects (lower):", features)
+            print("🧩 DB columns (lower):", gdf.columns.tolist())
+
+            # === 4️⃣ Match columns case-insensitively
+            matched_cols = {}
+            for feat in features:
+                for c in gdf.columns:
+                    if c.lower() == feat.lower():
+                        matched_cols[feat] = c
+                        break
+
+            missing = [f for f in features if f not in matched_cols]
+            if missing:
+                return {"error": f"Missing columns in table: {missing}"}
+
+            # === 5️⃣ Prepare feature dataframe
+            X = gdf[[matched_cols[f] for f in features]].apply(pd.to_numeric, errors="coerce").fillna(0)
+            X.columns = features  # rename to match model’s training features exactly
+
+            # === 6️⃣ Align to model.feature_names_in_ strictly
+            if hasattr(model, "feature_names_in_"):
+                rename_map = {}
+                for col in X.columns:
+                    for mf in model.feature_names_in_:
+                        if col.lower() == mf.lower():
+                            rename_map[col] = mf
+                if rename_map:
+                    X.rename(columns=rename_map, inplace=True)
+                    print("🔤 Renamed columns to match model feature_names_in_:", rename_map)
+
+            # === 7️⃣ Predict safely (tolerant to dtype/shape mismatch)
+            try:
+                # Ensure numeric conversion
+                X = X.apply(pd.to_numeric, errors="coerce").fillna(0)
+
+                # Match scaler’s expected feature count regardless of model source
+                if scaler:
+                    # If feature mismatch (local PKL → DB table), realign columns by name
+                    if hasattr(scaler, "feature_names_in_"):
+                        expected = [f.lower() for f in scaler.feature_names_in_]
+                        current = [c.lower() for c in X.columns]
+                        # Add missing columns as zeros
+                        for feat in expected:
+                            if feat not in current:
+                                X[feat] = 0
+                        # Reorder
+                        X = X[expected]
+                    preds = model.predict(scaler.transform(X))
+                else:
+                    preds = model.predict(X)
+            except Exception as e:
+                print("❌ Prediction failed (dtype/shape):", e)
+                preds = model.predict(X.values)  # fallback unscaled
+
+            except Exception as e:
+                print("❌ Prediction failed:", e)
+                print("Model expects:", getattr(model, "feature_names_in_", features))
+                print("DataFrame columns:", list(X.columns))
+                raise e
+
+            gdf["prediction"] = preds
+
+            # === 8️⃣ Export results
+            export_id = f"run_{np.random.randint(100000, 999999)}"
+            export_path = os.path.join("exported_models", export_id)
+            os.makedirs(export_path, exist_ok=True)
+
+            shp_dir = os.path.join(export_path, "predicted_shapefile")
+            os.makedirs(shp_dir, exist_ok=True)
+            shp_path = os.path.join(shp_dir, "predicted_output.shp")
+            gdf.to_file(shp_path)
+
+            geojson_path = os.path.join(export_path, "predicted_output.geojson")
+            gdf.to_file(geojson_path, driver="GeoJSON")
+
+            zip_out = os.path.join(export_path, "predicted_output.zip")
+            with zipfile.ZipFile(zip_out, "w", zipfile.ZIP_DEFLATED) as z:
+                for root, _, files in os.walk(shp_dir):
+                    for f in files:
+                        z.write(os.path.join(root, f), f)
+
+            # === 9️⃣ PDF Report
+            pdf_path = os.path.join(export_path, "predicted_report.pdf")
+            with PdfPages(pdf_path) as pdf:
+                plt.figure(figsize=(8, 5))
+                plt.hist(gdf["prediction"], bins=20, color="teal", edgecolor="black")
+                plt.title("Distribution of Predicted Values")
+                plt.xlabel("Prediction")
+                plt.ylabel("Frequency")
+                pdf.savefig()
+                plt.close()
+
+            # === 🔟 Response
+            base_url = "/api/linear-regression/download"
+            return {
+                "message": "Predictions completed successfully.",
+                "downloads": {
+                    "report": f"{base_url}?file={pdf_path}",
+                    "shapefile": f"{base_url}?file={zip_out}",
+                    "geojson": f"{base_url}?file={geojson_path}",
+                },
+                "record_count": len(gdf),
+                "preview_geojson": f"{base_url}?file={geojson_path}",
+            }
+
+    except Exception as e:
+        print(f"❌ RUN-SAVED-MODEL-DB ERROR: {e}")
+        return {"error": str(e)}
 
 # ============================================================
 # 🔹 4. File Download Endpoint (Persistent / No Auto Delete)
@@ -929,3 +1150,512 @@ async def download_file(file: str = Query(...)):
     except Exception as e:
         print(f"❌ Persistent download error: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
+    
+
+
+# ============================================================
+# 🔹 5. Database Table + Field List + Train From DB
+# ============================================================
+import psycopg2
+
+DB_CONFIG = {
+    "host": "104.199.142.35",
+    "port": 5432,
+    "database": "PH04021",
+    "user": "postgres",
+    "password": "#IGDIwebapp",
+    "schema": "PH0402118"
+}
+
+@router.get("/db-tables")
+def get_db_tables():
+    """Fetch all tables across all barangay schemas."""
+    try:
+        conn = psycopg2.connect(
+            host=DB_CONFIG["host"],
+            port=DB_CONFIG["port"],
+            database=DB_CONFIG["database"],
+            user=DB_CONFIG["user"],
+            password=DB_CONFIG["password"]
+        )
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT table_schema || '.' || table_name
+            FROM information_schema.tables
+            WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+              AND table_schema LIKE 'PH0402%'  -- ✅ only your barangay/province schemas
+            ORDER BY table_schema, table_name;
+        """)
+        tables = [r[0] for r in cur.fetchall()]
+        cur.close(); conn.close()
+        return {"tables": tables}
+    except Exception as e:
+        print(f"❌ DB TABLES ERROR: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@router.get("/db-fields")
+def get_db_fields(table: str):
+    """Fetch all fields from a specific table (handles schema.table input)."""
+    try:
+        # 🧩 Split schema.table properly
+        if "." in table:
+            schema, table_name = table.split(".", 1)
+        else:
+            schema, table_name = DB_CONFIG["schema"], table
+
+        # 🧩 Handle barangay tables that look like "PH0402118.01_KANLURAN"
+        if "." in table_name:
+            parts = table_name.split(".", 1)
+            schema, table_name = parts[0], parts[1]
+
+        conn = psycopg2.connect(
+            host=DB_CONFIG["host"],
+            port=DB_CONFIG["port"],
+            database=DB_CONFIG["database"],
+            user=DB_CONFIG["user"],
+            password=DB_CONFIG["password"]
+        )
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = %s AND table_name = %s;
+        """, (schema, table_name))
+        fields = [r[0] for r in cur.fetchall()]
+        cur.close(); conn.close()
+
+        print(f"✅ Fetched {len(fields)} fields from {schema}.{table_name}")
+        return {"fields": fields}
+
+    except Exception as e:
+        print(f"❌ DB FIELDS ERROR: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@router.post("/train-db")
+async def train_linear_regression_db(
+    table_name: str = Form(...),
+    independent_vars: str = Form(...),
+    dependent_var: str = Form(...),
+):
+    """
+    Train Linear Regression directly from Postgres table
+    (same flow and visuals as shapefile training).
+    """
+    import pandas as pd
+    from sklearn.linear_model import LinearRegression
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+    from datetime import datetime
+    import numpy as np
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+    from scipy import stats
+
+    try:
+        # ============================================================
+        # 🗄️ 1. Read Table
+        # ============================================================
+        # 🧩 Split schema.table properly (handles PH0402118.01_KANLURAN)
+        if "." in table_name:
+            schema_part, table_part = table_name.split(".", 1)
+        else:
+            schema_part, table_part = DB_CONFIG["schema"], table_name
+        if "." in table_part:
+            schema_part, table_part = table_part.split(".", 1)
+
+        conn = psycopg2.connect(
+            host=DB_CONFIG["host"],
+            port=DB_CONFIG["port"],
+            database=DB_CONFIG["database"],
+            user=DB_CONFIG["user"],
+            password=DB_CONFIG["password"]
+        )
+        sql = f'SELECT * FROM "{schema_part}"."{table_part}"'
+        print(f"📊 Fetching DB table: {sql}")
+        df_full = pd.read_sql(sql, conn)
+        conn.close()
+
+        # ============================================================
+        # 🧮 2. Parse Variables
+        # ============================================================
+        independent_vars = (
+            json.loads(independent_vars)
+            if independent_vars.startswith("[")
+            else independent_vars.split(",")
+        )
+        # --- Normalize field names to lowercase for case-insensitive handling ---
+        independent_vars = [v.strip().lower() for v in independent_vars if v.strip()]
+        target = dependent_var.strip().lower()
+
+        # --- Normalize dataframe columns to lowercase too ---
+        df_full.columns = [c.lower() for c in df_full.columns]
+
+        missing = [v for v in independent_vars + [target] if v not in df_full.columns]
+        if missing:
+            return JSONResponse(status_code=400, content={"error": f"Missing fields in DB table: {missing}"})
+
+        # ============================================================
+        # 🔢 3. Convert to Numeric + Clean Data
+        # ============================================================
+        def safe_to_float(x):
+            try:
+                if pd.isna(x):
+                    return np.nan
+                if isinstance(x, str):
+                    x = x.strip().replace(",", "")
+                    if x.lower() in ["", "none", "nan", "null"]:
+                        return np.nan
+                    return float(x)
+                return float(x)
+            except Exception:
+                return np.nan
+
+        for col in independent_vars + [target]:
+            df_full[col] = df_full[col].map(safe_to_float)
+
+        df_valid = df_full.dropna(subset=independent_vars + [target])
+        if df_valid.empty:
+            return JSONResponse(status_code=400, content={"error": "No valid numeric data found."})
+
+        # ============================================================
+        # 🧠 4. Train Model
+        # ============================================================
+        X = df_valid[independent_vars]
+        y = df_valid[target]
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+
+        model = LinearRegression()
+        model.fit(X_train_scaled, y_train)
+        preds = model.predict(X_test_scaled)
+        residuals = y_test - preds
+
+        # ============================================================
+        # 📊 5. Compute Metrics + Importance
+        # ============================================================
+        mse = mean_squared_error(y_test, preds)
+        mae = mean_absolute_error(y_test, preds)
+        rmse = np.sqrt(mse)
+        r2 = r2_score(y_test, preds)
+        t_stat, p_val = stats.ttest_1samp(residuals, 0)
+
+        std_X = np.std(X_train_scaled, axis=0)
+        std_y = np.std(y_train)
+        importance = model.coef_ * std_X / std_y
+        importance_dict = {k: float(v) for k, v in zip(independent_vars, importance)}
+
+        # ============================================================
+        # 🗂️ 6. Export Files
+        # ============================================================
+        export_id = f"db_linear_{np.random.randint(100000, 999999)}"
+        export_path = os.path.join(EXPORT_DIR, export_id)
+        os.makedirs(export_path, exist_ok=True)
+
+        model_path = os.path.join(export_path, "trained_model.pkl")
+        # ✅ Save model with lowercase features and dependent variable for case-insensitive runs
+        joblib.dump(
+            {
+                "model": model,
+                "scaler": scaler,
+                "features": [v.lower() for v in independent_vars],
+                "dependent_var": target.lower(),
+            },
+            model_path,
+        )
+
+        csv_path = os.path.join(export_path, f"{table_part}_LinearRegression_CAMA.csv")
+        df_full["prediction"] = np.nan
+        preds_valid = model.predict(scaler.transform(df_valid[independent_vars]))
+        df_full.loc[df_valid.index, "prediction"] = preds_valid
+        # ✅ Ensure consistent lowercase headers when saving CSV
+        df_full[independent_vars + [target, "prediction"]].to_csv(csv_path, index=False)
+        cama_preview = (
+            df_full[independent_vars + [target, "prediction"]]
+            .head(10)
+            .replace({np.nan: ""})
+            .to_dict(orient="records")
+        )
+
+        # ============================================================
+        # 📄 7. Generate PDF (FULL STYLE same as local)
+        # ============================================================
+        pdf_path = os.path.join(export_path, "regression_report.pdf")
+        with PdfPages(pdf_path) as pp:
+            # --- Metrics table ---
+            fig, ax = plt.subplots(figsize=(6, 1.5))
+            ax.axis("off")
+            table = ax.table(
+                cellText=[
+                    ["Model", "MSE", "MAE", "RMSE", "R²"],
+                    ["Linear Regression", f"{mse:.2f}", f"{mae:.2f}", f"{rmse:.2f}", f"{r2:.2f}"],
+                ],
+                loc="center",
+                cellLoc="center",
+            )
+            table.scale(1, 2)
+            pp.savefig(fig)
+            plt.close(fig)
+
+            # --- Feature Importance ---
+            fig, ax = plt.subplots(figsize=(8, 4))
+            ax.bar(independent_vars, importance, color="#00ff9d")
+            ax.set_ylabel("Standardized Coefficient")
+            ax.set_title("Feature Importance", color="#00ff9d")
+            ax.set_facecolor("black")
+            fig.patch.set_facecolor("black")
+            ax.tick_params(colors="white")
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            pp.savefig(fig)
+            plt.close(fig)
+
+            # --- Residual Distribution ---
+            fig, ax = plt.subplots(figsize=(6, 4))
+            sns.histplot(residuals, kde=True, ax=ax, color="#00ff9d", edgecolor="black")
+            ax.set_title("Residual Distribution (Normal Curve)", color="#00ff9d")
+            ax.set_xlabel("Residual", color="white")
+            ax.set_ylabel("Frequency", color="white")
+            ax.set_facecolor("black")
+            fig.patch.set_facecolor("black")
+            ax.tick_params(colors="white")
+            plt.tight_layout()
+            pp.savefig(fig)
+            plt.close(fig)
+
+            # --- Actual vs Predicted ---
+            fig, ax = plt.subplots(figsize=(6, 6))
+            ax.scatter(y_test, preds, alpha=0.7, color="#00ff9d")
+            ax.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], "w--", lw=1.5)
+            ax.set_xlabel("Actual Values", color="white")
+            ax.set_ylabel("Predicted Values", color="white")
+            ax.set_title("Actual vs Predicted Scatter Plot", color="#00ff9d")
+            ax.set_facecolor("black")
+            fig.patch.set_facecolor("black")
+            ax.tick_params(colors="white")
+            plt.tight_layout()
+            pp.savefig(fig)
+            plt.close(fig)
+
+            # --- T-Test ---
+            fig, ax = plt.subplots(figsize=(6, 2))
+            ax.axis("off")
+            ax.text(
+                0.5, 0.5,
+                f"T-test on Residuals:\nT-statistic = {t_stat:.4f}\nP-value = {p_val:.4f}",
+                fontsize=12, ha="center", va="center", color="white"
+            )
+            fig.patch.set_facecolor("black")
+            pp.savefig(fig)
+            plt.close(fig)
+
+            # --- Distribution per variable ---
+            for col in independent_vars:
+                try:
+                    fig, ax = plt.subplots(figsize=(6, 4))
+                    sns.histplot(df_valid[col].dropna(), kde=True, ax=ax, color="#00ff9d", edgecolor="black")
+                    ax.set_title(f"Distribution of {col}", fontsize=12, color="#00ff9d")
+                    ax.set_xlabel(col, color="white")
+                    ax.set_ylabel("Frequency", color="white")
+                    ax.tick_params(colors="white")
+                    ax.set_facecolor("black")
+                    fig.patch.set_facecolor("black")
+                    plt.tight_layout()
+                    pp.savefig(fig)
+                    plt.close(fig)
+                except Exception as e:
+                    print(f"⚠️ Could not add {col} distribution to PDF: {e}")
+
+        # ============================================================
+        # 📈 8. Interactive data (for React graphs)
+        # ============================================================
+        counts, bins = np.histogram(residuals, bins=20)
+        bin_centers = 0.5 * (bins[:-1] + bins[1:])
+        interactive_data = {
+            "residuals": residuals.tolist(),
+            "residual_bins": bin_centers.tolist(),
+            "residual_counts": counts.tolist(),
+            "y_test": y_test.tolist(),
+            "preds": preds.tolist(),
+            "importance": importance_dict,
+        }
+
+        base_url = "/api/linear-regression/download"
+        return {
+            "dependent_var": target,
+            "metrics": {"R²": r2, "MSE": mse, "MAE": mae, "RMSE": rmse},
+            "coefficients": {k: float(v) for k, v in zip(independent_vars, model.coef_)},
+            "intercept": float(model.intercept_),
+            "cama_preview": cama_preview,
+            "t_test": {"t_stat": float(t_stat), "p_value": float(p_val)},
+            "interactive_data": interactive_data,
+            "downloads": {
+                "model": f"{base_url}?file={model_path}",
+                "report": f"{base_url}?file={pdf_path}",
+                "cama_csv": f"{base_url}?file={csv_path}",
+            },
+            "message": "Database model trained successfully with full PDF and interactive data.",
+        }
+
+    except Exception as e:
+        print(f"❌ TRAIN-DB ERROR: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@router.post("/save-to-db")
+async def save_to_db(payload: dict):
+    """
+    Save predicted shapefile output (.zip) into PostGIS as a new table
+    using the hardcoded DB_CONFIG.
+    """
+    import geopandas as gpd
+    import zipfile, tempfile, os
+    from sqlalchemy import create_engine
+    from fastapi.responses import JSONResponse
+
+    shapefile_url = payload.get("shapefile_url")
+    table_name = payload.get("table_name", "Predicted_Output")
+
+    if not shapefile_url or not shapefile_url.endswith(".zip"):
+        return JSONResponse(status_code=400, content={"error": "Invalid shapefile URL."})
+
+    try:
+        # ✅ Locate shapefile ZIP file
+        file_path = shapefile_url.split("?file=")[-1]
+        if not os.path.exists(file_path):
+            return JSONResponse(status_code=404, content={"error": "Shapefile not found on server."})
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # ✅ Extract zip
+            with zipfile.ZipFile(file_path, "r") as z:
+                z.extractall(tmpdir)
+
+            shp_files = [os.path.join(tmpdir, f) for f in os.listdir(tmpdir) if f.endswith(".shp")]
+            if not shp_files:
+                return JSONResponse(status_code=400, content={"error": "No .shp file found in zip."})
+
+            shp_path = shp_files[0]
+            gdf = gpd.read_file(shp_path)
+
+            # ✅ Build SQLAlchemy engine (GeoPandas-compatible)
+            engine = create_engine(
+                f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@"
+                f"{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+            )
+
+            # ✅ Verify schema exists before writing
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                result = conn.execute(
+                    text(f"SELECT schema_name FROM information_schema.schemata WHERE schema_name = '{DB_CONFIG['schema']}'")
+                )
+                if not result.fetchone():
+                    return JSONResponse(
+                        status_code=400,
+                        content={"error": f"Schema '{DB_CONFIG['schema']}' does not exist in database '{DB_CONFIG['database']}'."}
+                    )
+
+            # ✅ Save GeoDataFrame to PostGIS
+            gdf.to_postgis(
+                name=table_name,
+                con=engine,
+                schema=DB_CONFIG["schema"],
+                if_exists="replace",   # overwrite if exists
+                index=False
+            )
+            engine.dispose()
+
+        print(f"✅ Saved shapefile to DB table: {DB_CONFIG['schema']}.{table_name}")
+        return {
+            "message": f"Saved successfully to {DB_CONFIG['schema']}.{table_name}",
+            "table": f"{DB_CONFIG['schema']}.{table_name}"
+        }
+
+    except Exception as e:
+        print(f"❌ SAVE-TO-DB ERROR: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@router.get("/predicted-geojson")
+def get_predicted_geojson(table: str = "Predicted_Output"):
+    """
+    Serve the predicted PostGIS table as GeoJSON for thematic display.
+    """
+    import geopandas as gpd
+    from sqlalchemy import create_engine
+    import json
+
+    try:
+        engine = create_engine(
+            f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@"
+            f"{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+        )
+        sql = f'SELECT * FROM "{DB_CONFIG["schema"]}"."{table}"'
+        gdf = gpd.read_postgis(sql, engine, geom_col="geometry")
+        engine.dispose()
+
+        return json.loads(gdf.to_json())
+
+    except Exception as e:
+        print(f"❌ PREDICTED-GEOJSON ERROR: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+
+@router.get("/preview-geojson")
+def preview_geojson(file_path: str):
+    """
+    Convert predicted shapefile ZIP output to GeoJSON for preview map.
+    Works even before saving to DB.
+    """
+    import tempfile, zipfile, geopandas as gpd, os, json, shutil, urllib.parse
+    from fastapi.responses import JSONResponse
+
+    try:
+        # 🧩 If frontend sends a download URL, extract the true path
+        if file_path.startswith("/api/linear-regression/download"):
+            parsed = urllib.parse.urlparse(file_path)
+            query_params = urllib.parse.parse_qs(parsed.query)
+            file_path = query_params.get("file", [None])[0]
+            if not file_path:
+                return JSONResponse({"error": "Invalid file parameter in URL."}, status_code=400)
+            file_path = urllib.parse.unquote(file_path)
+
+        # 🧩 Clean up quotes / escape chars
+        file_path = file_path.strip('"').strip("'")
+
+        if not os.path.exists(file_path):
+            return JSONResponse({"error": f"File not found: {file_path}"}, status_code=404)
+
+        tmpdir = tempfile.mkdtemp()
+        extract_dir = os.path.join(tmpdir, "unzipped")
+        os.makedirs(extract_dir, exist_ok=True)
+
+        # 🔓 Extract shapefile
+        with zipfile.ZipFile(file_path, "r") as zip_ref:
+            zip_ref.extractall(extract_dir)
+
+        # 🔍 Find the .shp
+        shp_file = next(
+            (os.path.join(extract_dir, f) for f in os.listdir(extract_dir) if f.endswith(".shp")),
+            None,
+        )
+        if not shp_file:
+            return JSONResponse({"error": "No .shp found inside ZIP."}, status_code=400)
+
+        # 🗺️ Load & reproject to EPSG:4326
+        gdf = gpd.read_file(shp_file)
+        if gdf.crs and gdf.crs.to_epsg() != 4326:
+            gdf = gdf.to_crs(epsg=4326)
+
+        geojson_data = json.loads(gdf.to_json())
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        return geojson_data
+
+    except Exception as e:
+        print(f"❌ PREVIEW-GEOJSON ERROR: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
