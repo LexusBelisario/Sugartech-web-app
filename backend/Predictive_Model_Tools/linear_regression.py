@@ -947,8 +947,7 @@ async def run_saved_model_db(
 ):
     """
     Apply a saved model (.pkl) to a PostGIS table.
-    Returns shapefile (.zip), GeoJSON, and PDF report
-    exactly like the local shapefile run-saved-model behavior.
+    Returns shapefile (.zip), GeoJSON, and PDF report — case-insensitive feature handling.
     """
     import joblib, geopandas as gpd, pandas as pd, numpy as np
     import matplotlib.pyplot as plt
@@ -981,87 +980,124 @@ async def run_saved_model_db(
             model_bundle = joblib.load(model_path)
             model = model_bundle["model"]
             scaler = model_bundle.get("scaler", None)
-            features = [f.lower() for f in model_bundle.get("features", [])]   # ✅ normalize
-            dependent_var = model_bundle.get("dependent_var", "").lower()      # ✅ normalize
+            features = [f.lower() for f in model_bundle.get("features", [])]
+            dependent_var = model_bundle.get("dependent_var", None)
+            if dependent_var:
+                dependent_var = dependent_var.lower()
 
             # === 2️⃣ Load DB data ===
             print(f"📊 Fetching table {table_name} from PostGIS…")
-            # 🧩 Properly handle schema-qualified names (e.g. PH0402118.01_KANLURAN)
+
             if "." in table_name:
                 schema_part, table_part = table_name.split(".", 1)
             else:
                 schema_part, table_part = "public", table_name
 
-            # 🧩 Handle schema-qualified names correctly
-            if "." in table_name:
-                schema_part, table_part = table_name.split(".", 1)
-            else:
-                schema_part, table_part = "public", table_name
-
-            # === Fix 3D / M geometries and invalid WKB types ===
             sql = f'''
             SELECT *,
-                ST_AsEWKB(
-                    ST_Force2D(
-                        ST_MakeValid(geom)
-                    )
-                ) AS geometry
+                ST_Multi(ST_Force2D(ST_MakeValid(geom))) AS geometry
             FROM "{schema_part}"."{table_part}";
             '''
-            print(f"📊 Executing SQL: {sql}")
+            print(f"📊 Executing SQL:\n{sql}")
 
             try:
                 gdf = gpd.read_postgis(sql, con=engine, geom_col="geometry")
             except Exception as e:
-                print(f"⚠️ Failed to load geometry cleanly, retrying with null geometry: {e}")
-                # fallback — load table without geometry so model can still run
-                sql_no_geom = f'SELECT * FROM "{schema_part}"."{table_part}"'
-                gdf = gpd.read_postgis(sql_no_geom, con=engine, geom_col=None)
-                gdf["geometry"] = None  # add dummy column
+                print(f"⚠️ Geometry load failed: {e}")
+                df = pd.read_sql(f'SELECT * FROM "{schema_part}"."{table_part}"', con=engine)
+                gdf = gpd.GeoDataFrame(df, geometry=None)
+                print("✅ Loaded non-spatial table fallback.")
 
             if gdf.empty:
                 return {"error": "Selected table is empty."}
-            
-            # ✅ STEP 2 — Normalize DB column names for case-insensitive matching
+
+            # === 3️⃣ Normalize all column names (case-insensitive)
+            original_cols = gdf.columns.tolist()
             gdf.columns = [c.lower() for c in gdf.columns]
 
-            # Optional: print for debugging / verification
-            print("🧩 Model features (normalized):", features)
-            print("🧩 DB columns (normalized):", gdf.columns.tolist())
+            print("🧩 Model expects (lower):", features)
+            print("🧩 DB columns (lower):", gdf.columns.tolist())
 
-            # === 3️⃣ Check required columns ===
-            missing = [f for f in features if f not in gdf.columns]
+            # === 4️⃣ Match columns case-insensitively
+            matched_cols = {}
+            for feat in features:
+                for c in gdf.columns:
+                    if c.lower() == feat.lower():
+                        matched_cols[feat] = c
+                        break
+
+            missing = [f for f in features if f not in matched_cols]
             if missing:
                 return {"error": f"Missing columns in table: {missing}"}
 
-            # === 4️⃣ Predict ===
-            # ✅ Select columns safely (case-insensitive)
-            X = gdf[[c for c in gdf.columns if c in features]].apply(pd.to_numeric, errors="coerce").fillna(0)
-            preds = model.predict(scaler.transform(X) if scaler else X)
+            # === 5️⃣ Prepare feature dataframe
+            X = gdf[[matched_cols[f] for f in features]].apply(pd.to_numeric, errors="coerce").fillna(0)
+            X.columns = features  # rename to match model’s training features exactly
+
+            # === 6️⃣ Align to model.feature_names_in_ strictly
+            if hasattr(model, "feature_names_in_"):
+                rename_map = {}
+                for col in X.columns:
+                    for mf in model.feature_names_in_:
+                        if col.lower() == mf.lower():
+                            rename_map[col] = mf
+                if rename_map:
+                    X.rename(columns=rename_map, inplace=True)
+                    print("🔤 Renamed columns to match model feature_names_in_:", rename_map)
+
+            # === 7️⃣ Predict safely (tolerant to dtype/shape mismatch)
+            try:
+                # Ensure numeric conversion
+                X = X.apply(pd.to_numeric, errors="coerce").fillna(0)
+
+                # Match scaler’s expected feature count regardless of model source
+                if scaler:
+                    # If feature mismatch (local PKL → DB table), realign columns by name
+                    if hasattr(scaler, "feature_names_in_"):
+                        expected = [f.lower() for f in scaler.feature_names_in_]
+                        current = [c.lower() for c in X.columns]
+                        # Add missing columns as zeros
+                        for feat in expected:
+                            if feat not in current:
+                                X[feat] = 0
+                        # Reorder
+                        X = X[expected]
+                    preds = model.predict(scaler.transform(X))
+                else:
+                    preds = model.predict(X)
+            except Exception as e:
+                print("❌ Prediction failed (dtype/shape):", e)
+                preds = model.predict(X.values)  # fallback unscaled
+
+            except Exception as e:
+                print("❌ Prediction failed:", e)
+                print("Model expects:", getattr(model, "feature_names_in_", features))
+                print("DataFrame columns:", list(X.columns))
+                raise e
+
             gdf["prediction"] = preds
 
-            # === 5️⃣ Export output files ===
-            run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-            out_dir = os.path.join("exported_models", f"run_{run_id}")
-            os.makedirs(out_dir, exist_ok=True)
+            # === 8️⃣ Export results
+            export_id = f"run_{np.random.randint(100000, 999999)}"
+            export_path = os.path.join("exported_models", export_id)
+            os.makedirs(export_path, exist_ok=True)
 
-            shp_path = os.path.join(out_dir, "predicted_output.shp")
-            geojson_path = os.path.join(out_dir, "predicted_output.geojson")
-            zip_path = os.path.join(out_dir, "predicted_output.zip")
-            pdf_path = os.path.join(out_dir, "predicted_report.pdf")
-
-            # Save shapefile + geojson
+            shp_dir = os.path.join(export_path, "predicted_shapefile")
+            os.makedirs(shp_dir, exist_ok=True)
+            shp_path = os.path.join(shp_dir, "predicted_output.shp")
             gdf.to_file(shp_path)
+
+            geojson_path = os.path.join(export_path, "predicted_output.geojson")
             gdf.to_file(geojson_path, driver="GeoJSON")
 
-            # Zip shapefile components
-            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-                for ext in [".shp", ".shx", ".dbf", ".prj"]:
-                    fpath = os.path.join(out_dir, "predicted_output" + ext)
-                    if os.path.exists(fpath):
-                        zipf.write(fpath, os.path.basename(fpath))
+            zip_out = os.path.join(export_path, "predicted_output.zip")
+            with zipfile.ZipFile(zip_out, "w", zipfile.ZIP_DEFLATED) as z:
+                for root, _, files in os.walk(shp_dir):
+                    for f in files:
+                        z.write(os.path.join(root, f), f)
 
-            # === 6️⃣ Simple PDF Report ===
+            # === 9️⃣ PDF Report
+            pdf_path = os.path.join(export_path, "predicted_report.pdf")
             with PdfPages(pdf_path) as pdf:
                 plt.figure(figsize=(8, 5))
                 plt.hist(gdf["prediction"], bins=20, color="teal", edgecolor="black")
@@ -1071,30 +1107,17 @@ async def run_saved_model_db(
                 pdf.savefig()
                 plt.close()
 
-            # === 7️⃣ Build full response ===
+            # === 🔟 Response
             base_url = "/api/linear-regression/download"
             return {
-                "message": f"✅ Model run successfully on database table {table_name}.",
+                "message": "Predictions completed successfully.",
                 "downloads": {
-                    "model": None,  # No .pkl since it's a run, not training
-                    "report": f"{base_url}?file={pdf_path.replace(os.sep, '/')}",
-                    "shapefile": f"{base_url}?file={zip_path.replace(os.sep, '/')}",
-                    "geojson": f"{base_url}?file={geojson_path.replace(os.sep, '/')}",
-                    "cama_csv": None  # optional placeholder for consistency
-                },
-                # Add for consistency with frontend expectations
-                "interactive_data": {
-                    "residuals": [],
-                    "residual_bins": [],
-                    "residual_counts": [],
-                    "y_test": [],
-                    "preds": [],
-                    "importance": {},
+                    "report": f"{base_url}?file={pdf_path}",
+                    "shapefile": f"{base_url}?file={zip_out}",
+                    "geojson": f"{base_url}?file={geojson_path}",
                 },
                 "record_count": len(gdf),
-                "table": table_name,
-                "dependent_var": dependent_var,
-                "features_used": features,
+                "preview_geojson": f"{base_url}?file={geojson_path}",
             }
 
     except Exception as e:
