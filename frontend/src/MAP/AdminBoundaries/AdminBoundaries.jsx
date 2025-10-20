@@ -24,8 +24,8 @@ function AdminBoundaries() {
   // === Zoom thresholds ===
   const limits = {
     municipal: [4, 13],
-    barangay: [12, 14],
-    section: [12, 25],
+    barangay: [12, 15],
+    section: [14, 19],
     parcel: [16, 25],
   };
 
