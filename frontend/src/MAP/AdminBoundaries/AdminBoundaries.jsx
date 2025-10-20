@@ -63,7 +63,6 @@ function AdminBoundaries() {
       if (!map) return;
       const zoom = map.getZoom();
 
-      // determine final visibility states (panel may override)
       const active = {
         municipal:
           overrides.showMunicipal !== undefined
@@ -104,7 +103,9 @@ function AdminBoundaries() {
         } else {
           if (map.hasLayer(barangayLayerRef.current)) {
             map.removeLayer(barangayLayerRef.current);
-            barangayLabelsRef.current.forEach((label) => map.removeLayer(label));
+            barangayLabelsRef.current.forEach((label) =>
+              map.removeLayer(label)
+            );
           }
         }
       }
@@ -167,22 +168,38 @@ function AdminBoundaries() {
 
         // Clear old
         [barangayLayerRef, sectionLayerRef].forEach((ref) => {
-          if (ref.current && map.hasLayer(ref.current)) map.removeLayer(ref.current);
+          if (ref.current && map.hasLayer(ref.current))
+            map.removeLayer(ref.current);
         });
         barangayLabelsRef.current.forEach((l) => map.removeLayer(l));
         barangayLabelsRef.current = [];
 
-        // Color palette
+        // 🎨 Color palette
         const palette = [
           "#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231",
-          "#911eb4", "#46f0f0", "#f032e6", "#bcf60c"
+          "#911eb4", "#46f0f0", "#f032e6", "#bcf60c", "#fabebe",
+          "#008080", "#e6beff", "#9a6324", "#fffac8", "#800000",
+          "#aaffc3", "#808000", "#ffd8b1", "#000075", "#808080"
         ];
+
+        // Barangay color assignments
         const barangayColors = {};
-        let i = 0;
+        let brgyIndex = 0;
         data.barangay?.features?.forEach((f) => {
           const n = f.properties.barangay;
-          if (n && !barangayColors[n])
-            barangayColors[n] = palette[i++ % palette.length];
+          if (n && !barangayColors[n]) {
+            barangayColors[n] = palette[brgyIndex++ % palette.length];
+          }
+        });
+
+        // Section colors inherit barangay palette
+        const sectionColors = {};
+        let secIndex = 0;
+        data.section?.features?.forEach((f) => {
+          const n = f.properties.barangay;
+          if (n && !sectionColors[n]) {
+            sectionColors[n] = palette[secIndex++ % palette.length];
+          }
         });
 
         // Barangay layer
@@ -218,14 +235,14 @@ function AdminBoundaries() {
           interactive: false,
         });
 
-        // Section layer
+        // ✅ Section layer (from your old BoundaryLayers version)
         sectionLayerRef.current = L.geoJSON(data.section || null, {
-          style: {
+          style: (f) => ({
             color: "#202020",
-            weight: 1.2,
-            fillColor: "#999",
+            weight: 2.0,
+            fillColor: sectionColors[f.properties.barangay] || "#999",
             fillOpacity: 0.15,
-          },
+          }),
           interactive: false,
         });
 
