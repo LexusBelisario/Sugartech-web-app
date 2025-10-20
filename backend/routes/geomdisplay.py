@@ -17,12 +17,18 @@ def get_all_geom_tables(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_user_main_db)
 ):
-    # ✅ Check user access
+    """
+    Loads all parcel-like tables (with geom + pin) from the given schemas,
+    excluding system and analysis tables such as transaction logs, JoinedTable,
+    CAMA-Table, and RunSavedModel results.
+    """
+
+    # ✅ Verify user access
     access_info = AccessControl.check_user_access(current_user)
     if access_info["status"] == "pending_approval":
         raise HTTPException(status_code=403, detail=access_info["message"])
 
-    # ✅ Validate schemas
+    # ✅ Validate which schemas user can access
     invalid_schemas = []
     valid_schemas = []
     for schema in schemas:
@@ -44,21 +50,29 @@ def get_all_geom_tables(
     # ✅ Query tables within each valid schema
     for schema in valid_schemas:
         try:
+            # -- Find all tables with both geom + pin columns,
+            #    excluding unwanted system/analysis tables --
             result = db.execute(
                 text("""
                     SELECT table_name
                     FROM information_schema.columns
                     WHERE table_schema = :schema
-                    AND column_name IN ('geom', 'pin')
-                    AND table_name NOT ILIKE :pattern1
-                    AND table_name NOT ILIKE :pattern2
+                      AND column_name IN ('geom', 'pin')
+                      AND table_name NOT ILIKE :pattern1
+                      AND table_name NOT ILIKE :pattern2
+                      AND table_name NOT ILIKE :pattern3
+                      AND table_name NOT ILIKE :pattern4
+                      AND table_name NOT ILIKE :pattern5
                     GROUP BY table_name
                     HAVING COUNT(DISTINCT column_name) = 2
                 """),
                 {
                     "schema": schema,
                     "pattern1": "%transaction_log%",
-                    "pattern2": "%JoinedTable%"
+                    "pattern2": "%JoinedTable%",
+                    "pattern3": "%CAMA-Table%",
+                    "pattern4": "%RunSavedModel1%",
+                    "pattern5": "%RunSavedModel2%"
                 }
             )
             tables = [row[0] for row in result]
@@ -69,7 +83,7 @@ def get_all_geom_tables(
         # ✅ Build and execute queries per table
         for table in tables:
             try:
-                # Get column names except geom
+                # Retrieve all columns except geom
                 result = db.execute(
                     text("""
                         SELECT column_name
@@ -88,6 +102,7 @@ def get_all_geom_tables(
             if not columns:
                 continue
 
+            # Build query for features (pin + geometry only)
             sql = text(f'''
                 SELECT t."pin", ST_AsGeoJSON(t.geom)::json AS geometry
                 FROM "{schema}"."{table}" t
@@ -98,21 +113,20 @@ def get_all_geom_tables(
                 rows = result.fetchall()
 
                 for row in rows:
-                    row_dict = {
-                        "pin": row[0],
-                        "geometry": row[1],
-                        "source_schema": schema,
-                        "source_table": table
-                    }
-                    geom = row_dict.pop("geometry", None)
+                    geom = row[1]
                     if not geom:
                         continue
 
                     all_features.append({
                         "type": "Feature",
                         "geometry": geom,
-                        "properties": row_dict
+                        "properties": {
+                            "pin": row[0],
+                            "source_schema": schema,
+                            "source_table": table
+                        }
                     })
+
             except Exception as e:
                 print(f"⚠️ Query failed on {schema}.{table}: {e}")
                 continue
@@ -133,8 +147,11 @@ def get_single_table(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_user_main_db)
 ):
+    """
+    Loads all features from a single specified table (e.g., Landmarks, Roads, Parcels).
+    """
     try:
-        # ✅ Get column names
+        # ✅ Get all non-geometry columns
         result = db.execute(
             text("""
                 SELECT column_name
@@ -150,7 +167,7 @@ def get_single_table(
         if not columns:
             return {"type": "FeatureCollection", "features": []}
 
-        # ✅ Build main query
+        # ✅ Build query to fetch all data + geometry
         col_sql = ", ".join(f't."{col}"' for col in columns)
         sql = text(f'''
             SELECT {col_sql}, ST_AsGeoJSON(t.geom)::json AS geometry
@@ -162,10 +179,7 @@ def get_single_table(
 
         features = []
         for row in rows:
-            row_dict = {}
-            for i, col in enumerate(columns):
-                row_dict[col] = row[i]
-
+            row_dict = {columns[i]: row[i] for i in range(len(columns))}
             geometry = row[-1]
             if not geometry:
                 continue
@@ -182,4 +196,5 @@ def get_single_table(
         return {"type": "FeatureCollection", "features": features}
 
     except Exception as e:
+        print(f"❌ Error loading single table {schema}.{table}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
