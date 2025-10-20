@@ -947,7 +947,7 @@ async def run_saved_model_db(
 ):
     """
     Apply a saved model (.pkl) to a PostGIS table.
-    Returns shapefile (.zip), GeoJSON, and PDF report — case-insensitive feature handling.
+    Returns shapefile (.zip), GeoJSON, GPKG, and PDF report — case-insensitive feature handling.
     """
     import joblib, geopandas as gpd, pandas as pd, numpy as np
     import matplotlib.pyplot as plt
@@ -987,7 +987,6 @@ async def run_saved_model_db(
 
             # === 2️⃣ Load DB data ===
             print(f"📊 Fetching table {table_name} from PostGIS…")
-
             if "." in table_name:
                 schema_part, table_part = table_name.split(".", 1)
             else:
@@ -1012,7 +1011,6 @@ async def run_saved_model_db(
                 return {"error": "Selected table is empty."}
 
             # === 3️⃣ Normalize all column names (case-insensitive)
-            original_cols = gdf.columns.tolist()
             gdf.columns = [c.lower() for c in gdf.columns]
 
             print("🧩 Model expects (lower):", features)
@@ -1032,7 +1030,7 @@ async def run_saved_model_db(
 
             # === 5️⃣ Prepare feature dataframe
             X = gdf[[matched_cols[f] for f in features]].apply(pd.to_numeric, errors="coerce").fillna(0)
-            X.columns = features  # rename to match model’s training features exactly
+            X.columns = features  # rename to match model training features
 
             # === 6️⃣ Align to model.feature_names_in_ strictly
             if hasattr(model, "feature_names_in_"):
@@ -1045,35 +1043,23 @@ async def run_saved_model_db(
                     X.rename(columns=rename_map, inplace=True)
                     print("🔤 Renamed columns to match model feature_names_in_:", rename_map)
 
-            # === 7️⃣ Predict safely (tolerant to dtype/shape mismatch)
+            # === 7️⃣ Predict safely
             try:
-                # Ensure numeric conversion
                 X = X.apply(pd.to_numeric, errors="coerce").fillna(0)
-
-                # Match scaler’s expected feature count regardless of model source
                 if scaler:
-                    # If feature mismatch (local PKL → DB table), realign columns by name
                     if hasattr(scaler, "feature_names_in_"):
                         expected = [f.lower() for f in scaler.feature_names_in_]
                         current = [c.lower() for c in X.columns]
-                        # Add missing columns as zeros
                         for feat in expected:
                             if feat not in current:
                                 X[feat] = 0
-                        # Reorder
                         X = X[expected]
                     preds = model.predict(scaler.transform(X))
                 else:
                     preds = model.predict(X)
             except Exception as e:
-                print("❌ Prediction failed (dtype/shape):", e)
-                preds = model.predict(X.values)  # fallback unscaled
-
-            except Exception as e:
                 print("❌ Prediction failed:", e)
-                print("Model expects:", getattr(model, "feature_names_in_", features))
-                print("DataFrame columns:", list(X.columns))
-                raise e
+                preds = model.predict(X.values)
 
             gdf["prediction"] = preds
 
@@ -1085,11 +1071,28 @@ async def run_saved_model_db(
             shp_dir = os.path.join(export_path, "predicted_shapefile")
             os.makedirs(shp_dir, exist_ok=True)
             shp_path = os.path.join(shp_dir, "predicted_output.shp")
-            gdf.to_file(shp_path)
 
+            # 🧠 Clamp extremely large values to prevent shapefile overflow
+            if "prediction" in gdf.columns:
+                gdf["prediction_million"] = (gdf["prediction"] / 1_000_000).round(2)
+                gdf["prediction"] = gdf["prediction"].round(2)
+            if "residual" in gdf.columns:
+                gdf["residual_million"] = (gdf["residual"] / 1_000_000).round(2)
+                gdf["residual"] = gdf["residual"].round(2)
+
+            # 🧹 Drop duplicate geometry or WKB fields to avoid shapefile write errors
+            for col in ["geom", "wkb_geometry", "the_geom"]:
+                if col in gdf.columns:
+                    gdf.drop(columns=[col], inplace=True)
+
+            # ✅ Save outputs
+            gdf.to_file(shp_path)
             geojson_path = os.path.join(export_path, "predicted_output.geojson")
             gdf.to_file(geojson_path, driver="GeoJSON")
+            gpkg_path = os.path.join(export_path, "predicted_output.gpkg")
+            gdf.to_file(gpkg_path, driver="GPKG")
 
+            # ZIP the shapefile components
             zip_out = os.path.join(export_path, "predicted_output.zip")
             with zipfile.ZipFile(zip_out, "w", zipfile.ZIP_DEFLATED) as z:
                 for root, _, files in os.walk(shp_dir):
@@ -1102,10 +1105,14 @@ async def run_saved_model_db(
                 plt.figure(figsize=(8, 5))
                 plt.hist(gdf["prediction"], bins=20, color="teal", edgecolor="black")
                 plt.title("Distribution of Predicted Values")
-                plt.xlabel("Prediction")
+                plt.xlabel(
+                    "Prediction (in millions)" if "prediction_million" in gdf.columns else "Prediction"
+                )
                 plt.ylabel("Frequency")
                 pdf.savefig()
                 plt.close()
+
+            print(f"✅ Files generated in: {export_path}")
 
             # === 🔟 Response
             base_url = "/api/linear-regression/download"
@@ -1115,6 +1122,7 @@ async def run_saved_model_db(
                     "report": f"{base_url}?file={pdf_path}",
                     "shapefile": f"{base_url}?file={zip_out}",
                     "geojson": f"{base_url}?file={geojson_path}",
+                    "gpkg": f"{base_url}?file={gpkg_path}",
                 },
                 "record_count": len(gdf),
                 "preview_geojson": f"{base_url}?file={geojson_path}",
