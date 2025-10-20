@@ -19,7 +19,7 @@ from routes.landmarks import router as landmark_router
 from routes.search import router as search_router
 from routes.province import router as province_router
 from routes.municipal import router as municipal_router
-from AI_Model_Tools import linear_regression as ai_linear_router
+from Predictive_Model_Tools import linear_regression as ai_linear_router
 
 
 app = FastAPI()
@@ -85,7 +85,7 @@ from routes.landmarks import router as landmark_router
 from routes.search import router as search_router
 from routes.province import router as province_router
 from routes.municipal import router as municipal_router
-from AI_Model_Tools import linear_regression as ai_linear_router
+from Predictive_Model_Tools import linear_regression as ai_linear_router
 
 
 # ==========================================================

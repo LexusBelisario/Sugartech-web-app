@@ -92,7 +92,7 @@ async def subdivide_preview(
             return {
                 "status": "success",
                 "message": f"Preview successful with {len(parts)} parts.",
-                "parts": parts,  # each with geom as GeoJSON
+                "parts": parts,
                 "suggested_pins": suggested_pins
             }
 
@@ -133,6 +133,13 @@ async def subdivide_parcel(
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             print(f"🧩 Subdivide SAVE by {current_user.user_name}: schema={schema}, table={table}, pin={pin}")
 
+            # === Detect actual log table columns ===
+            cur.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_schema = %s AND table_name = %s
+            """, (schema, "parcel_transaction_log"))
+            log_columns = [r["column_name"] for r in cur.fetchall()]
+
             # === 1. Get original parcel geometry ===
             cur.execute(f'''
                 SELECT pin, ST_AsGeoJSON(geom)::json AS geometry
@@ -170,8 +177,8 @@ async def subdivide_parcel(
 
             transaction_date = datetime.now()
 
-            # === 3. Log original parcel ===
-            attr_fields = [f for f in merged_props.keys() if f.lower() not in ("id", "geom")]
+            # === 3. Log original parcel safely ===
+            attr_fields = [f for f in merged_props.keys() if f.lower() not in ("id", "geom") and f in log_columns]
             log_fields = ', '.join(['"table_name"', '"transaction_type"', '"transaction_date"']
                                    + [f'"{f}"' for f in attr_fields] + ['"geom"'])
             log_placeholders = ', '.join(['%s'] * (3 + len(attr_fields)) + ['ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)'])
@@ -188,7 +195,7 @@ async def subdivide_parcel(
             cur.execute(f'DELETE FROM {attr_table} WHERE pin = %s', (pin,))
             print("🧹 Original parcel removed.")
 
-            # === 5. Compute suggested PINs (for safety)
+            # === 5. Compute suggested PINs ===
             pin_parts = pin.split("-")
             prefix = "-".join(pin_parts[:4]) if len(pin_parts) == 5 else pin.rsplit("-", 1)[0]
             cur.execute(f'SELECT pin FROM {full_table} WHERE pin LIKE %s', (f"{prefix}%",))
@@ -196,11 +203,9 @@ async def subdivide_parcel(
             suffixes = [int(p.split("-")[-1]) for p in existing_pins if p.split("-")[-1].isdigit()]
             next_suffix = max(suffixes or [0]) + 1
 
-            suggested_pins = [
-                f"{prefix}-{str(next_suffix + i).zfill(3)}" for i in range(len(parts))
-            ]
+            suggested_pins = [f"{prefix}-{str(next_suffix + i).zfill(3)}" for i in range(len(parts))]
 
-            # === 6. Insert and log new parts ===
+            # === 6. Insert and log new parts safely ===
             for idx, geom in enumerate(parts):
                 final_pin = (new_pins[idx] if new_pins and idx < len(new_pins)
                              else suggested_pins[idx])
@@ -222,12 +227,16 @@ async def subdivide_parcel(
                     VALUES ({attr_vals})
                 ''', list(new_props.values()))
 
-                # log insert
+                # log insert safely filtered
+                loggable_props = {k: v for k, v in new_props.items() if k in log_columns}
+                log_cols = ', '.join(f'"{k}"' for k in loggable_props.keys())
+                log_vals = list(loggable_props.values())
+
                 cur.execute(f'''
                     INSERT INTO {log_table}
-                    (table_name, transaction_type, transaction_date, {attr_cols}, geom)
-                    VALUES (%s, %s, %s, {attr_vals}, ST_SetSRID(%s::geometry, 4326))
-                ''', [table, "new (subdivide)", transaction_date] + list(new_props.values()) + [raw_geom])
+                    (table_name, transaction_type, transaction_date, {log_cols}, geom)
+                    VALUES (%s, %s, %s, {', '.join(['%s'] * len(loggable_props))}, ST_SetSRID(%s::geometry, 4326))
+                ''', [table, "new (subdivide)", transaction_date] + log_vals + [raw_geom])
 
             conn.commit()
             print(f"✅ Subdivision saved successfully ({len(parts)} parts).")
