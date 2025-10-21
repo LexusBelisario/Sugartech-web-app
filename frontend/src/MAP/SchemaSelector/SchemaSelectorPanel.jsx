@@ -1,27 +1,40 @@
 import React, { useRef, useEffect } from "react";
 import { ChevronRight } from "lucide-react";
 
-const SchemaSelectorPanel = ({ 
-  isVisible, 
-  onClose, 
-  schemas, 
-  selectedSchema, 
-  onSchemaChange, 
-  loading, 
-  error, 
-  userAccess 
+const SchemaSelectorPanel = ({
+  isVisible,
+  onClose,
+  schemas,
+  selectedSchema,
+  onSchemaChange,
+  loading,
+  error,
+  userAccess,
 }) => {
   const containerRef = useRef(null);
+  const scrollableRef = useRef(null);
 
-  // 🧩 Prevent map zoom & drag interference inside panel
+  // 🧩 Prevent map zoom & drag interference - but allow scrolling inside the list
   useEffect(() => {
     if (!containerRef.current) return;
+
+    const handleWheel = (e) => {
+      if (scrollableRef.current && scrollableRef.current.contains(e.target)) {
+        e.stopPropagation();
+      } else {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+
     const stopEvent = (e) => e.stopPropagation();
     const el = containerRef.current;
-    el.addEventListener("wheel", stopEvent);
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
     el.addEventListener("dblclick", stopEvent);
+
     return () => {
-      el.removeEventListener("wheel", stopEvent);
+      el.removeEventListener("wheel", handleWheel);
       el.removeEventListener("dblclick", stopEvent);
     };
   }, []);
@@ -62,8 +75,8 @@ const SchemaSelectorPanel = ({
             )}
 
             <ul
-              className="space-y-2 max-h-[200px] overflow-y-auto pr-1"
-              onWheel={(e) => e.stopPropagation()}
+              ref={scrollableRef}
+              className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar"
             >
               {schemas.map((schema) => (
                 <li
@@ -101,6 +114,33 @@ const SchemaSelectorPanel = ({
           </div>
         )}
       </div>
+
+      {/* Inline styles for custom scrollbar */}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #1a1d26;
+          border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #2a2e35;
+          border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #f7c800;
+        }
+
+        /* Firefox */
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: #2a2e35 #1a1d26;
+        }
+      `}</style>
     </div>
   );
 };
