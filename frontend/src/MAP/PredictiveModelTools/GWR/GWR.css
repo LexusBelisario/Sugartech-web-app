@@ -1,0 +1,365 @@
+/* === Overlay background === */
+.gwr-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+/* === Main panel === */
+.gwr-panel {
+  background: #111;
+  color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  width: 450px;
+  box-shadow: 0 0 15px rgba(26, 212, 255, 0.3);
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* === Header === */
+.gwr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.gwr-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* === File upload === */
+.file-upload {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.choose-file-btn {
+  background: #1abc9c;
+  color: white;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.file-name {
+  font-size: 0.9rem;
+  color: #ccc;
+}
+
+/* === Section spacing === */
+.divider {
+  border: none;
+  border-top: 1px solid #333;
+  margin: 10px 0;
+}
+
+/* === Independent Variable List === */
+.checkbox-list {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #222;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.checkbox-item:hover {
+  background: #333;
+}
+
+.checkbox-item input {
+  accent-color: #1abc9c;
+  transform: scale(1.2);
+}
+
+/* === Dependent Variable Dropdown === */
+select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  background-color: #1a1a1a;
+  color: #fff;
+  border: 1px solid #333;
+  font-size: 14px;
+}
+
+select:focus {
+  outline: 2px solid #1abc9c;
+}
+
+/* === Placeholder text === */
+.placeholder-text {
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  padding: 10px 0;
+}
+
+/* === Buttons === */
+.gwr-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.run-btn {
+  background-color: #1abc9c;
+  color: white;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.run-btn:hover {
+  background-color: #1ad4ff;
+}
+
+.run-btn.secondary {
+  background-color: #555;
+}
+
+.run-btn.secondary:hover {
+  background-color: #777;
+}
+
+/* === Results Box === */
+.gwr-results {
+  background: #222;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #ddd;
+  white-space: pre-wrap;
+}
+
+.download-links {
+  margin-top: 15px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.download-links h4 {
+  color: #1ad4ff;
+  margin-bottom: 6px;
+}
+
+.download-links ul {
+  list-style: none;
+  padding-left: 10px;
+}
+
+.download-links li {
+  margin: 6px 0;
+}
+
+.download-links a {
+  color: #1abc9c;
+  text-decoration: none;
+  transition: 0.2s;
+}
+
+.download-links a:hover {
+  color: #1ad4ff;
+  text-decoration: underline;
+}
+
+/* === Modal Overlay === */
+.gwr-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+/* === Modal Box === */
+.gwr-modal-content {
+  background: #111;
+  color: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  width: 400px;
+  box-shadow: 0 0 15px rgba(26, 212, 255, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gwr-modal-content h4 {
+  margin: 0 0 10px 0;
+  color: #1abc9c;
+}
+
+.gwr-modal-content input[type="file"] {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 6px;
+  color: #ccc;
+}
+
+.gwr-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.gwr-modal-buttons button {
+  background-color: #1abc9c;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #fff;
+}
+
+.gwr-modal-buttons button:hover {
+  background-color: #1ad4ff;
+}
+
+.cancel-btn {
+  background-color: #555 !important;
+}
+
+.cancel-btn:hover {
+  background-color: #777 !important;
+}
+
+/* === Model Summary === */
+.model-summary-box {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 10px;
+  border: 1px solid #222;
+  box-shadow: 0 0 12px rgba(26, 212, 255, 0.15);
+}
+
+.summary-title {
+  position: relative;
+  text-align: center;
+  color: #1ad4ff;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.4px;
+  text-shadow: 0 0 8px rgba(26, 212, 255, 0.5);
+  margin-bottom: 12px;
+}
+
+.summary-title::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #1ad4ff, transparent);
+  box-shadow: 0 0 8px rgba(26, 212, 255, 0.4);
+  border-radius: 2px;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #333;
+  margin-bottom: 12px;
+  background: rgba(20, 20, 20, 0.6);
+}
+
+.summary-table th,
+.summary-table td {
+  border: 1px solid #333;
+  padding: 8px 10px;
+  font-size: 13px;
+  text-align: left;
+  color: #e0e0e0;
+}
+
+.summary-table th {
+  background: #111;
+  color: #1ad4ff;
+  text-transform: none;
+  font-weight: 600;
+}
+
+.summary-table tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.summary-table tr:hover td {
+  background: rgba(26, 212, 255, 0.05);
+}
+
+/* === Button for showing map === */
+.show-map-btn {
+  background: linear-gradient(90deg, #1abc9c, #1ad4ff);
+  color: white;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.show-map-btn:hover {
+  background: linear-gradient(90deg, #1ad4ff, #1abc9c);
+  transform: translateY(-1px);
+}
+
+/* === Scrollbar styling === */
+.checkbox-list::-webkit-scrollbar,
+.gwr-panel::-webkit-scrollbar {
+  width: 8px;
+}
+.checkbox-list::-webkit-scrollbar-thumb,
+.gwr-panel::-webkit-scrollbar-thumb {
+  background: #1ad4ff;
+  border-radius: 10px;
+}
+.checkbox-list::-webkit-scrollbar-track,
+.gwr-panel::-webkit-scrollbar-track {
+  background: #111;
+}

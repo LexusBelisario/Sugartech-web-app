@@ -5,19 +5,19 @@ import "leaflet/dist/leaflet.css";
 import "./PredictedMapModal.css";
 import API from "../../api.js";
 
-// 🌈 Color scale for prediction values
+// 🌈 Color scale (blue → red)
 const getColor = (val, min, max) => {
   if (isNaN(val)) return "#ccc";
   const ratio = (val - min) / (max - min);
-  const hue = (1 - ratio) * 240; // from blue (low) to red (high)
+  const hue = (1 - ratio) * 240;
   return `hsl(${hue}, 100%, 50%)`;
 };
 
-// 🧭 Zoom map to bounds after layer load
+// 🧭 Auto-zoom once
 const FitBoundsOnce = ({ data }) => {
   const map = useMap();
   useEffect(() => {
-    if (data && data.features && data.features.length > 0) {
+    if (data?.features?.length) {
       const geojson = L.geoJSON(data);
       const bounds = geojson.getBounds();
       if (bounds.isValid()) map.fitBounds(bounds);
@@ -30,13 +30,13 @@ const PredictedMapModal = ({ onClose, geojsonUrl = null }) => {
   const [geojson, setGeojson] = useState(null);
   const [loading, setLoading] = useState(false);
   const [minMax, setMinMax] = useState([0, 0]);
+  const [ranges, setRanges] = useState([]);
 
   // 🧠 Fetch predicted GeoJSON
   useEffect(() => {
     const fetchGeo = async () => {
       setLoading(true);
       try {
-        // ✅ Detect if it's a preview or database-based GeoJSON
         const url =
           geojsonUrl && geojsonUrl.includes("/preview-geojson")
             ? geojsonUrl
@@ -44,13 +44,10 @@ const PredictedMapModal = ({ onClose, geojsonUrl = null }) => {
               `${API}/linear-regression/predicted-geojson?table=Predicted_Output`;
 
         console.log("🗺️ Loading predicted map from:", url);
-
         const res = await fetch(url);
         const data = await res.json();
+        if (!data?.features) throw new Error("Invalid GeoJSON data.");
 
-        if (!data || !data.features) throw new Error("Invalid GeoJSON data.");
-
-        // compute prediction min/max
         const preds = data.features
           .map((f) => parseFloat(f.properties.prediction))
           .filter((v) => !isNaN(v));
@@ -58,6 +55,29 @@ const PredictedMapModal = ({ onClose, geojsonUrl = null }) => {
         const min = Math.min(...preds);
         const max = Math.max(...preds);
         setMinMax([min, max]);
+
+        // ✅ 10 ranges between min and max
+        const step = (max - min) / 10;
+        const diff = max - min;
+
+        // Smart rounding factor
+        let roundTo = 10;
+        if (diff > 2000) roundTo = 100;
+        else if (diff > 10000) roundTo = 500;
+
+        const newRanges = [];
+        for (let i = 0; i < 10; i++) {
+          let start = min + step * i;
+          let end = i === 9 ? max : min + step * (i + 1);
+
+          // Keep exact min and max, but round middle ones
+          if (i !== 0) start = Math.round(start / roundTo) * roundTo;
+          if (i !== 9) end = Math.round(end / roundTo) * roundTo;
+
+          newRanges.push([start, end]);
+        }
+
+        setRanges(newRanges);
         setGeojson(data);
       } catch (err) {
         console.error("❌ Error loading GeoJSON:", err);
@@ -69,7 +89,7 @@ const PredictedMapModal = ({ onClose, geojsonUrl = null }) => {
     fetchGeo();
   }, [geojsonUrl]);
 
-  // 🎨 Style each feature
+  // 🎨 Feature style
   const styleFeature = (feature) => ({
     color: "#000",
     weight: 0.3,
@@ -77,73 +97,65 @@ const PredictedMapModal = ({ onClose, geojsonUrl = null }) => {
     fillOpacity: 0.7,
   });
 
-  // 🪄 Compute legend ranges
-  const ranges = [];
-  for (let i = Math.floor(minMax[0] / 500) * 500; i <= minMax[1]; i += 500) {
-    ranges.push([i, i + 500]);
-  }
-
   return (
     <div className="predictmap-overlay" onClick={onClose}>
-        <div className="predictmap-box" onClick={(e) => e.stopPropagation()}>
+      <div className="predictmap-box" onClick={(e) => e.stopPropagation()}>
         <button className="predictmap-close" onClick={onClose}>✕</button>
         <h3 className="predictmap-title">🗺️ Predicted Values Thematic Map</h3>
 
         {loading ? (
-            <p style={{ textAlign: "center", marginTop: "2rem" }}>Loading predicted map...</p>
+          <p style={{ textAlign: "center", marginTop: "2rem" }}>Loading predicted map...</p>
         ) : geojson ? (
-            <>
+          <>
             <div className="predictmap-map">
-                <MapContainer
-                zoom={14}
-                minZoom={5}
-                maxZoom={20}
-                center={[12.8797, 121.774]}
-                >
+              <MapContainer zoom={14} minZoom={5} maxZoom={20} center={[12.8797, 121.774]}>
                 <TileLayer
-                    attribution='&copy; <a href="https://osm.org">OpenStreetMap</a>'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://osm.org">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 <GeoJSON
-                    data={geojson}
-                    style={styleFeature}
-                    onEachFeature={(feature, layer) => {
-                    const value = feature.properties.prediction;
+                  data={geojson}
+                  style={styleFeature}
+                  onEachFeature={(feature, layer) => {
+                    const val = feature.properties.prediction;
                     const formatted =
-                        typeof value === "number"
-                        ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                      typeof val === "number"
+                        ? val.toLocaleString(undefined, { maximumFractionDigits: 2 })
                         : "N/A";
                     layer.bindTooltip(
-                        `<div style="font-size:12px;"><b>Prediction:</b> ${formatted}</div>`,
-                        { sticky: true, direction: "top", opacity: 0.9 }
+                      `<div style="font-size:12px;"><b>Prediction:</b> ${formatted}</div>`,
+                      { sticky: true, direction: "top", opacity: 0.9 }
                     );
-                    }}
+                  }}
                 />
                 <FitBoundsOnce data={geojson} />
-                </MapContainer>
+              </MapContainer>
             </div>
 
             <div className="predictmap-legend">
-                <h4>Legend (Prediction)</h4>
-                {ranges.map(([min, max], i) => (
+              <h4>Legend (Predicted Values)</h4>
+              {ranges.map(([min, max], i) => (
                 <div key={i} className="legend-item">
-                    <span
+                  <span
                     className="legend-color"
                     style={{ background: getColor(min, minMax[0], minMax[1]) }}
-                    ></span>
-                    <span className="legend-label">
-                    {min.toFixed(0)} – {max.toFixed(0)}
-                    </span>
+                  ></span>
+                  <span className="legend-label">
+                    {min.toLocaleString(undefined, { maximumFractionDigits: 0 })} –{" "}
+                    {max.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </span>
                 </div>
-                ))}
+              ))}
             </div>
-            </>
+          </>
         ) : (
-            <p style={{ textAlign: "center", marginTop: "2rem" }}>No map data available.</p>
+          <p style={{ textAlign: "center", marginTop: "2rem" }}>
+            No map data available.
+          </p>
         )}
-        </div>
+      </div>
     </div>
-    );
+  );
 };
 
 export default PredictedMapModal;
