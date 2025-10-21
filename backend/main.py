@@ -86,6 +86,8 @@ from routes.search import router as search_router
 from routes.province import router as province_router
 from routes.municipal import router as municipal_router
 from Predictive_Model_Tools import linear_regression as ai_linear_router
+from Predictive_Model_Tools.GWR.routes import router as ai_gwr_router
+
 
 
 # ==========================================================
@@ -124,6 +126,8 @@ app.include_router(tableinfo_router, prefix="/api")
 app.include_router(province_router, prefix="/api")
 app.include_router(municipal_router, prefix="/api")
 app.include_router(ai_linear_router.router, prefix="/api")
+app.include_router(ai_linear_router.router, prefix="/api")
+app.include_router(ai_gwr_router, prefix="/api")
 
 
 # ==========================================================

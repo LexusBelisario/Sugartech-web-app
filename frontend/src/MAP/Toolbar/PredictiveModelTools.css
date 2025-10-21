@@ -1,99 +1,92 @@
 /* =======================================================
-   🎯 Predictive Model Tools - Linear & XGBoost Side by Side
+   🎯 Predictive Model Tools — Final Refined Centered Layout
    ======================================================= */
 
-/* === Wrapper === */
-.predictive-tools-wrapper {
+.predictive-tools-wrapper.dual-column {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3rem;                  /* 🧩 Wider spacing between AI and GEO-AI columns */
+  width: 100%;
+  margin-left: 1.2rem;        /* 🧭 Push both columns more to the right */
+  margin-top: 0.6rem;
+}
+
+/* === Each Column Section === */
+.column-section {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
-  width: 100%;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  max-width: 220px;           /* 🧠 Wider column container */
 }
 
 /* === Section Title === */
-.predictive-tools-wrapper .section-title {
+.column-section .section-title {
   color: #f7c800;
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.4rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   padding-bottom: 0.3rem;
+  text-align: center;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* =======================================================
-   🧠 AI MODEL SECTION — THREE COLUMN GRID
+   🧠 AI MODEL & GEO-AI MODEL Columns
    ======================================================= */
-.predictive-grid.ai-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  width: 100%;
-}
-
-/* Each AI button takes one column in the 3-column grid */
-.predictive-grid.ai-grid .tool-button {
-  height: 80px;
-  background: #1a1a1a;
-  border: 1px solid #555;
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  box-sizing: border-box;
-  transition: all 0.2s ease;
-}
-
-.predictive-grid.ai-grid .tool-button:hover {
-  background-color: #333;
-  border-color: #fff;
-}
-
-/* =======================================================
-   🌍 GEO-AI MODEL SECTION — THREE COLUMN GRID
-   ======================================================= */
+.predictive-grid.ai-grid,
 .predictive-grid.geo-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   width: 100%;
 }
 
+/* === Buttons === */
+.predictive-grid.ai-grid .tool-button,
 .predictive-grid.geo-grid .tool-button {
-  height: 80px;
+  width: 100px;       /* 💪 Wider buttons (was ~150–170px before) */
+  height: 80px;         /* Slightly taller for proportion */
   background: #1a1a1a;
   border: 1px solid #555;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+.predictive-grid.ai-grid .tool-button:hover,
 .predictive-grid.geo-grid .tool-button:hover {
   background-color: #333;
   border-color: #fff;
+  transform: translateY(-1px);
 }
 
 /* =======================================================
    🎨 ICON + TEXT INSIDE BUTTONS
    ======================================================= */
-.predictive-tools-wrapper .tool-button img {
-  width: 28px;
-  height: 28px;
-  margin-bottom: 4px;
+.tool-button img {
+  width: 30px;
+  height: 30px;
+  margin-bottom: 6px;
 }
 
-.predictive-tools-wrapper .tool-button span {
-  font-size: 10px;
+.tool-button span {
+  font-size: 11px;
   color: white;
-  line-height: 1.1;
+  line-height: 1.2;
   text-align: center;
-  padding: 0 4px;
+  padding: 0 6px;
   white-space: normal;
 }

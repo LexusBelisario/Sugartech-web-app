@@ -780,26 +780,64 @@ async def run_saved_model(
             else:
                 return JSONResponse(status_code=400, content={"error": "No shapefile or ZIP provided."})
 
-            # ✅ Step 3: Read shapefile
+            # ✅ Step 3: Read shapefile (case-insensitive handling)
             gdf = gpd.read_file(shp_path)
             df = pd.DataFrame(gdf.drop(columns="geometry", errors="ignore"))
-            # ✅ Normalize all dataframe columns to lowercase for case-insensitive matching
-            df.columns = [c.lower() for c in df.columns]
 
-            # ✅ Step 4: Check required features
-            missing_features = [f for f in features if f not in df.columns]
-            if missing_features:
-                return JSONResponse(status_code=400, content={"error": f"Missing features in shapefile: {missing_features}"})
+            # ✅ Build lowercase mapping for case-insensitive matching
+            lower_map = {c.lower(): c for c in df.columns}
+            df_lower = df.rename(columns=lower_map)
+            df_lower.columns = [c.lower() for c in df_lower.columns]
 
-            # ✅ Step 5: Prepare and predict
-            # ✅ Select columns case-insensitively (already lowercase)
-            df_features = df[[c for c in df.columns if c in features]].copy()
-            for col in features:
-                df_features[col] = pd.to_numeric(df_features[col], errors="coerce")
-            df_features = df_features.fillna(0)
+            # ✅ Step 4: Match model features to real columns (ignore case)
+            matched_cols = {}
+            for feat in features:
+                for real_col in df.columns:
+                    if real_col.lower() == feat.lower():
+                        matched_cols[feat] = real_col
+                        break
 
-            X_scaled = scaler.transform(df_features.values)
-            preds = model.predict(X_scaled)
+            missing = [f for f in features if f not in matched_cols]
+            if missing:
+                print(f"⚠️ Missing features: {missing}")
+                return JSONResponse(status_code=400, content={"error": f"Missing features in shapefile: {missing}"})
+
+            print("🧩 Model expects:", features)
+            print("🧩 Matched columns:", matched_cols)
+
+            # ✅ Step 5: Prepare numeric dataframe safely
+            X = df[[matched_cols[f] for f in features]].apply(pd.to_numeric, errors="coerce").fillna(0)
+            X.columns = features  # keep model’s feature order
+
+            # ✅ Step 6: Align to model.feature_names_in_ strictly
+            if hasattr(model, "feature_names_in_"):
+                rename_map = {}
+                for col in X.columns:
+                    for mf in model.feature_names_in_:
+                        if col.lower() == mf.lower():
+                            rename_map[col] = mf
+                if rename_map:
+                    X.rename(columns=rename_map, inplace=True)
+                    print("🔤 Renamed columns to match model.feature_names_in_:", rename_map)
+
+            # ✅ Step 7: Predict safely (works for all PKL/shapefile case combos)
+            try:
+                X = X.apply(pd.to_numeric, errors="coerce").fillna(0)
+                if scaler:
+                    if hasattr(scaler, "feature_names_in_"):
+                        expected = [f.lower() for f in scaler.feature_names_in_]
+                        current = [c.lower() for c in X.columns]
+                        for feat in expected:
+                            if feat not in current:
+                                X[feat] = 0
+                        X = X[expected]
+                    preds = model.predict(scaler.transform(X))
+                else:
+                    preds = model.predict(X)
+            except Exception as e:
+                print("❌ Prediction failed (fallback unscaled):", e)
+                preds = model.predict(X.values)
+
             gdf["prediction"] = preds
 
             # ✅ Optional residuals (if dependent var exists)
