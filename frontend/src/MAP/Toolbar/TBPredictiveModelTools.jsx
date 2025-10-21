@@ -2,14 +2,25 @@ import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import "./toolbar.css";
 import LinearRegression from "../PredictiveModelTools/LinearRegression/LinearRegression.jsx";
-import GWR from "../PredictiveModelTools/GWR/GWR.jsx";  // 🧩 Import new GWR tool
+import GWR from "../PredictiveModelTools/GWR/GWR.jsx";
 
 const TBPredictiveModelTools = () => {
+  // AI Model states
   const [showLinearRegression, setShowLinearRegression] = useState(false);
+
+  // Geo-AI Model states
   const [showGWR, setShowGWR] = useState(false);
 
+  // AI Model handlers
   const handleLinearRegression = () => setShowLinearRegression(true);
+
+  // Geo-AI Model handlers
   const handleGWR = () => setShowGWR(true);
+
+  // Placeholder handlers (for future implementation)
+  const handlePlaceholder = (modelName) => {
+    alert(`${modelName} - Coming Soon!`);
+  };
 
   return (
     <>
@@ -20,8 +31,26 @@ const TBPredictiveModelTools = () => {
           <div className="predictive-grid ai-grid">
             <button
               className="tool-button"
+              onClick={() => handlePlaceholder("XGBoost")}
+              title="Run XGBoost Model"
+            >
+              <div className="icon-placeholder">🚀</div>
+              <span>XGBoost</span>
+            </button>
+
+            <button
+              className="tool-button"
+              onClick={() => handlePlaceholder("Random Forest")}
+              title="Run Random Forest Model"
+            >
+              <div className="icon-placeholder">🌲</div>
+              <span>Random Forest</span>
+            </button>
+
+            <button
+              className="tool-button"
               onClick={handleLinearRegression}
-              title="Run Multiple Linear Regression"
+              title="Run Linear Regression"
             >
               <img src="/icons/mlr.png" alt="Linear Regression" />
               <span>Linear Regression</span>
@@ -41,11 +70,29 @@ const TBPredictiveModelTools = () => {
               <img src="/icons/gwr.png" alt="GWR" />
               <span>Geographically Weighted Regression</span>
             </button>
+
+            <button
+              className="tool-button"
+              onClick={() => handlePlaceholder("Ordinary Least Squares")}
+              title="Run Ordinary Least Squares"
+            >
+              <div className="icon-placeholder">📊</div>
+              <span>Ordinary Least Squares</span>
+            </button>
+
+            <button
+              className="tool-button"
+              onClick={() => handlePlaceholder("Spatial Lag Filter")}
+              title="Run Spatial Lag Filter"
+            >
+              <div className="icon-placeholder">🗺️</div>
+              <span>Spatial Lag Filter</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* === Modals === */}
+      {/* === MODALS (Only for implemented components) === */}
       {showLinearRegression &&
         ReactDOM.createPortal(
           <LinearRegression onClose={() => setShowLinearRegression(false)} />,
@@ -54,7 +101,7 @@ const TBPredictiveModelTools = () => {
 
       {showGWR &&
         ReactDOM.createPortal(
-          <GWR onClose={() => setShowGWR(false)} />,   // ✅ Replace placeholder with real component
+          <GWR onClose={() => setShowGWR(false)} />,
           document.body
         )}
     </>
