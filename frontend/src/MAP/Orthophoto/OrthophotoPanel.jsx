@@ -10,10 +10,8 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [orthoVisible, setOrthoVisible] = useState(initialData?.orthoVisible || false);
 
-  // ✅ Compute hasConfig based on actual form values
   const hasConfig = !!(gserverUrl && layerName);
 
-  // Sync with external data changes
   useEffect(() => {
     if (initialData) {
       setGserverUrl(initialData.Gsrvr_URL || "");
@@ -28,11 +26,17 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
     if (!containerRef.current) return;
     const stopEvent = (e) => e.stopPropagation();
     const el = containerRef.current;
-    el.addEventListener("wheel", stopEvent);
-    el.addEventListener("dblclick", stopEvent);
+    
+    // ✅ ADDED: Stop ALL events that might interfere with typing
+    const events = [
+      'wheel', 'dblclick', 'mousedown', 'touchstart',
+      'keydown', 'keyup', 'keypress' // ✅ Added keyboard events
+    ];
+    
+    events.forEach(event => el.addEventListener(event, stopEvent));
+    
     return () => {
-      el.removeEventListener("wheel", stopEvent);
-      el.removeEventListener("dblclick", stopEvent);
+      events.forEach(event => el.removeEventListener(event, stopEvent));
     };
   }, []);
 
@@ -57,6 +61,11 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
     }
   };
 
+  // ✅ ADDED: Handler to stop keyboard events on inputs
+  const handleInputKeyEvent = (e) => {
+    e.stopPropagation();
+  };
+
   if (!isVisible) return null;
 
   return (
@@ -78,7 +87,6 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
 
       {/* Body */}
       <div className="p-4 text-sm space-y-3">
-        {/* ✅ Orthophoto Toggle - Show at TOP if config exists */}
         {hasConfig && (
           <div className="bg-[#1E1E1E] border border-[#2A2E35] rounded p-3">
             <label className="flex items-center justify-between cursor-pointer">
@@ -102,7 +110,6 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
           </div>
         )}
 
-        {/* Configuration Section */}
         <div className={hasConfig ? "border-t border-[#2A2E35] pt-3" : ""}>
           <h5 className="text-xs text-gray-400 mb-2 font-semibold">LAYER CONFIGURATION</h5>
 
@@ -116,6 +123,9 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
               type="text"
               value={gserverUrl}
               onChange={(e) => setGserverUrl(e.target.value)}
+              onKeyDown={handleInputKeyEvent}
+              onKeyUp={handleInputKeyEvent}
+              onKeyPress={handleInputKeyEvent}
               placeholder="http://your-geoserver/geoserver/gwc/service/wmts"
               className="w-full bg-[#1E1E1E] text-white border border-[#2A2E35] rounded px-2 py-1.5 text-xs focus:outline-none focus:border-[#F7C800]"
             />
@@ -131,12 +141,14 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
               type="text"
               value={layerName}
               onChange={(e) => setLayerName(e.target.value)}
+              onKeyDown={handleInputKeyEvent}
+              onKeyUp={handleInputKeyEvent}
+              onKeyPress={handleInputKeyEvent}
               placeholder="workspace:layername"
               className="w-full bg-[#1E1E1E] text-white border border-[#2A2E35] rounded px-2 py-1.5 text-xs focus:outline-none focus:border-[#F7C800]"
             />
           </div>
 
-          {/* Save Button */}
           <button
             onClick={handleSave}
             disabled={loading || !gserverUrl || !layerName}
@@ -150,7 +162,6 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
           </button>
         </div>
 
-        {/* Message */}
         {message && (
           <div className={`text-xs p-2 rounded ${
             message.includes("success") 
@@ -163,7 +174,6 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
           </div>
         )}
 
-        {/* Info */}
         <div className="text-xs text-gray-400 border-t border-[#2A2E35] pt-2 mt-2">
           <p>Configure the orthophoto layer source for the current municipality.</p>
         </div>

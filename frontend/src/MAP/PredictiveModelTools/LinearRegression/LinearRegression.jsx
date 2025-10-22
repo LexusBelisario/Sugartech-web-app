@@ -30,9 +30,6 @@ const LinearRegression = ({ onClose }) => {
   const [runDbTables, setRunDbTables] = useState([]);
   const [selectedRunDbTable, setSelectedRunDbTable] = useState(null);
 
-
-
-
   // === Handle file upload ===
   const handleFileChange = async (e) => {
     const selectedFiles = Array.from(e.target.files);
@@ -591,93 +588,171 @@ const LinearRegression = ({ onClose }) => {
               ].map((g) => (
                 <div key={g.key} className="graph-card" onClick={() => setFullscreenGraph(g.key)}>
                   <h4>{g.title}</h4>
-                  {g.key === "importance" && (
-                    <Plot
-                      data={[{ x: Object.keys(result.interactive_data.importance),
-                               y: Object.values(result.interactive_data.importance),
-                               type: "bar", marker: { color: "#00ff9d" } }]}
-                      layout={{ ...plotLayoutBase, title: g.title }}
-                      config={plotConfig(g.key)}
-                      useResizeHandler
-                      style={{ width: "100%", height: "100%" }}
-                    />
-                  )}
                   {g.key === "residuals" && (
   <Plot
-    data={[
-      {
-        type: "bar",
-        x: result.interactive_data.residual_bins,
-        y: result.interactive_data.residual_counts,
-        marker: {
-          color: "#00ff9d",
-          opacity: 0.85,
-          line: { color: "#0f0f0f", width: 1.2 },
-        },
-        // 🟩 Slightly thinner bars to give visible spacing even on zoom
-        width: 0.6 *
-          ((Math.max(...result.interactive_data.residual_bins) -
-            Math.min(...result.interactive_data.residual_bins)) /
-            result.interactive_data.residual_bins.length),
+    data={[{
+      type: "bar",
+      x: result.interactive_data.residual_bins,
+      y: result.interactive_data.residual_counts,
+      marker: {
+        color: "#00ff9d",
+        opacity: 0.85,
+        line: { color: "#0f0f0f", width: 1.2 },
       },
-    ]}
+    }]}
     layout={{
       ...plotLayoutBase,
-      title: {
-        text: "Residual Distribution (with spacing)",
-        font: { color: "#00ff9d" },
-      },
-      xaxis: { title: "Residual", showgrid: true, gridcolor: "#222" },
+      title: "Residual Distribution",
+      xaxis: { title: "Residual" },
       yaxis: { title: "Frequency" },
-      bargap: 0.35, // 💡 slightly wider gaps between bars
-      bargroupgap: 0.25,
-      autosize: true,
-      responsive: true,
     }}
-    config={{
-      ...plotConfig("residual_distribution"),
-      scrollZoom: true,
+    config={plotConfig("residual_distribution")}
+    useResizeHandler
+    style={{ width: "100%", height: "100%" }}
+  />
+)}
+{g.key === "importance" && (
+  <Plot
+    data={[{
+      x: Object.keys(result.interactive_data.importance),
+      y: Object.values(result.interactive_data.importance),
+      type: "bar",
+      marker: { color: "#00ff9d" },
+    }]}
+    layout={{
+      ...plotLayoutBase,
+      title: g.title,
+      xaxis: { title: "Independent Variables", color: "#ccc" },
+      yaxis: { title: "Importance Score", color: "#ccc" },
     }}
+    config={plotConfig(g.key)}
     useResizeHandler
     style={{ width: "100%", height: "100%" }}
   />
 )}
 
-                  {g.key === "actual_pred" && (
-                    <Plot
-                      data={[
-                        { x: result.interactive_data.y_test,
-                          y: result.interactive_data.preds,
-                          mode: "markers", type: "scatter",
-                          marker: { color: "#00ff9d", size: 8, opacity: 0.8 } },
-                        { x: result.interactive_data.y_test,
-                          y: result.interactive_data.y_test,
-                          mode: "lines", line: { color: "white", dash: "dash" } },
-                      ]}
-                      layout={{ ...plotLayoutBase, title: g.title }}
-                      config={plotConfig(g.key)}
-                      useResizeHandler
-                      style={{ width: "100%", height: "100%" }}
-                    />
-                  )}
-                  {g.key === "resid_pred" && (
-                    <Plot
-                      data={[
-                        { x: result.interactive_data.preds,
-                          y: result.interactive_data.residuals,
-                          mode: "markers", type: "scatter",
-                          marker: { color: "#ff6363", size: 8, opacity: 0.8 } },
-                        { x: result.interactive_data.preds,
-                          y: Array(result.interactive_data.preds?.length).fill(0),
-                          mode: "lines", line: { color: "white", dash: "dash" } },
-                      ]}
-                      layout={{ ...plotLayoutBase, title: g.title }}
-                      config={plotConfig(g.key)}
-                      useResizeHandler
-                      style={{ width: "100%", height: "100%" }}
-                    />
-                  )}
-                </div>
+ {g.key === "residuals" && (
+  <Plot
+    data={[{
+      type: "bar",
+      x: result.interactive_data.residual_bins,
+      y: result.interactive_data.residual_counts,
+      marker: {
+        color: "#00ff9d",
+        opacity: 0.85,
+        line: { color: "#0f0f0f", width: 1.2 },
+      },
+    }]}
+    layout={{
+      ...plotLayoutBase,
+      title: "Residual Distribution",
+      xaxis: { title: "Residual", color: "#ccc" },
+      yaxis: { title: "Frequency", color: "#ccc" },
+    }}
+    config={plotConfig("residual_distribution")}
+    useResizeHandler
+    style={{ width: "100%", height: "100%" }}
+  />
+)}
+
+
+{g.key === "actual_pred" && (
+  <Plot
+    data={[
+      {
+        x: result.interactive_data.y_test,
+        y: result.interactive_data.preds,
+        mode: "markers",
+        type: "scatter",
+        name: "Predicted Points",
+        marker: { color: "#00ff9d", size: 8, opacity: 0.8 },
+      },
+      {
+        x: result.interactive_data.y_test,
+        y: result.interactive_data.y_test,
+        mode: "lines",
+        name: "Ideal Fit Line",
+        line: { color: "white", dash: "dash" },
+      },
+    ]}
+    layout={{
+      ...plotLayoutBase,
+      title: g.title,
+      xaxis: {
+        title: { text: "Actual Values", font: { color: "#00ff9d", size: 14 } },
+        color: "#ccc",
+      },
+      yaxis: {
+        title: { text: "Predicted Values", font: { color: "#00ff9d", size: 14 } },
+        color: "#ccc",
+      },
+      legend: {
+        x: 0.02,
+        y: 0.98,
+        xanchor: "left",
+        yanchor: "top",
+        bgcolor: "rgba(0,0,0,0.5)",
+        bordercolor: "#00ff9d60",
+        borderwidth: 1,
+        font: { color: "#00ff9d", size: 12 },
+        orientation: "v",
+      },
+    }}
+    config={plotConfig(g.key)}
+    useResizeHandler
+    style={{ width: "100%", height: "100%" }}
+  />
+)}
+
+{g.key === "resid_pred" && (
+  <Plot
+    data={[
+      {
+        x: result.interactive_data.preds,
+        y: result.interactive_data.residuals,
+        mode: "markers",
+        type: "scatter",
+        name: "Residual Points",
+        marker: { color: "#ff6363", size: 8, opacity: 0.8 },
+      },
+      {
+        x: result.interactive_data.preds,
+        y: Array(result.interactive_data.preds?.length).fill(0),
+        mode: "lines",
+        name: "Zero Residual Line",
+        line: { color: "white", dash: "dash" },
+      },
+    ]}
+    layout={{
+      ...plotLayoutBase,
+      title: g.title,
+      xaxis: {
+        title: { text: "Predicted Values", font: { color: "#00ff9d", size: 14 } },
+        color: "#ccc",
+      },
+      yaxis: {
+        title: { text: "Residuals", font: { color: "#00ff9d", size: 14 } },
+        color: "#ccc",
+      },
+      legend: {
+        x: 0.02,
+        y: 0.98,
+        xanchor: "left",
+        yanchor: "top",
+        bgcolor: "rgba(0,0,0,0.5)",
+        bordercolor: "#00ff9d60",
+        borderwidth: 1,
+        font: { color: "#ff6363", size: 12 },
+        orientation: "v",
+      },
+    }}
+    config={plotConfig(g.key)}
+    useResizeHandler
+    style={{ width: "100%", height: "100%" }}
+  />
+)}
+
+                </div>  
               ))}
             </div>
 

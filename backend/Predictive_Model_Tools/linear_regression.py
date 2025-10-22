@@ -224,81 +224,99 @@ async def train_linear_regression(
             png_paths = {}
 
             with PdfPages(pdf_path) as pp:
-                # --- Metrics table ---
                 fig, ax = plt.subplots(figsize=(6, 1.5))
-                ax.axis("off")
-                table = ax.table(
-                    cellText=[
-                        ["Model", "MSE", "MAE", "RMSE", "R²"],
-                        ["Linear Regression", f"{mse:.2f}", f"{mae:.2f}", f"{rmse:.2f}", f"{r2:.2f}"],
-                    ],
-                    loc="center",
-                    cellLoc="center",
-                )
-                table.scale(1, 2)
-                pp.savefig(fig)
-                metrics_png = os.path.join(export_path, "metrics_table.png")
-                fig.savefig(metrics_png, bbox_inches="tight")
-                plt.close(fig)
-                png_paths["metrics"] = metrics_png
+            ax.axis("off")
+            table = ax.table(
+                cellText=[
+                    ["Model", "MSE", "MAE", "RMSE", "R²"],
+                    ["Linear Regression", f"{mse:.2f}", f"{mae:.2f}", f"{rmse:.2f}", f"{r2:.2f}"],
+                ],
+                loc="center",
+                cellLoc="center",
+            )
+            table.scale(1, 2)
+            ax.set_title("📊 Linear Regression Model Performance", color=accent, fontsize=12, pad=10)
+            pp.savefig(fig, facecolor="white", edgecolor="white")
+            plt.close(fig)
 
-                # --- Feature importance ---
-                std_X = np.std(X_train_scaled, axis=0)
-                std_y = np.std(y_train)
-                importance = model.coef_ * std_X / std_y
-                fig, ax = plt.subplots(figsize=(8, 4))
-                ax.bar(independent_vars, importance)
-                ax.set_ylabel("Standardized Coefficient")
-                ax.set_title("Feature Importance")
-                plt.xticks(rotation=45)
-                plt.tight_layout()
-                pp.savefig(fig)
-                fi_png = os.path.join(export_path, "feature_importance.png")
-                fig.savefig(fi_png, bbox_inches="tight")
-                plt.close(fig)
-                png_paths["feature_importance"] = fi_png
+            # --- Feature Importance ---
+            std_X = np.std(X_train_scaled, axis=0)
+            std_y = np.std(y_train)
+            importance = model.coef_ * std_X / std_y
+            fig, ax = plt.subplots(figsize=(8, 4))
+            ax.bar(independent_vars, importance, color=accent)
+            ax.set_ylabel("Standardized Coefficient", color="black")
+            ax.set_title("Feature Importance", color=accent, fontsize=12, pad=10)
+            ax.tick_params(colors="black")
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            pp.savefig(fig, facecolor="white", edgecolor="white")
+            plt.close(fig)
 
-                # --- Residual distribution ---
+            # --- Residual Distribution ---
+            fig, ax = plt.subplots(figsize=(6, 4))
+            sns.histplot(residuals, kde=True, ax=ax, color=accent)
+            ax.set_title("Residual Distribution (Normal Curve)", color=accent, fontsize=12, pad=10)
+            ax.set_xlabel("Residual", color="black")
+            ax.set_ylabel("Frequency", color="black")
+            ax.tick_params(colors="black")
+            plt.tight_layout()
+            pp.savefig(fig, facecolor="white", edgecolor="white")
+            plt.close(fig)
+
+            # --- Actual vs Predicted ---
+            fig, ax = plt.subplots(figsize=(6, 6))
+            ax.scatter(y_test, preds, color=accent, alpha=0.6)
+            ax.plot(
+                [min(y_test), max(y_test)],
+                [min(y_test), max(y_test)],
+                linestyle="--",
+                color="gray"
+            )
+            ax.set_xlabel("Actual Values", color="black")
+            ax.set_ylabel("Predicted Values", color="black")
+            ax.set_title("Actual vs Predicted", color=accent, fontsize=12, pad=10)
+            ax.tick_params(colors="black")
+            plt.tight_layout()
+            pp.savefig(fig, facecolor="white", edgecolor="white")
+            plt.close(fig)
+
+            # --- T-test text ---
+            fig, ax = plt.subplots(figsize=(5, 1.2))
+            ax.axis("off")
+            ax.text(
+                0.5, 0.5,
+                f"T-test on Residuals:\nT-statistic = {t_stat:.4f}\nP-value = {p_val:.4f}",
+                ha="center", va="center", color="black", fontsize=10
+            )
+            pp.savefig(fig, facecolor="white", edgecolor="white")
+            plt.close(fig)
+
+            # --- Independent Variable Distributions ---
+            for var in independent_vars:
                 fig, ax = plt.subplots(figsize=(6, 4))
-                sns.histplot(residuals, kde=True, ax=ax)
-                ax.set_title("Residual Distribution (Normal Curve)")
-                ax.set_xlabel("Residual")
-                ax.set_ylabel("Frequency")
+                sns.histplot(df[var], kde=True, color=accent, ax=ax)
+                ax.set_title(f"Distribution of {var}", color=accent, fontsize=12, pad=10)
+                ax.set_xlabel(var, color="black")
+                ax.set_ylabel("Frequency", color="black")
+                ax.tick_params(colors="black")
                 plt.tight_layout()
-                pp.savefig(fig)
-                resid_png = os.path.join(export_path, "residual_distribution.png")
-                fig.savefig(resid_png, bbox_inches="tight")
+                pp.savefig(fig, facecolor="white", edgecolor="white")
                 plt.close(fig)
-                png_paths["residual_distribution"] = resid_png
 
-                # --- Actual vs Predicted ---
-                fig, ax = plt.subplots(figsize=(6, 6))
-                ax.scatter(y_test, preds, alpha=0.6)
-                ax.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], "k--", lw=1.5)
-                ax.set_xlabel("Actual Values")
-                ax.set_ylabel("Predicted Values")
-                ax.set_title("Actual vs Predicted Scatter Plot")
-                plt.tight_layout()
-                pp.savefig(fig)
-                scatter_png = os.path.join(export_path, "actual_vs_predicted.png")
-                fig.savefig(scatter_png, bbox_inches="tight")
-                plt.close(fig)
-                png_paths["actual_vs_predicted"] = scatter_png
+            # --- Dependent Variable Distribution ---
+            fig, ax = plt.subplots(figsize=(6, 4))
+            sns.histplot(df[dependent_var], kde=True, color=accent, ax=ax)
+            ax.set_title(f"Distribution of {dependent_var}", color=accent, fontsize=12, pad=10)
+            ax.set_xlabel(dependent_var, color="black")
+            ax.set_ylabel("Frequency", color="black")
+            ax.tick_params(colors="black")
+            plt.tight_layout()
+            pp.savefig(fig, facecolor="white", edgecolor="white")
+            plt.close(fig)
+            png_paths["t_test_residuals"] = ttest_png
 
-                # --- T-test on residuals (table) ---
-                t_stat, p_val = stats.ttest_1samp(residuals, 0)
-                t_test_result = {"t_stat": float(t_stat), "p_value": float(p_val)}
-                fig, ax = plt.subplots(figsize=(6, 2))
-                ax.axis("off")
-                ax.text(0.5, 0.5, f"T-test on Residuals:\nT-statistic = {t_stat:.4f}\nP-value = {p_val:.4f}",
-                        fontsize=12, ha="center", va="center")
-                pp.savefig(fig)
-                ttest_png = os.path.join(export_path, "t_test_residuals.png")
-                fig.savefig(ttest_png, bbox_inches="tight")
-                plt.close(fig)
-                png_paths["t_test_residuals"] = ttest_png
-
-                for col in independent_vars:
+            for col in independent_vars:
                     try:
                         fig, ax = plt.subplots(figsize=(6, 4))
                         sns.histplot(df_valid[col].dropna(), kde=True, ax=ax, color="#00ff9d", edgecolor="black")
