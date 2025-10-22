@@ -1,6 +1,5 @@
 @import "./PredictiveModelTools.css";
 
-
 /* === TOOLBAR CONTAINER === */
 .toolbar-panel {
   position: absolute;
@@ -28,7 +27,7 @@
 #toggleToolbarBtn {
   position: absolute;
   top: 75px;
-  left: 10px;            /* ✅ Add left position so it sits on the left side */
+  left: 10px; /* ✅ Add left position so it sits on the left side */
   z-index: 2100;
   padding: 8px 12px;
   background-color: #000;
@@ -39,9 +38,8 @@
   height: 50px;
   font-size: 18px;
   font-family: sans-serif;
-  display: block;        /* ✅ Always visible now */
+  display: block; /* ✅ Always visible now */
 }
-
 
 #toggleToolbarBtn:hover {
   background-color: #838383;
@@ -125,4 +123,14 @@
   background-color: #acacac !important;
 }
 
-
+.icon-placeholder {
+  font-size: 32px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
