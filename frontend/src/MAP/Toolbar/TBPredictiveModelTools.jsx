@@ -29,24 +29,27 @@ const TBPredictiveModelTools = () => {
         <div className="column-section">
           <h4 className="section-title">AI MODEL</h4>
           <div className="predictive-grid ai-grid">
+            {/* XGBoost */}
             <button
               className="tool-button"
               onClick={() => handlePlaceholder("XGBoost")}
               title="Run XGBoost Model"
             >
-              <div className="icon-placeholder">🚀</div>
+              <img src="/icons/xgboost.png" alt="XGBoost" />
               <span>XGBoost</span>
             </button>
 
+            {/* Random Forest */}
             <button
               className="tool-button"
               onClick={() => handlePlaceholder("Random Forest")}
               title="Run Random Forest Model"
             >
-              <div className="icon-placeholder">🌲</div>
+              <img src="/icons/randomforest.png" alt="Random Forest" />
               <span>Random Forest</span>
             </button>
 
+            {/* Linear Regression */}
             <button
               className="tool-button"
               onClick={handleLinearRegression}
@@ -62,6 +65,7 @@ const TBPredictiveModelTools = () => {
         <div className="column-section">
           <h4 className="section-title">GEO-AI MODEL</h4>
           <div className="predictive-grid geo-grid">
+            {/* GWR */}
             <button
               className="tool-button"
               onClick={handleGWR}
@@ -71,22 +75,24 @@ const TBPredictiveModelTools = () => {
               <span>Geographically Weighted Regression</span>
             </button>
 
+            {/* Ordinary Least Squares */}
             <button
               className="tool-button"
               onClick={() => handlePlaceholder("Ordinary Least Squares")}
               title="Run Ordinary Least Squares"
             >
-              <div className="icon-placeholder">📊</div>
+              <img src="/icons/ols.png" alt="Ordinary Least Squares" />
               <span>Ordinary Least Squares</span>
             </button>
 
+            {/* Spatial Lag Model */}
             <button
               className="tool-button"
-              onClick={() => handlePlaceholder("Spatial Lag Filter")}
-              title="Run Spatial Lag Filter"
+              onClick={() => handlePlaceholder("Spatial Lag Model")}
+              title="Run Spatial Lag Model"
             >
-              <div className="icon-placeholder">🗺️</div>
-              <span>Spatial Lag Filter</span>
+              <img src="/icons/slm.png" alt="Spatial Lag Model" />
+              <span>Spatial Lag Model</span>
             </button>
           </div>
         </div>
