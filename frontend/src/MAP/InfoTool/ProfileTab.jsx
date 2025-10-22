@@ -34,7 +34,7 @@ const boundaryFields = [
 ];
 
 const locationFields = [
-  { label: "Barangay", key: "barangay" },
+  { label: "Barangay", key: "brgy_nm" },
   { label: "Street", key: "street" },
   { label: "Extent", key: "extent" }
 ];
