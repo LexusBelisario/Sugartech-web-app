@@ -4,7 +4,6 @@ import Plot from "react-plotly.js";
 import API from "../../../api.js";
 import PredictedMapModal from "../PredictedMapModal.jsx";
 
-
 const LinearRegression = ({ onClose }) => {
   const [files, setFiles] = useState([]);
   const [fields, setFields] = useState([]);
@@ -18,7 +17,7 @@ const LinearRegression = ({ onClose }) => {
   const [showResultsPanel, setShowResultsPanel] = useState(false);
   const [selectedGraph, setSelectedGraph] = useState(null);
   const [fullscreenGraph, setFullscreenGraph] = useState(null);
-    // === Database Mode States ===
+  // === Database Mode States ===
   const [showDbModal, setShowDbModal] = useState(false);
   const [dbTables, setDbTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
@@ -42,13 +41,19 @@ const LinearRegression = ({ onClose }) => {
     setResult(null);
 
     try {
-      const hasZip = selectedFiles.some((f) => f.name.toLowerCase().endsWith(".zip"));
+      const hasZip = selectedFiles.some((f) =>
+        f.name.toLowerCase().endsWith(".zip")
+      );
       const hasParts = selectedFiles.some((f) =>
-        [".shp", ".dbf", ".shx", ".prj"].some((ext) => f.name.toLowerCase().endsWith(ext))
+        [".shp", ".dbf", ".shx", ".prj"].some((ext) =>
+          f.name.toLowerCase().endsWith(ext)
+        )
       );
 
       if (hasZip && hasParts) {
-        alert("Please select only a single ZIP file or a complete shapefile set.");
+        alert(
+          "Please select only a single ZIP file or a complete shapefile set."
+        );
         return;
       }
 
@@ -56,7 +61,9 @@ const LinearRegression = ({ onClose }) => {
       let endpoint;
       if (hasZip) {
         if (selectedFiles.length > 1) {
-          alert("Multiple ZIP files detected. Please upload only one ZIP file.");
+          alert(
+            "Multiple ZIP files detected. Please upload only one ZIP file."
+          );
           return;
         }
         formData.append("zip_file", selectedFiles[0]);
@@ -95,33 +102,34 @@ const LinearRegression = ({ onClose }) => {
   };
 
   const fetchRunDbTables = async () => {
-  try {
-    setLoading(true);
-    const res = await fetch(`${API}/linear-regression/db-tables`);
-    const data = await res.json();
-    if (res.ok) setRunDbTables(data.tables || []);
-    else alert(data.error || "Failed to load database tables.");
-  } catch (err) {
-    console.error("Error fetching run model DB tables:", err);
-    alert("Cannot connect to database.");
-  } finally {
-    setLoading(false);
-  }
-};
-
+    try {
+      setLoading(true);
+      const res = await fetch(`${API}/linear-regression/db-tables`);
+      const data = await res.json();
+      if (res.ok) setRunDbTables(data.tables || []);
+      else alert(data.error || "Failed to load database tables.");
+    } catch (err) {
+      console.error("Error fetching run model DB tables:", err);
+      alert("Cannot connect to database.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchDbFields = async (tableName) => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/linear-regression/db-fields?table=${tableName}`);
+      const res = await fetch(
+        `${API}/linear-regression/db-fields?table=${tableName}`
+      );
       const data = await res.json();
 
       if (res.ok && data.fields) {
         setFields(data.fields);
         setSelectedTable(tableName);
         setShowDbModal(false);
-        setFiles([]);             // ✅ clear local shapefiles
-        setIndependentVars([]);   // ✅ reset selections
+        setFiles([]); // ✅ clear local shapefiles
+        setIndependentVars([]); // ✅ reset selections
         setDependentVar("");
         setResult(null);
       } else {
@@ -135,7 +143,6 @@ const LinearRegression = ({ onClose }) => {
     }
   };
 
-
   const toggleIndependentVar = (field) => {
     setIndependentVars((prev) =>
       prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]
@@ -144,130 +151,133 @@ const LinearRegression = ({ onClose }) => {
 
   // === Train model ===
   const handleTrainModel = async () => {
-  // Validation
-  if (!selectedTable && files.length === 0)
-    return alert("Please upload a shapefile or select a database table.");
-  if (independentVars.length === 0)
-    return alert("Select independent variables.");
-  if (!dependentVar)
-    return alert("Select dependent variable.");
+    // Validation
+    if (!selectedTable && files.length === 0)
+      return alert("Please upload a shapefile or select a database table.");
+    if (independentVars.length === 0)
+      return alert("Select independent variables.");
+    if (!dependentVar) return alert("Select dependent variable.");
 
-  setLoading(true);
-  setResult(null);
+    setLoading(true);
+    setResult(null);
 
-  try {
-    let res, data;
+    try {
+      let res, data;
 
-    if (selectedTable) {
-      // === Database-based training ===
-      const formData = new FormData();
-      formData.append("table_name", selectedTable);
-      formData.append("independent_vars", JSON.stringify(independentVars));
-      formData.append("dependent_var", dependentVar);
+      if (selectedTable) {
+        // === Database-based training ===
+        const formData = new FormData();
+        formData.append("table_name", selectedTable);
+        formData.append("independent_vars", JSON.stringify(independentVars));
+        formData.append("dependent_var", dependentVar);
 
-      res = await fetch(`${API}/linear-regression/train-db`, {
-        method: "POST",
-        body: formData,
-      });
-      data = await res.json();
-    } else {
-      // === Local shapefile-based training ===
-      const formData = new FormData();
-      let endpoint;
-
-      if (files.length === 1 && files[0].name.toLowerCase().endsWith(".zip")) {
-        formData.append("zip_file", files[0]);
-        endpoint = `${API}/linear-regression/train-zip`;
+        res = await fetch(`${API}/linear-regression/train-db`, {
+          method: "POST",
+          body: formData,
+        });
+        data = await res.json();
       } else {
-        files.forEach((f) => formData.append("shapefiles", f));
-        endpoint = `${API}/linear-regression/train`;
+        // === Local shapefile-based training ===
+        const formData = new FormData();
+        let endpoint;
+
+        if (
+          files.length === 1 &&
+          files[0].name.toLowerCase().endsWith(".zip")
+        ) {
+          formData.append("zip_file", files[0]);
+          endpoint = `${API}/linear-regression/train-zip`;
+        } else {
+          files.forEach((f) => formData.append("shapefiles", f));
+          endpoint = `${API}/linear-regression/train`;
+        }
+
+        formData.append("independent_vars", JSON.stringify(independentVars));
+        formData.append("dependent_var", dependentVar);
+
+        res = await fetch(endpoint, { method: "POST", body: formData });
+        data = await res.json();
       }
 
-      formData.append("independent_vars", JSON.stringify(independentVars));
-      formData.append("dependent_var", dependentVar);
-
-      res = await fetch(endpoint, { method: "POST", body: formData });
-      data = await res.json();
+      if (!res.ok) {
+        console.error("Training error:", data);
+        alert(`Error: ${data.error || res.statusText}`);
+      }
+      if (data.interactive_data) {
+        setResult(data);
+      } else {
+        // backward compatibility for DB results without interactive_data
+        setResult({
+          ...data,
+          interactive_data: {
+            residuals: [],
+            residual_bins: [],
+            residual_counts: [],
+            y_test: [],
+            preds: [],
+            importance: {},
+          },
+        });
+      }
+    } catch (err) {
+      console.error("Training fetch error:", err);
+      alert("Failed to connect to backend.");
+    } finally {
+      setLoading(false);
     }
-
-    if (!res.ok) {
-      console.error("Training error:", data);
-      alert(`Error: ${data.error || res.statusText}`);
-    } if (data.interactive_data) {
-      setResult(data);
-    } else {
-      // backward compatibility for DB results without interactive_data
-      setResult({
-        ...data,
-        interactive_data: {
-          residuals: [],
-          residual_bins: [],
-          residual_counts: [],
-          y_test: [],
-          preds: [],
-          importance: {},
-        },
-      });
-    }
-
-  } catch (err) {
-    console.error("Training fetch error:", err);
-    alert("Failed to connect to backend.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // === Run saved model ===
   const handleRunModel = async () => {
-  if (!modelFile) return alert("Please select a .pkl model file.");
+    if (!modelFile) return alert("Please select a .pkl model file.");
 
-  const usingDatabase = !!selectedRunDbTable;
-  const usingFiles = runFiles.length > 0;
+    const usingDatabase = !!selectedRunDbTable;
+    const usingFiles = runFiles.length > 0;
 
-  if (!usingDatabase && !usingFiles)
-    return alert("Please upload a shapefile or select a database table.");
+    if (!usingDatabase && !usingFiles)
+      return alert("Please upload a shapefile or select a database table.");
 
-  const formData = new FormData();
-  formData.append("model_file", modelFile);
-  let endpoint = `${API}/linear-regression/run-saved-model`;
+    const formData = new FormData();
+    formData.append("model_file", modelFile);
+    let endpoint = `${API}/linear-regression/run-saved-model`;
 
-  if (usingDatabase) {
-    formData.append("table_name", selectedRunDbTable);
-    endpoint = `${API}/linear-regression/run-saved-model-db`;
-  } else {
-    const hasZip = runFiles.some((f) => f.name.toLowerCase().endsWith(".zip"));
-    if (hasZip) formData.append("zip_file", runFiles[0]);
-    else runFiles.forEach((f) => formData.append("shapefiles", f));
-  }
-
-  setLoading(true);
-  setResult(null);
-
-  try {
-    const res = await fetch(endpoint, { method: "POST", body: formData });
-    const data = await res.json();
-    if (!res.ok) {
-      console.error("Run Model Error:", data);
-      alert(`Error: ${data.error || res.statusText}`);
+    if (usingDatabase) {
+      formData.append("table_name", selectedRunDbTable);
+      endpoint = `${API}/linear-regression/run-saved-model-db`;
     } else {
-      if (data.downloads?.shapefile && !data.downloads.geojson) {
-        data.downloads.geojson = `${API}/linear-regression/preview-geojson?file_path=${encodeURIComponent(data.downloads.shapefile)}`;
-      }
-      setResult(data);
-      alert("✅ Model run completed successfully!");
+      const hasZip = runFiles.some((f) =>
+        f.name.toLowerCase().endsWith(".zip")
+      );
+      if (hasZip) formData.append("zip_file", runFiles[0]);
+      else runFiles.forEach((f) => formData.append("shapefiles", f));
     }
 
-  } catch (err) {
-    console.error("Run Model Fetch Error:", err);
-    alert("Failed to connect to backend.");
-  } finally {
-    setLoading(false);
-    setShowRunModal(false);
-    setModelFile(null);
-    setRunFiles([]);
-  }
-};
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const res = await fetch(endpoint, { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Run Model Error:", data);
+        alert(`Error: ${data.error || res.statusText}`);
+      } else {
+        if (data.downloads?.shapefile && !data.downloads.geojson) {
+          data.downloads.geojson = `${API}/linear-regression/preview-geojson?file_path=${encodeURIComponent(data.downloads.shapefile)}`;
+        }
+        setResult(data);
+        alert("✅ Model run completed successfully!");
+      }
+    } catch (err) {
+      console.error("Run Model Fetch Error:", err);
+      alert("Failed to connect to backend.");
+    } finally {
+      setLoading(false);
+      setShowRunModal(false);
+      setModelFile(null);
+      setRunFiles([]);
+    }
+  };
 
   // === Plotly defaults ===
   const plotConfig = (filename) => ({
@@ -283,18 +293,22 @@ const LinearRegression = ({ onClose }) => {
     paper_bgcolor: "#000",
     plot_bgcolor: "#000",
     font: { color: "white" },
-    hoverlabel: { bgcolor: "#111", bordercolor: "#00ff9d", font: { color: "white" } },
+    hoverlabel: {
+      bgcolor: "#111",
+      bordercolor: "#00ff9d",
+      font: { color: "white" },
+    },
     margin: { l: 60, r: 30, t: 60, b: 60 },
   };
-
-
 
   return (
     <div className="lr-overlay">
       <div className="lr-panel">
         <div className="lr-header">
           <h3>Linear Regression Tool</h3>
-          <button className="lr-close" onClick={onClose}>✕</button>
+          <button className="lr-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
 
         <div className="lr-content">
@@ -329,10 +343,9 @@ const LinearRegression = ({ onClose }) => {
               {selectedTable
                 ? `Database Table: ${selectedTable}`
                 : files.length > 0
-                ? files.map((f) => f.name).join(", ")
-                : "No data source chosen"}
+                  ? files.map((f) => f.name).join(", ")
+                  : "No data source chosen"}
             </span>
-
           </div>
 
           <hr className="divider" />
@@ -356,15 +369,24 @@ const LinearRegression = ({ onClose }) => {
           </div>
 
           <label>Dependent Variable</label>
-          <select value={dependentVar} onChange={(e) => setDependentVar(e.target.value)}>
+          <select
+            value={dependentVar}
+            onChange={(e) => setDependentVar(e.target.value)}
+          >
             <option value="">-- Select --</option>
             {fields.map((f) => (
-              <option key={f} value={f}>{f}</option>
+              <option key={f} value={f}>
+                {f}
+              </option>
             ))}
           </select>
 
           <div className="lr-buttons">
-            <button className="run-btn" onClick={handleTrainModel} disabled={loading}>
+            <button
+              className="run-btn"
+              onClick={handleTrainModel}
+              disabled={loading}
+            >
               {loading ? "Training..." : "Train Model"}
             </button>
             <button
@@ -389,7 +411,12 @@ const LinearRegression = ({ onClose }) => {
                     </p>
 
                     <table className="summary-table">
-                      <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                      <thead>
+                        <tr>
+                          <th>Metric</th>
+                          <th>Value</th>
+                        </tr>
+                      </thead>
                       <tbody>
                         {Object.entries(result.metrics || {}).map(([k, v]) => (
                           <tr key={k}>
@@ -402,19 +429,31 @@ const LinearRegression = ({ onClose }) => {
 
                     <h4 className="coef-header">Regression Coefficients</h4>
                     <table className="coef-table">
-                      <thead><tr><th>Variable</th><th>Coefficient</th></tr></thead>
+                      <thead>
+                        <tr>
+                          <th>Variable</th>
+                          <th>Coefficient</th>
+                        </tr>
+                      </thead>
                       <tbody>
-                        {Object.entries(result.coefficients || {}).map(([v, c]) => (
-                          <tr key={v}>
-                            <td>{v}</td>
-                            <td>{typeof c === "number" ? c.toFixed(6) : c}</td>
-                          </tr>
-                        ))}
+                        {Object.entries(result.coefficients || {}).map(
+                          ([v, c]) => (
+                            <tr key={v}>
+                              <td>{v}</td>
+                              <td>
+                                {typeof c === "number" ? c.toFixed(6) : c}
+                              </td>
+                            </tr>
+                          )
+                        )}
                       </tbody>
                     </table>
 
                     <p className="intercept-line">
-                      Intercept: {typeof result.intercept === "number" ? result.intercept.toFixed(6) : "—"}
+                      Intercept:{" "}
+                      {typeof result.intercept === "number"
+                        ? result.intercept.toFixed(6)
+                        : "—"}
                     </p>
 
                     {result.t_test && (
@@ -425,19 +464,27 @@ const LinearRegression = ({ onClose }) => {
                         <table className="w-full border-collapse text-sm bg-black/30 text-white">
                           <thead>
                             <tr className="bg-black/50 text-green-300">
-                              <th className="border border-green-700 p-1">Metric</th>
-                              <th className="border border-green-700 p-1">Value</th>
+                              <th className="border border-green-700 p-1">
+                                Metric
+                              </th>
+                              <th className="border border-green-700 p-1">
+                                Value
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
                             <tr>
-                              <td className="border border-green-700 p-1">T-statistic</td>
+                              <td className="border border-green-700 p-1">
+                                T-statistic
+                              </td>
                               <td className="border border-green-700 p-1">
                                 {result.t_test.t_stat?.toFixed(4) ?? "—"}
                               </td>
                             </tr>
                             <tr>
-                              <td className="border border-green-700 p-1">P-value</td>
+                              <td className="border border-green-700 p-1">
+                                P-value
+                              </td>
                               <td className="border border-green-700 p-1">
                                 {result.t_test.p_value?.toFixed(4) ?? "—"}
                               </td>
@@ -451,10 +498,42 @@ const LinearRegression = ({ onClose }) => {
                     <div className="download-links">
                       <h4>Downloads</h4>
                       <ul>
-                        <li><a href={result.downloads.model} target="_blank" rel="noreferrer">📦 Model (.pkl)</a></li>
-                        <li><a href={result.downloads.report} target="_blank" rel="noreferrer">📄 PDF Report</a></li>
-                        <li><a href={result.downloads.shapefile} target="_blank" rel="noreferrer">🗺️ Predicted Shapefile (.zip)</a></li>
-                        <li><a href={result.downloads.cama_csv} target="_blank" rel="noreferrer">📊 Full CAMA Table (CSV)</a></li>
+                        <li>
+                          <a
+                            href={result.downloads.model}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            📦 Model (.pkl)
+                          </a>
+                        </li>
+                        <li>
+                          <a
+                            href={result.downloads.report}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            📄 PDF Report
+                          </a>
+                        </li>
+                        <li>
+                          <a
+                            href={result.downloads.shapefile}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            🗺️ Predicted Shapefile (.zip)
+                          </a>
+                        </li>
+                        <li>
+                          <a
+                            href={result.downloads.cama_csv}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            📊 Full CAMA Table (CSV)
+                          </a>
+                        </li>
                       </ul>
                     </div>
 
@@ -463,7 +542,9 @@ const LinearRegression = ({ onClose }) => {
                         className="show-graphs-btn"
                         onClick={() => setShowResultsPanel(!showResultsPanel)}
                       >
-                        {showResultsPanel ? "Hide Graphs & Tables" : "Show Graphs & Tables"}
+                        {showResultsPanel
+                          ? "Hide Graphs & Tables"
+                          : "Show Graphs & Tables"}
                       </button>
                     </div>
                   </div>
@@ -471,7 +552,7 @@ const LinearRegression = ({ onClose }) => {
               ) : (
                 /* Else → Run Saved Model result (no metrics/graphs) */
                 <div className="model-summary-box">
-                  { result.downloads && (
+                  {result.downloads && (
                     <div className="download-links">
                       <h4>Downloads</h4>
                       <ul>
@@ -484,7 +565,11 @@ const LinearRegression = ({ onClose }) => {
                         )} */}
                         {result.downloads.shapefile && (
                           <li>
-                            <a href={result.downloads.shapefile} target="_blank" rel="noreferrer">
+                            <a
+                              href={result.downloads.shapefile}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
                               🗺️ Predicted Shapefile (.zip)
                             </a>
                           </li>
@@ -498,7 +583,7 @@ const LinearRegression = ({ onClose }) => {
                         )} */}
                       </ul>
                     </div>
-                  ) }
+                  )}
 
                   <div className="graphs-button-container">
                     <button
@@ -539,17 +624,22 @@ const LinearRegression = ({ onClose }) => {
                           return;
                         }
                         try {
-                          const res = await fetch(`${API}/linear-regression/save-to-db`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              shapefile_url: result.downloads.shapefile,
-                              table_name: "Predicted_Output",
-                            }),
-                          });
+                          const res = await fetch(
+                            `${API}/linear-regression/save-to-db`,
+                            {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                shapefile_url: result.downloads.shapefile,
+                                table_name: "Predicted_Output",
+                              }),
+                            }
+                          );
                           const data = await res.json();
-                          if (res.ok) alert(`✅ Saved to database table: ${data.table}`);
-                          else alert(`❌ Error: ${data.error || "Save failed"}`);
+                          if (res.ok)
+                            alert(`✅ Saved to database table: ${data.table}`);
+                          else
+                            alert(`❌ Error: ${data.error || "Save failed"}`);
                         } catch (err) {
                           console.error(err);
                           alert("Failed to save to database.");
@@ -559,14 +649,10 @@ const LinearRegression = ({ onClose }) => {
                       💾 Save to Database
                     </button>
                   </div>
-
                 </div>
               )}
             </>
           )}
-
-
-
         </div>
       </div>
 
@@ -574,10 +660,18 @@ const LinearRegression = ({ onClose }) => {
       {showResultsPanel && result && (
         <div className="graphs-modal">
           <div className="graphs-modal-content">
-            <button className="graphs-close" onClick={() => setShowResultsPanel(false)}>✕</button>
+            <button
+              className="graphs-close"
+              onClick={() => setShowResultsPanel(false)}
+            >
+              ✕
+            </button>
             <h2 className="graphs-title">📊 Linear Regression Results</h2>
-            <p className="graphs-subtitle">Interactive model performance & diagnostics dashboard</p>
+            <p className="graphs-subtitle">
+              Interactive model performance & diagnostics dashboard
+            </p>
 
+            {/* === Graph Grid === */}
             {/* === Graph Grid === */}
             <div className="graphs-grid">
               {[
@@ -586,180 +680,150 @@ const LinearRegression = ({ onClose }) => {
                 { key: "actual_pred", title: "Actual vs Predicted" },
                 { key: "resid_pred", title: "Residuals vs Predicted" },
               ].map((g) => (
-                <div key={g.key} className="graph-card" onClick={() => setFullscreenGraph(g.key)}>
+                <div
+                  key={g.key}
+                  className="graph-card"
+                  onClick={() => setFullscreenGraph(g.key)}
+                >
                   <h4>{g.title}</h4>
+
+                  {g.key === "importance" && (
+                    <Plot
+                      data={[
+                        {
+                          x: Object.keys(result.interactive_data.importance),
+                          y: Object.values(result.interactive_data.importance),
+                          type: "bar",
+                          marker: { color: "#00ff9d" },
+                          showlegend: false,
+                        },
+                      ]}
+                      layout={{
+                        ...plotLayoutBase,
+                        title: "",
+                        xaxis: {
+                          title: "",
+                          color: "#ccc",
+                          showticklabels: false,
+                        },
+                        yaxis: { title: "", color: "#ccc" },
+                        margin: { l: 40, r: 20, t: 20, b: 30 },
+                      }}
+                      config={plotConfig(g.key)}
+                      useResizeHandler
+                      style={{ width: "100%", height: "100%" }}
+                    />
+                  )}
+
                   {g.key === "residuals" && (
-  <Plot
-    data={[{
-      type: "bar",
-      x: result.interactive_data.residual_bins,
-      y: result.interactive_data.residual_counts,
-      marker: {
-        color: "#00ff9d",
-        opacity: 0.85,
-        line: { color: "#0f0f0f", width: 1.2 },
-      },
-    }]}
-    layout={{
-      ...plotLayoutBase,
-      title: "Residual Distribution",
-      xaxis: { title: "Residual" },
-      yaxis: { title: "Frequency" },
-    }}
-    config={plotConfig("residual_distribution")}
-    useResizeHandler
-    style={{ width: "100%", height: "100%" }}
-  />
-)}
-{g.key === "importance" && (
-  <Plot
-    data={[{
-      x: Object.keys(result.interactive_data.importance),
-      y: Object.values(result.interactive_data.importance),
-      type: "bar",
-      marker: { color: "#00ff9d" },
-    }]}
-    layout={{
-      ...plotLayoutBase,
-      title: g.title,
-      xaxis: { title: "Independent Variables", color: "#ccc" },
-      yaxis: { title: "Importance Score", color: "#ccc" },
-    }}
-    config={plotConfig(g.key)}
-    useResizeHandler
-    style={{ width: "100%", height: "100%" }}
-  />
-)}
+                    <Plot
+                      data={[
+                        {
+                          type: "bar",
+                          x: result.interactive_data.residual_bins,
+                          y: result.interactive_data.residual_counts,
+                          marker: {
+                            color: "#00ff9d",
+                            opacity: 0.85,
+                            line: { color: "#0f0f0f", width: 1.2 },
+                          },
+                          showlegend: false,
+                        },
+                      ]}
+                      layout={{
+                        ...plotLayoutBase,
+                        title: "",
+                        xaxis: { title: "", color: "#ccc" },
+                        yaxis: { title: "", color: "#ccc" },
+                        margin: { l: 40, r: 20, t: 20, b: 30 },
+                      }}
+                      config={plotConfig("residual_distribution")}
+                      useResizeHandler
+                      style={{ width: "100%", height: "100%" }}
+                    />
+                  )}
 
- {g.key === "residuals" && (
-  <Plot
-    data={[{
-      type: "bar",
-      x: result.interactive_data.residual_bins,
-      y: result.interactive_data.residual_counts,
-      marker: {
-        color: "#00ff9d",
-        opacity: 0.85,
-        line: { color: "#0f0f0f", width: 1.2 },
-      },
-    }]}
-    layout={{
-      ...plotLayoutBase,
-      title: "Residual Distribution",
-      xaxis: { title: "Residual", color: "#ccc" },
-      yaxis: { title: "Frequency", color: "#ccc" },
-    }}
-    config={plotConfig("residual_distribution")}
-    useResizeHandler
-    style={{ width: "100%", height: "100%" }}
-  />
-)}
+                  {g.key === "actual_pred" && (
+                    <Plot
+                      data={[
+                        {
+                          x: result.interactive_data.y_test,
+                          y: result.interactive_data.preds,
+                          mode: "markers",
+                          type: "scatter",
+                          name: "Predicted Values",
+                          marker: {
+                            color: "#00ff9d",
+                            size: 6,
+                            opacity: 0.7,
+                          },
+                        },
+                        {
+                          x: result.interactive_data.y_test,
+                          y: result.interactive_data.y_test,
+                          mode: "lines",
+                          name: "Actual Values",
+                          line: { color: "#ffff00", dash: "dash", width: 1.5 },
+                        },
+                      ]}
+                      layout={{
+                        ...plotLayoutBase,
+                        title: "",
+                        xaxis: { title: "", color: "#ccc" },
+                        yaxis: { title: "", color: "#ccc" },
+                        margin: { l: 40, r: 20, t: 20, b: 30 },
+                        showlegend: false,
+                      }}
+                      config={plotConfig(g.key)}
+                      useResizeHandler
+                      style={{ width: "100%", height: "100%" }}
+                    />
+                  )}
 
-
-{g.key === "actual_pred" && (
-  <Plot
-    data={[
-      {
-        x: result.interactive_data.y_test,
-        y: result.interactive_data.preds,
-        mode: "markers",
-        type: "scatter",
-        name: "Predicted Points",
-        marker: { color: "#00ff9d", size: 8, opacity: 0.8 },
-      },
-      {
-        x: result.interactive_data.y_test,
-        y: result.interactive_data.y_test,
-        mode: "lines",
-        name: "Ideal Fit Line",
-        line: { color: "white", dash: "dash" },
-      },
-    ]}
-    layout={{
-      ...plotLayoutBase,
-      title: g.title,
-      xaxis: {
-        title: { text: "Actual Values", font: { color: "#00ff9d", size: 14 } },
-        color: "#ccc",
-      },
-      yaxis: {
-        title: { text: "Predicted Values", font: { color: "#00ff9d", size: 14 } },
-        color: "#ccc",
-      },
-      legend: {
-        x: 0.02,
-        y: 0.98,
-        xanchor: "left",
-        yanchor: "top",
-        bgcolor: "rgba(0,0,0,0.5)",
-        bordercolor: "#00ff9d60",
-        borderwidth: 1,
-        font: { color: "#00ff9d", size: 12 },
-        orientation: "v",
-      },
-    }}
-    config={plotConfig(g.key)}
-    useResizeHandler
-    style={{ width: "100%", height: "100%" }}
-  />
-)}
-
-{g.key === "resid_pred" && (
-  <Plot
-    data={[
-      {
-        x: result.interactive_data.preds,
-        y: result.interactive_data.residuals,
-        mode: "markers",
-        type: "scatter",
-        name: "Residual Points",
-        marker: { color: "#ff6363", size: 8, opacity: 0.8 },
-      },
-      {
-        x: result.interactive_data.preds,
-        y: Array(result.interactive_data.preds?.length).fill(0),
-        mode: "lines",
-        name: "Zero Residual Line",
-        line: { color: "white", dash: "dash" },
-      },
-    ]}
-    layout={{
-      ...plotLayoutBase,
-      title: g.title,
-      xaxis: {
-        title: { text: "Predicted Values", font: { color: "#00ff9d", size: 14 } },
-        color: "#ccc",
-      },
-      yaxis: {
-        title: { text: "Residuals", font: { color: "#00ff9d", size: 14 } },
-        color: "#ccc",
-      },
-      legend: {
-        x: 0.02,
-        y: 0.98,
-        xanchor: "left",
-        yanchor: "top",
-        bgcolor: "rgba(0,0,0,0.5)",
-        bordercolor: "#00ff9d60",
-        borderwidth: 1,
-        font: { color: "#ff6363", size: 12 },
-        orientation: "v",
-      },
-    }}
-    config={plotConfig(g.key)}
-    useResizeHandler
-    style={{ width: "100%", height: "100%" }}
-  />
-)}
-
-                </div>  
+                  {g.key === "resid_pred" && (
+                    <Plot
+                      data={[
+                        {
+                          x: result.interactive_data.preds,
+                          y: result.interactive_data.residuals,
+                          mode: "markers",
+                          type: "scatter",
+                          name: "Residuals",
+                          marker: { color: "#ff6363", size: 6, opacity: 0.7 },
+                        },
+                        {
+                          x: result.interactive_data.preds,
+                          y: Array(result.interactive_data.preds?.length).fill(
+                            0
+                          ),
+                          mode: "lines",
+                          name: "Zero Line",
+                          line: { color: "#ffff00", dash: "dash", width: 1.5 },
+                        },
+                      ]}
+                      layout={{
+                        ...plotLayoutBase,
+                        title: "",
+                        xaxis: { title: "", color: "#ccc" },
+                        yaxis: { title: "", color: "#ccc" },
+                        margin: { l: 40, r: 20, t: 20, b: 30 },
+                        showlegend: false,
+                      }}
+                      config={plotConfig(g.key)}
+                      useResizeHandler
+                      style={{ width: "100%", height: "100%" }}
+                    />
+                  )}
+                </div>
               ))}
             </div>
 
             {/* === CAMA PREVIEW === */}
             {result.cama_preview && (
               <div className="cama-preview-modal">
-                <h3 className="cama-header-modal">🏠 CAMA Attribute Table (Preview)</h3>
+                <h3 className="cama-header-modal">
+                  🏠 CAMA Attribute Table (Preview)
+                </h3>
                 <p className="graphs-subtitle">
                   Click a column name to see its data distribution.
                 </p>
@@ -767,39 +831,52 @@ const LinearRegression = ({ onClose }) => {
                   <table className="cama-table-modal">
                     <thead>
                       <tr>
-                        {Object.keys(result.cama_preview[0] || {}).map((col) => (
-                          <th
-  key={col}
-  onClick={() => {
-    const columnValues = result.cama_preview
-      .map((row) => parseFloat(row[col]))
-      .filter((v) => !isNaN(v)); // only numeric
-    if (columnValues.length > 0) {
-      setSelectedGraph({
-        title: `Distribution of ${col}`,
-        column: col,
-        values: columnValues,
-      });
-    } else {
-      alert(`No numeric data found for column: ${col}`);
-    }
-  }}
-  style={{ cursor: "pointer" }}
->
-
-                            {col}
-                            {result.distributions?.[col] && (
-                              <span style={{ fontSize: "12px", color: "#00ff9d" }}> 📊</span>
-                            )}
-                          </th>
-                        ))}
+                        {Object.keys(result.cama_preview[0] || {}).map(
+                          (col) => (
+                            <th
+                              key={col}
+                              onClick={() => {
+                                const columnValues = result.cama_preview
+                                  .map((row) => parseFloat(row[col]))
+                                  .filter((v) => !isNaN(v)); // only numeric
+                                if (columnValues.length > 0) {
+                                  setSelectedGraph({
+                                    title: `Distribution of ${col}`,
+                                    column: col,
+                                    values: columnValues,
+                                  });
+                                } else {
+                                  alert(
+                                    `No numeric data found for column: ${col}`
+                                  );
+                                }
+                              }}
+                              style={{ cursor: "pointer" }}
+                            >
+                              {col}
+                              {result.distributions?.[col] && (
+                                <span
+                                  style={{ fontSize: "12px", color: "#00ff9d" }}
+                                >
+                                  {" "}
+                                  📊
+                                </span>
+                              )}
+                            </th>
+                          )
+                        )}
                       </tr>
                     </thead>
                     <tbody>
                       {result.cama_preview.map((row, i) => (
                         <tr key={i}>
                           {Object.entries(row).map(([col, val]) => (
-                            <td key={col} className={col === "prediction" ? "prediction-col" : ""}>
+                            <td
+                              key={col}
+                              className={
+                                col === "prediction" ? "prediction-col" : ""
+                              }
+                            >
                               {val !== "" ? val : "—"}
                             </td>
                           ))}
@@ -824,88 +901,260 @@ const LinearRegression = ({ onClose }) => {
 
             {/* === Popup distribution viewer === */}
             {selectedGraph && (
-  <div className="graph-viewer-overlay" onClick={() => setSelectedGraph(null)}>
-    <div className="graph-viewer-box" onClick={(e) => e.stopPropagation()}>
-      <button className="graph-viewer-close" onClick={() => setSelectedGraph(null)}>✕</button>
-      <h3 style={{ color: "#00ff9d" }}>{selectedGraph.title}</h3>
-      {/* 🧠 Render Plotly histogram dynamically */}
-      <Plot
-        data={[
-          {
-            x: selectedGraph.values,
-            type: "histogram",
-            histnorm: "probability density",
-            marker: { color: "#00ff9d", opacity: 0.75 },
-          },
-        ]}
-        layout={{
-          paper_bgcolor: "#000",
-          plot_bgcolor: "#000",
-          font: { color: "white" },
-          hoverlabel: { bgcolor: "#111", bordercolor: "#00ff9d", font: { color: "white" } },
-          margin: { l: 50, r: 30, t: 60, b: 60 },
-          xaxis: { title: selectedGraph.column },
-          yaxis: { title: "Density" },
-          bargap: 0.3,
-        }}
-        config={{
-          responsive: true,
-          displaylogo: false,
-          scrollZoom: true,
-          toImageButtonOptions: { format: "png", filename: selectedGraph.column },
-        }}
-        useResizeHandler
-        style={{ width: "100%", height: "70vh" }}
-      />
-    </div>
-  </div>
-)}
-
+              <div
+                className="graph-viewer-overlay"
+                onClick={() => setSelectedGraph(null)}
+              >
+                <div
+                  className="graph-viewer-box"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    className="graph-viewer-close"
+                    onClick={() => setSelectedGraph(null)}
+                  >
+                    ✕
+                  </button>
+                  <h3 style={{ color: "#00ff9d" }}>{selectedGraph.title}</h3>
+                  {/* 🧠 Render Plotly histogram dynamically */}
+                  <Plot
+                    data={[
+                      {
+                        x: selectedGraph.values,
+                        type: "histogram",
+                        histnorm: "probability density",
+                        marker: { color: "#00ff9d", opacity: 0.75 },
+                      },
+                    ]}
+                    layout={{
+                      paper_bgcolor: "#000",
+                      plot_bgcolor: "#000",
+                      font: { color: "white" },
+                      hoverlabel: {
+                        bgcolor: "#111",
+                        bordercolor: "#00ff9d",
+                        font: { color: "white" },
+                      },
+                      margin: { l: 50, r: 30, t: 60, b: 60 },
+                      xaxis: { title: selectedGraph.column },
+                      yaxis: { title: "Density" },
+                      bargap: 0.3,
+                    }}
+                    config={{
+                      responsive: true,
+                      displaylogo: false,
+                      scrollZoom: true,
+                      toImageButtonOptions: {
+                        format: "png",
+                        filename: selectedGraph.column,
+                      },
+                    }}
+                    useResizeHandler
+                    style={{ width: "100%", height: "70vh" }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* === Fullscreen Chart === */}
       {fullscreenGraph && (
-        <div className="graph-viewer-overlay" onClick={() => setFullscreenGraph(null)}>
-          <div className="graph-viewer-box" onClick={(e) => e.stopPropagation()}>
-            <button className="graph-viewer-close" onClick={() => setFullscreenGraph(null)}>✕</button>
+        <div
+          className="graph-viewer-overlay"
+          onClick={() => setFullscreenGraph(null)}
+        >
+          <div
+            className="graph-viewer-box"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="graph-viewer-close"
+              onClick={() => setFullscreenGraph(null)}
+            >
+              ✕
+            </button>
             <h3 style={{ color: "#00ff9d" }}>
-              {fullscreenGraph.replace("_", " ").toUpperCase()}
+              {fullscreenGraph === "importance" && "Feature Importance"}
+              {fullscreenGraph === "residuals" && "Residual Distribution"}
+              {fullscreenGraph === "actual_pred" && "Actual vs Predicted"}
+              {fullscreenGraph === "resid_pred" && "Residuals vs Predicted"}
             </h3>
             <Plot
               data={
                 fullscreenGraph === "importance"
-                  ? [{ x: Object.keys(result.interactive_data.importance),
-                       y: Object.values(result.interactive_data.importance),
-                       type: "bar", marker: { color: "#00ff9d" } }]
-                  : fullscreenGraph === "residuals"
-? [{
-    type: "bar",
-    x: result.interactive_data.residual_bins,
-    y: result.interactive_data.residual_counts,
-    marker: {
-      color: "#00ff9d",
-      opacity: 0.85,
-      line: { color: "#0f0f0f", width: 1.2 },
-    },
-    // ✅ keep the same width ratio and spacing
-    width: 0.6 *
-      ((Math.max(...result.interactive_data.residual_bins) -
-        Math.min(...result.interactive_data.residual_bins)) /
-        result.interactive_data.residual_bins.length),
-  }]
-                  : fullscreenGraph === "actual_pred"
                   ? [
-                      { x: result.interactive_data.y_test, y: result.interactive_data.preds, mode: "markers", type: "scatter", marker: { color: "#00ff9d", size: 10 } },
-                      { x: result.interactive_data.y_test, y: result.interactive_data.y_test, mode: "lines", line: { color: "white", dash: "dash" } },
+                      {
+                        x: Object.keys(result.interactive_data.importance),
+                        y: Object.values(result.interactive_data.importance),
+                        type: "bar",
+                        name: "Importance Score",
+                        marker: { color: "#00ff9d" },
+                      },
                     ]
-                  : [
-                      { x: result.interactive_data.preds, y: result.interactive_data.residuals, mode: "markers", type: "scatter", marker: { color: "#ff6363", size: 10 } },
-                      { x: result.interactive_data.preds, y: Array(result.interactive_data.preds?.length).fill(0), mode: "lines", line: { color: "white", dash: "dash" } },
-                    ]
+                  : fullscreenGraph === "residuals"
+                    ? [
+                        {
+                          type: "bar",
+                          x: result.interactive_data.residual_bins,
+                          y: result.interactive_data.residual_counts,
+                          name: "Frequency",
+                          marker: {
+                            color: "#00ff9d",
+                            opacity: 0.85,
+                            line: { color: "#0f0f0f", width: 1.2 },
+                          },
+                          width:
+                            0.6 *
+                            ((Math.max(
+                              ...result.interactive_data.residual_bins
+                            ) -
+                              Math.min(
+                                ...result.interactive_data.residual_bins
+                              )) /
+                              result.interactive_data.residual_bins.length),
+                        },
+                      ]
+                    : fullscreenGraph === "actual_pred"
+                      ? [
+                          {
+                            x: result.interactive_data.y_test,
+                            y: result.interactive_data.preds,
+                            mode: "markers",
+                            type: "scatter",
+                            name: "Predicted Values",
+                            marker: {
+                              color: "#00ff9d",
+                              size: 10,
+                              opacity: 0.8,
+                              line: { color: "#fff", width: 0.5 },
+                            },
+                          },
+                          {
+                            x: result.interactive_data.y_test,
+                            y: result.interactive_data.y_test,
+                            mode: "lines",
+                            name: "Actual Values (y=x)",
+                            line: { color: "#ffff00", dash: "dash", width: 3 },
+                          },
+                        ]
+                      : [
+                          {
+                            x: result.interactive_data.preds,
+                            y: result.interactive_data.residuals,
+                            mode: "markers",
+                            type: "scatter",
+                            name: "Residuals",
+                            marker: {
+                              color: "#ff6363",
+                              size: 10,
+                              opacity: 0.8,
+                              line: { color: "#fff", width: 0.5 },
+                            },
+                          },
+                          {
+                            x: result.interactive_data.preds,
+                            y: Array(
+                              result.interactive_data.preds?.length
+                            ).fill(0),
+                            mode: "lines",
+                            name: "Zero Line (Perfect Model)",
+                            line: { color: "#ffff00", dash: "dash", width: 3 },
+                          },
+                        ]
               }
-              layout={{ ...plotLayoutBase, title: `${fullscreenGraph.replace("_", " ").toUpperCase()} (Fullscreen)` }}
+              layout={{
+                ...plotLayoutBase,
+                title: "",
+                xaxis: {
+                  title: {
+                    text:
+                      fullscreenGraph === "importance"
+                        ? "Independent Variables"
+                        : fullscreenGraph === "residuals"
+                          ? "Residual Value"
+                          : fullscreenGraph === "actual_pred"
+                            ? "Actual Values (Observed)"
+                            : "Predicted Values (Model Output)",
+                    font: {
+                      color:
+                        fullscreenGraph === "resid_pred"
+                          ? "#ff6363"
+                          : "#00ff9d",
+                      size: 16,
+                      weight: "bold",
+                    },
+                  },
+                  color: "#ccc",
+                  gridcolor: "#333",
+                },
+                yaxis: {
+                  title: {
+                    text:
+                      fullscreenGraph === "importance"
+                        ? "Importance Score"
+                        : fullscreenGraph === "residuals"
+                          ? "Frequency"
+                          : fullscreenGraph === "actual_pred"
+                            ? "Predicted Values (Model Output)"
+                            : "Residuals (Actual - Predicted)",
+                    font: {
+                      color:
+                        fullscreenGraph === "resid_pred"
+                          ? "#ff6363"
+                          : "#00ff9d",
+                      size: 16,
+                      weight: "bold",
+                    },
+                  },
+                  color: "#ccc",
+                  gridcolor: "#333",
+                },
+                legend: {
+                  x: 0.05,
+                  y: 0.95,
+                  xanchor: "left",
+                  yanchor: "top",
+                  bgcolor: "rgba(0,0,0,0.8)",
+                  bordercolor:
+                    fullscreenGraph === "resid_pred" ? "#ff6363" : "#00ff9d",
+                  borderwidth: 2,
+                  font: { color: "#fff", size: 14 },
+                },
+                annotations:
+                  fullscreenGraph === "actual_pred"
+                    ? [
+                        {
+                          text: "Points closer to the line = Better predictions",
+                          xref: "paper",
+                          yref: "paper",
+                          x: 0.5,
+                          y: -0.12,
+                          showarrow: false,
+                          font: { color: "#00ff9d", size: 13, style: "italic" },
+                          xanchor: "center",
+                        },
+                      ]
+                    : fullscreenGraph === "resid_pred"
+                      ? [
+                          {
+                            text: "Random scatter around zero = Good model fit",
+                            xref: "paper",
+                            yref: "paper",
+                            x: 0.5,
+                            y: -0.12,
+                            showarrow: false,
+                            font: {
+                              color: "#ff6363",
+                              size: 13,
+                              style: "italic",
+                            },
+                            xanchor: "center",
+                          },
+                        ]
+                      : [],
+              }}
               config={plotConfig(`${fullscreenGraph}_full`)}
               useResizeHandler
               style={{ width: "100%", height: "80vh" }}
@@ -913,7 +1162,6 @@ const LinearRegression = ({ onClose }) => {
           </div>
         </div>
       )}
-
       {/* === Database Table Modal === */}
       {showDbModal && (
         <div className="lr-modal" onClick={() => setShowDbModal(false)}>
@@ -944,7 +1192,10 @@ const LinearRegression = ({ onClose }) => {
             )}
 
             <div className="lr-modal-buttons">
-              <button className="cancel-btn" onClick={() => setShowDbModal(false)}>
+              <button
+                className="cancel-btn"
+                onClick={() => setShowDbModal(false)}
+              >
                 Close
               </button>
             </div>
@@ -952,11 +1203,13 @@ const LinearRegression = ({ onClose }) => {
         </div>
       )}
 
-
       {/* === Run Model Modal === */}
       {showRunModal && (
         <div className="lr-modal" onClick={() => setShowRunModal(false)}>
-          <div className="lr-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="lr-modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h4>Run Saved Model</h4>
 
             <label>Upload Model (.pkl)</label>
@@ -993,22 +1246,24 @@ const LinearRegression = ({ onClose }) => {
               >
                 🗄️ Database
               </button>
-
             </div>
 
             <span className="file-name">
               {selectedRunDbTable
                 ? `Database Table: ${selectedRunDbTable}`
                 : runFiles.length > 0
-                ? runFiles.map((f) => f.name).join(", ")
-                : "No data source chosen"}
+                  ? runFiles.map((f) => f.name).join(", ")
+                  : "No data source chosen"}
             </span>
 
             <div className="lr-modal-buttons">
               <button onClick={handleRunModel} disabled={loading}>
                 {loading ? "Running..." : "Run"}
               </button>
-              <button className="cancel-btn" onClick={() => setShowRunModal(false)}>
+              <button
+                className="cancel-btn"
+                onClick={() => setShowRunModal(false)}
+              >
                 Cancel
               </button>
             </div>
@@ -1048,15 +1303,16 @@ const LinearRegression = ({ onClose }) => {
             )}
 
             <div className="lr-modal-buttons">
-              <button className="cancel-btn" onClick={() => setShowRunDbModal(false)}>
+              <button
+                className="cancel-btn"
+                onClick={() => setShowRunDbModal(false)}
+              >
                 Close
               </button>
             </div>
           </div>
         </div>
       )}
-
-
     </div>
   );
 };

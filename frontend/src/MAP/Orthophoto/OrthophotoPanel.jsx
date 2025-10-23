@@ -32,17 +32,11 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
     if (!containerRef.current) return;
     const stopEvent = (e) => e.stopPropagation();
     const el = containerRef.current;
-    
-    // ✅ ADDED: Stop ALL events that might interfere with typing
-    const events = [
-      'wheel', 'dblclick', 'mousedown', 'touchstart',
-      'keydown', 'keyup', 'keypress' // ✅ Added keyboard events
-    ];
-    
-    events.forEach(event => el.addEventListener(event, stopEvent));
-    
+    el.addEventListener("wheel", stopEvent);
+    el.addEventListener("dblclick", stopEvent);
     return () => {
-      events.forEach(event => el.removeEventListener(event, stopEvent));
+      el.removeEventListener("wheel", stopEvent);
+      el.removeEventListener("dblclick", stopEvent);
     };
   }, []);
 
@@ -153,9 +147,6 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
               type="text"
               value={gserverUrl}
               onChange={(e) => setGserverUrl(e.target.value)}
-              onKeyDown={handleInputKeyEvent}
-              onKeyUp={handleInputKeyEvent}
-              onKeyPress={handleInputKeyEvent}
               placeholder="http://your-geoserver/geoserver/gwc/service/wmts"
               className="w-full bg-[#1E1E1E] text-white border border-[#2A2E35] rounded px-2 py-1.5 text-xs focus:outline-none focus:border-[#F7C800]"
             />
@@ -170,9 +161,6 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
               type="text"
               value={layerName}
               onChange={(e) => setLayerName(e.target.value)}
-              onKeyDown={handleInputKeyEvent}
-              onKeyUp={handleInputKeyEvent}
-              onKeyPress={handleInputKeyEvent}
               placeholder="workspace:layername"
               className="w-full bg-[#1E1E1E] text-white border border-[#2A2E35] rounded px-2 py-1.5 text-xs focus:outline-none focus:border-[#F7C800]"
             />
