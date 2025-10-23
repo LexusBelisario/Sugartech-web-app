@@ -3,21 +3,24 @@ import ReactDOM from "react-dom";
 import "./toolbar.css";
 import LinearRegression from "../PredictiveModelTools/LinearRegression/LinearRegression.jsx";
 import GWR from "../PredictiveModelTools/GWR/GWR.jsx";
+import XGBoost from "../PredictiveModelTools/XGBoost/XGBoost.jsx";
 
 const TBPredictiveModelTools = () => {
-  // AI Model states
+  // === AI Model states ===
   const [showLinearRegression, setShowLinearRegression] = useState(false);
+  const [showXGBoost, setShowXGBoost] = useState(false);
 
-  // Geo-AI Model states
+  // === GEO-AI Model states ===
   const [showGWR, setShowGWR] = useState(false);
 
-  // AI Model handlers
+  // === AI Model handlers ===
   const handleLinearRegression = () => setShowLinearRegression(true);
+  const handleXGBoost = () => setShowXGBoost(true);
 
-  // Geo-AI Model handlers
+  // === GEO-AI Model handlers ===
   const handleGWR = () => setShowGWR(true);
 
-  // Placeholder handlers (for future implementation)
+  // === Placeholder handlers (for future models) ===
   const handlePlaceholder = (modelName) => {
     alert(`${modelName} - Coming Soon!`);
   };
@@ -32,7 +35,7 @@ const TBPredictiveModelTools = () => {
             {/* XGBoost */}
             <button
               className="tool-button"
-              onClick={() => handlePlaceholder("XGBoost")}
+              onClick={handleXGBoost}
               title="Run XGBoost Model"
             >
               <img src="/icons/xgboost.png" alt="XGBoost" />
@@ -102,6 +105,12 @@ const TBPredictiveModelTools = () => {
       {showLinearRegression &&
         ReactDOM.createPortal(
           <LinearRegression onClose={() => setShowLinearRegression(false)} />,
+          document.body
+        )}
+
+      {showXGBoost &&
+        ReactDOM.createPortal(
+          <XGBoost onClose={() => setShowXGBoost(false)} />,
           document.body
         )}
 
