@@ -119,12 +119,16 @@ async def extract_fields_zip(zip_file: UploadFile):  # ✅ renamed parameter
 # ============================================================
 # 🔹 Train Linear Regression model and export files (with full PDF)
 # ============================================================
+# ============================================================
+# 🔹 Train Linear Regression model and export files (with full PDF)
+# ============================================================
 @router.post("/train")
 async def train_linear_regression(
     shapefiles: list[UploadFile],
     independent_vars: str = Form(...),
     dependent_var: str = Form(...),
 ):
+    import zipfile as zfmod
     import matplotlib.pyplot as plt
     import seaborn as sns
     from matplotlib.backends.backend_pdf import PdfPages
@@ -142,33 +146,28 @@ async def train_linear_regression(
                 with open(os.path.join(tmpdir, f.filename), "wb") as out:
                     out.write(await f.read())
 
-            # ✅ Find shapefile
             shp_file = next((f.filename for f in shapefiles if f.filename.endswith(".shp")), None)
             if not shp_file:
                 return JSONResponse(status_code=400, content={"error": "No .shp file found among uploads."})
+            
             shp_path = os.path.join(tmpdir, shp_file)
             gdf = gpd.read_file(shp_path)
             df_full = pd.DataFrame(gdf.drop(columns="geometry", errors="ignore"))
 
-            # ✅ Parse variable selections
-            independent_vars = (
-                json.loads(independent_vars)
-                if independent_vars.startswith("[")
-                else independent_vars.split(",")
-            )
+            # ✅ Parse vars
+            independent_vars = json.loads(independent_vars) if independent_vars.startswith("[") else independent_vars.split(",")
             independent_vars = [v.strip() for v in independent_vars if v.strip()]
             target = dependent_var.strip()
 
-            # ✅ Validate variables
+            # ✅ Validate fields
             missing = [v for v in independent_vars + [target] if v not in df_full.columns]
             if missing:
                 return JSONResponse(status_code=400, content={"error": f"Missing variables in shapefile: {missing}"})
 
-            # ✅ Safe numeric conversion
+            # ✅ Clean numeric
             def safe_to_float(x):
                 try:
-                    if pd.isna(x):
-                        return np.nan
+                    if pd.isna(x): return np.nan
                     if isinstance(x, str):
                         x = x.strip().replace(",", "")
                         if x.lower() in ["", "none", "nan", "null"]:
@@ -177,29 +176,28 @@ async def train_linear_regression(
                     return float(x)
                 except Exception:
                     return np.nan
-
             for col in independent_vars + [target]:
                 df_full[col] = df_full[col].map(safe_to_float)
 
             df_valid = df_full.dropna(subset=independent_vars + [target])
             if df_valid.empty:
-                return JSONResponse(status_code=400, content={"error": "No valid numeric data found in selected fields."})
+                return JSONResponse(status_code=400, content={"error": "No valid numeric data found."})
 
-            # ✅ Train-test split
+            # ✅ Train model
             X = df_valid[independent_vars]
             y = df_valid[target]
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-            # ✅ Scale & train
             scaler = StandardScaler()
             X_train_scaled = scaler.fit_transform(X_train)
             X_test_scaled = scaler.transform(X_test)
+
             model = LinearRegression()
             model.fit(X_train_scaled, y_train)
             preds = model.predict(X_test_scaled)
             residuals = y_test - preds
 
-            # ✅ Compute metrics
+            # ✅ Metrics
             mse = mean_squared_error(y_test, preds)
             mae = mean_absolute_error(y_test, preds)
             rmse = np.sqrt(mse)
@@ -215,122 +213,123 @@ async def train_linear_regression(
             joblib.dump({
                 "model": model,
                 "scaler": scaler,
-                "features": [v.lower() for v in independent_vars],  # 👈 normalize to lowercase
-                "dependent_var": target.lower(),                    # 👈 normalize too
+                "features": [v.lower() for v in independent_vars],
+                "dependent_var": target.lower(),
             }, model_path)
 
-            # ✅ PDF & plots
+            # ✅ PDF & Plots — BLUE ACCENT STYLE
+            accent = "#1e88e5"
             pdf_path = os.path.join(export_path, "regression_report.pdf")
             png_paths = {}
 
             with PdfPages(pdf_path) as pp:
+                # --- Metrics Table ---
                 fig, ax = plt.subplots(figsize=(6, 1.5))
-            ax.axis("off")
-            table = ax.table(
-                cellText=[
-                    ["Model", "MSE", "MAE", "RMSE", "R²"],
-                    ["Linear Regression", f"{mse:.2f}", f"{mae:.2f}", f"{rmse:.2f}", f"{r2:.2f}"],
-                ],
-                loc="center",
-                cellLoc="center",
-            )
-            table.scale(1, 2)
-            ax.set_title("📊 Linear Regression Model Performance", color=accent, fontsize=12, pad=10)
-            pp.savefig(fig, facecolor="white", edgecolor="white")
-            plt.close(fig)
-
-            # --- Feature Importance ---
-            std_X = np.std(X_train_scaled, axis=0)
-            std_y = np.std(y_train)
-            importance = model.coef_ * std_X / std_y
-            fig, ax = plt.subplots(figsize=(8, 4))
-            ax.bar(independent_vars, importance, color=accent)
-            ax.set_ylabel("Standardized Coefficient", color="black")
-            ax.set_title("Feature Importance", color=accent, fontsize=12, pad=10)
-            ax.tick_params(colors="black")
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-            pp.savefig(fig, facecolor="white", edgecolor="white")
-            plt.close(fig)
-
-            # --- Residual Distribution ---
-            fig, ax = plt.subplots(figsize=(6, 4))
-            sns.histplot(residuals, kde=True, ax=ax, color=accent)
-            ax.set_title("Residual Distribution (Normal Curve)", color=accent, fontsize=12, pad=10)
-            ax.set_xlabel("Residual", color="black")
-            ax.set_ylabel("Frequency", color="black")
-            ax.tick_params(colors="black")
-            plt.tight_layout()
-            pp.savefig(fig, facecolor="white", edgecolor="white")
-            plt.close(fig)
-
-            # --- Actual vs Predicted ---
-            fig, ax = plt.subplots(figsize=(6, 6))
-            ax.scatter(y_test, preds, color=accent, alpha=0.6)
-            ax.plot(
-                [min(y_test), max(y_test)],
-                [min(y_test), max(y_test)],
-                linestyle="--",
-                color="gray"
-            )
-            ax.set_xlabel("Actual Values", color="black")
-            ax.set_ylabel("Predicted Values", color="black")
-            ax.set_title("Actual vs Predicted", color=accent, fontsize=12, pad=10)
-            ax.tick_params(colors="black")
-            plt.tight_layout()
-            pp.savefig(fig, facecolor="white", edgecolor="white")
-            plt.close(fig)
-
-            # --- T-test text ---
-            fig, ax = plt.subplots(figsize=(5, 1.2))
-            ax.axis("off")
-            ax.text(
-                0.5, 0.5,
-                f"T-test on Residuals:\nT-statistic = {t_stat:.4f}\nP-value = {p_val:.4f}",
-                ha="center", va="center", color="black", fontsize=10
-            )
-            pp.savefig(fig, facecolor="white", edgecolor="white")
-            plt.close(fig)
-
-            # --- Independent Variable Distributions ---
-            for var in independent_vars:
-                fig, ax = plt.subplots(figsize=(6, 4))
-                sns.histplot(df[var], kde=True, color=accent, ax=ax)
-                ax.set_title(f"Distribution of {var}", color=accent, fontsize=12, pad=10)
-                ax.set_xlabel(var, color="black")
-                ax.set_ylabel("Frequency", color="black")
-                ax.tick_params(colors="black")
-                plt.tight_layout()
-                pp.savefig(fig, facecolor="white", edgecolor="white")
+                ax.axis("off")
+                table = ax.table(
+                    cellText=[
+                        ["Model", "MSE", "MAE", "RMSE", "R²"],
+                        ["Linear Regression", f"{mse:.2f}", f"{mae:.2f}", f"{rmse:.2f}", f"{r2:.2f}"],
+                    ],
+                    loc="center", cellLoc="center",
+                )
+                table.scale(1, 2)
+                for (i, j), cell in table.get_celld().items():
+                    if i == 0:
+                        cell.set_facecolor(accent)
+                        cell.set_text_props(weight='bold', color='white')
+                    else:
+                        cell.set_facecolor('#f0f0f0')
+                pp.savefig(fig, facecolor="white")
+                metrics_png = os.path.join(export_path, "metrics_table.png")
+                fig.savefig(metrics_png, bbox_inches="tight", facecolor="white")
                 plt.close(fig)
+                png_paths["metrics"] = metrics_png
 
-            # --- Dependent Variable Distribution ---
-            fig, ax = plt.subplots(figsize=(6, 4))
-            sns.histplot(df[dependent_var], kde=True, color=accent, ax=ax)
-            ax.set_title(f"Distribution of {dependent_var}", color=accent, fontsize=12, pad=10)
-            ax.set_xlabel(dependent_var, color="black")
-            ax.set_ylabel("Frequency", color="black")
-            ax.tick_params(colors="black")
-            plt.tight_layout()
-            pp.savefig(fig, facecolor="white", edgecolor="white")
-            plt.close(fig)
-            png_paths["t_test_residuals"] = ttest_png
+                # --- Feature Importance ---
+                std_X = np.std(X_train_scaled, axis=0)
+                std_y = np.std(y_train)
+                importance = model.coef_ * std_X / std_y
+                fig, ax = plt.subplots(figsize=(8, 4))
+                ax.bar(independent_vars, importance, color=accent)
+                ax.set_ylabel("Standardized Coefficient")
+                ax.set_title("Feature Importance", color=accent, fontsize=13, weight='bold', pad=10)
+                ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+                plt.xticks(rotation=45, ha='right'); plt.tight_layout()
+                pp.savefig(fig, facecolor="white")
+                fi_png = os.path.join(export_path, "feature_importance.png")
+                fig.savefig(fi_png, bbox_inches="tight", facecolor="white"); plt.close(fig)
+                png_paths["feature_importance"] = fi_png
 
-            for col in independent_vars:
+                # --- Residual Distribution ---
+                fig, ax = plt.subplots(figsize=(6, 4))
+                sns.histplot(residuals, kde=True, ax=ax, color=accent, edgecolor="black")
+                ax.set_title("Residual Distribution (Normal Curve)", color=accent, fontsize=13, weight='bold', pad=10)
+                ax.set_xlabel("Residual"); ax.set_ylabel("Frequency")
+                ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+                plt.tight_layout(); pp.savefig(fig, facecolor="white")
+                resid_png = os.path.join(export_path, "residual_distribution.png")
+                fig.savefig(resid_png, bbox_inches="tight", facecolor="white"); plt.close(fig)
+                png_paths["residual_distribution"] = resid_png
+
+                # --- Actual vs Predicted ---
+                fig, ax = plt.subplots(figsize=(6, 6))
+                ax.scatter(y_test, preds, alpha=0.6, color=accent, edgecolor="black", linewidth=0.5)
+                ax.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], "k--", lw=1.5, label="Perfect Prediction")
+                ax.set_xlabel("Actual Values"); ax.set_ylabel("Predicted Values")
+                ax.set_title("Actual vs Predicted Scatter Plot", color=accent, fontsize=13, weight='bold', pad=10)
+                ax.legend(); plt.tight_layout(); pp.savefig(fig, facecolor="white")
+                scatter_png = os.path.join(export_path, "actual_vs_predicted.png")
+                fig.savefig(scatter_png, bbox_inches="tight", facecolor="white"); plt.close(fig)
+                png_paths["actual_vs_predicted"] = scatter_png
+
+                # --- Residuals vs Predicted ---
+                fig, ax = plt.subplots(figsize=(6, 6))
+                ax.scatter(preds, residuals, alpha=0.6, color="#e53935", edgecolor="black", linewidth=0.5)
+                ax.axhline(y=0, color="black", linestyle="--", linewidth=1.5, label="Zero Line")
+                ax.set_xlabel("Predicted Values"); ax.set_ylabel("Residuals (Actual - Predicted)")
+                ax.set_title("Residuals vs Predicted Values", color="#e53935", fontsize=13, weight='bold', pad=10)
+                ax.legend(); plt.tight_layout(); pp.savefig(fig, facecolor="white")
+                resid_pred_png = os.path.join(export_path, "residuals_vs_predicted.png")
+                fig.savefig(resid_pred_png, bbox_inches="tight", facecolor="white"); plt.close(fig)
+                png_paths["residuals_vs_predicted"] = resid_pred_png
+
+                # --- T-Test ---
+                t_stat, p_val = stats.ttest_1samp(residuals, 0)
+                t_test_result = {"t_stat": float(t_stat), "p_value": float(p_val)}
+                fig, ax = plt.subplots(figsize=(6, 2))
+                ax.axis("off")
+                ax.text(0.5, 0.5,
+                        f"T-test on Residuals:\nT-statistic = {t_stat:.4f}\nP-value = {p_val:.4f}",
+                        fontsize=12, ha="center", va="center", color="black",
+                        bbox=dict(boxstyle="round,pad=0.5", facecolor=accent, edgecolor="black", alpha=0.2))
+                pp.savefig(fig, facecolor="white")
+                ttest_png = os.path.join(export_path, "t_test_residuals.png")
+                fig.savefig(ttest_png, bbox_inches="tight", facecolor="white"); plt.close(fig)
+                png_paths["t_test_residuals"] = ttest_png
+
+                # --- Independent Var Distributions ---
+                for col in independent_vars:
                     try:
                         fig, ax = plt.subplots(figsize=(6, 4))
-                        sns.histplot(df_valid[col].dropna(), kde=True, ax=ax, color="#00ff9d", edgecolor="black")
-                        ax.set_title(f"Distribution of {col}", fontsize=12, color="#00ff9d")
-                        ax.set_xlabel(col, color="white")
-                        ax.set_ylabel("Frequency", color="white")
-                        ax.tick_params(colors="white")
-                        ax.set_facecolor("black")
-                        fig.patch.set_facecolor("black")
-                        plt.tight_layout()
-                        pp.savefig(fig)  # ✅ Add to PDF directly
-                        plt.close(fig)
+                        sns.histplot(df_valid[col].dropna(), kde=True, ax=ax, color=accent, edgecolor="black")
+                        ax.set_title(f"Distribution of {col}", color=accent, fontsize=13, weight='bold', pad=10)
+                        ax.set_xlabel(col); ax.set_ylabel("Frequency")
+                        ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+                        pp.savefig(fig, facecolor="white"); plt.close(fig)
                     except Exception as e:
-                         print(f"⚠️ Could not add {col} distribution to PDF: {e}")
+                        print(f"⚠️ Could not add {col} distribution: {e}")
+
+                # --- Dependent Var Distribution ---
+                try:
+                    fig, ax = plt.subplots(figsize=(6, 4))
+                    sns.histplot(df_valid[target].dropna(), kde=True, ax=ax, color=accent, edgecolor="black")
+                    ax.set_title(f"Distribution of {target} (Dependent Variable)", color=accent, fontsize=13, weight='bold', pad=10)
+                    ax.set_xlabel(target); ax.set_ylabel("Frequency")
+                    ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+                    pp.savefig(fig, facecolor="white"); plt.close(fig)
+                except Exception as e:
+                    print(f"⚠️ Could not add dependent variable: {e}")
 
             # ✅ Predict on full dataset
             df_full["prediction"] = np.nan
@@ -346,14 +345,14 @@ async def train_linear_regression(
 
             # ✅ Zip shapefile
             zip_out = os.path.join(export_path, "predicted_output.zip")
-            with zipfile.ZipFile(zip_out, "w", zipfile.ZIP_DEFLATED) as z:
+            with zfmod.ZipFile(zip_out, "w", zfmod.ZIP_DEFLATED) as z:
                 for root, _, files in os.walk(shp_pred_dir):
                     for f in files:
                         z.write(os.path.join(root, f), f)
 
             # ✅ Derive LGU/schema name
             try:
-                base_name = os.path.splitext(os.path.basename(shp_file))[0]
+                base_name = os.path.splitext(shp_file)[0]
                 clean_name = base_name.split("_", 1)[-1] if "_" in base_name else base_name
             except Exception:
                 clean_name = "LinearRegression"
@@ -432,6 +431,9 @@ async def train_linear_regression(
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+# ============================================================
+# 🔹 Train Linear Regression model from ZIP shapefile (Blue Accent PDF)
+# ============================================================
 @router.post("/train-zip")
 async def train_linear_regression_zip(
     zip_file: UploadFile,
@@ -451,12 +453,11 @@ async def train_linear_regression_zip(
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
-            # ✅ Save uploaded ZIP
+            # ✅ Save and extract ZIP
             zip_path = os.path.join(tmpdir, zip_file.filename)
             with open(zip_path, "wb") as out:
                 out.write(await zip_file.read())
 
-            # ✅ Extract shapefile contents
             with zfmod.ZipFile(zip_path, "r") as archive:
                 archive.extractall(tmpdir)
 
@@ -464,8 +465,7 @@ async def train_linear_regression_zip(
             shp_files = [
                 os.path.join(root, f)
                 for root, _, files in os.walk(tmpdir)
-                for f in files
-                if f.endswith(".shp")
+                for f in files if f.endswith(".shp")
             ]
             if len(shp_files) == 0:
                 return JSONResponse(status_code=400, content={"error": "No .shp file found in ZIP."})
@@ -476,25 +476,20 @@ async def train_linear_regression_zip(
             gdf = gpd.read_file(shp_path)
             df_full = pd.DataFrame(gdf.drop(columns="geometry", errors="ignore"))
 
-            # ✅ Parse variable selections
-            independent_vars = (
-                json.loads(independent_vars)
-                if independent_vars.startswith("[")
-                else independent_vars.split(",")
-            )
+            # ✅ Parse variables
+            independent_vars = json.loads(independent_vars) if independent_vars.startswith("[") else independent_vars.split(",")
             independent_vars = [v.strip() for v in independent_vars if v.strip()]
             target = dependent_var.strip()
 
-            # ✅ Validate variables
+            # ✅ Validate fields
             missing = [v for v in independent_vars + [target] if v not in df_full.columns]
             if missing:
                 return JSONResponse(status_code=400, content={"error": f"Missing variables in shapefile: {missing}"})
 
-            # ✅ Safe numeric conversion
+            # ✅ Convert to numeric
             def safe_to_float(x):
                 try:
-                    if pd.isna(x):
-                        return np.nan
+                    if pd.isna(x): return np.nan
                     if isinstance(x, str):
                         x = x.strip().replace(",", "")
                         if x.lower() in ["", "none", "nan", "null"]:
@@ -503,7 +498,6 @@ async def train_linear_regression_zip(
                     return float(x)
                 except Exception:
                     return np.nan
-
             for col in independent_vars + [target]:
                 df_full[col] = df_full[col].map(safe_to_float)
 
@@ -511,12 +505,11 @@ async def train_linear_regression_zip(
             if df_valid.empty:
                 return JSONResponse(status_code=400, content={"error": "No valid numeric data found in selected fields."})
 
-            # ✅ Train-test split
+            # ✅ Train model
             X = df_valid[independent_vars]
             y = df_valid[target]
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-            # ✅ Scale & train
             scaler = StandardScaler()
             X_train_scaled = scaler.fit_transform(X_train)
             X_test_scaled = scaler.transform(X_test)
@@ -526,7 +519,7 @@ async def train_linear_regression_zip(
             preds = model.predict(X_test_scaled)
             residuals = y_test - preds
 
-            # ✅ Compute metrics
+            # ✅ Metrics
             mse = mean_squared_error(y_test, preds)
             mae = mean_absolute_error(y_test, preds)
             rmse = np.sqrt(mse)
@@ -542,16 +535,17 @@ async def train_linear_regression_zip(
             joblib.dump({
                 "model": model,
                 "scaler": scaler,
-                "features": [v.lower() for v in independent_vars],  # 👈 normalize to lowercase
-                "dependent_var": target.lower(),                    # 👈 normalize too
+                "features": [v.lower() for v in independent_vars],
+                "dependent_var": target.lower(),
             }, model_path)
 
-            # ✅ PDF & plots
+            # ✅ PDF & Plots — BLUE ACCENT STYLE
+            accent = "#1e88e5"
             pdf_path = os.path.join(export_path, "regression_report.pdf")
             png_paths = {}
 
             with PdfPages(pdf_path) as pp:
-                # --- Metrics table ---
+                # --- Metrics Table ---
                 fig, ax = plt.subplots(figsize=(6, 1.5))
                 ax.axis("off")
                 table = ax.table(
@@ -559,87 +553,105 @@ async def train_linear_regression_zip(
                         ["Model", "MSE", "MAE", "RMSE", "R²"],
                         ["Linear Regression", f"{mse:.2f}", f"{mae:.2f}", f"{rmse:.2f}", f"{r2:.2f}"],
                     ],
-                    loc="center",
-                    cellLoc="center",
+                    loc="center", cellLoc="center",
                 )
                 table.scale(1, 2)
-                pp.savefig(fig)
+                for (i, j), cell in table.get_celld().items():
+                    if i == 0:
+                        cell.set_facecolor(accent)
+                        cell.set_text_props(weight='bold', color='white')
+                    else:
+                        cell.set_facecolor('#f0f0f0')
+                pp.savefig(fig, facecolor="white")
                 metrics_png = os.path.join(export_path, "metrics_table.png")
-                fig.savefig(metrics_png, bbox_inches="tight")
+                fig.savefig(metrics_png, bbox_inches="tight", facecolor="white")
                 plt.close(fig)
                 png_paths["metrics"] = metrics_png
 
-                # --- Feature importance ---
+                # --- Feature Importance ---
                 std_X = np.std(X_train_scaled, axis=0)
                 std_y = np.std(y_train)
                 importance = model.coef_ * std_X / std_y
                 fig, ax = plt.subplots(figsize=(8, 4))
-                ax.bar(independent_vars, importance)
+                ax.bar(independent_vars, importance, color=accent)
                 ax.set_ylabel("Standardized Coefficient")
-                ax.set_title("Feature Importance")
-                plt.xticks(rotation=45)
-                plt.tight_layout()
-                pp.savefig(fig)
+                ax.set_title("Feature Importance", color=accent, fontsize=13, weight='bold', pad=10)
+                ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+                plt.xticks(rotation=45, ha='right'); plt.tight_layout()
+                pp.savefig(fig, facecolor="white")
                 fi_png = os.path.join(export_path, "feature_importance.png")
-                fig.savefig(fi_png, bbox_inches="tight")
-                plt.close(fig)
+                fig.savefig(fi_png, bbox_inches="tight", facecolor="white"); plt.close(fig)
                 png_paths["feature_importance"] = fi_png
 
-                # --- Residual distribution ---
+                # --- Residual Distribution ---
                 fig, ax = plt.subplots(figsize=(6, 4))
-                sns.histplot(residuals, kde=True, ax=ax)
-                ax.set_title("Residual Distribution (Normal Curve)")
-                ax.set_xlabel("Residual")
-                ax.set_ylabel("Frequency")
-                plt.tight_layout()
-                pp.savefig(fig)
+                sns.histplot(residuals, kde=True, ax=ax, color=accent, edgecolor="black")
+                ax.set_title("Residual Distribution (Normal Curve)", color=accent, fontsize=13, weight='bold', pad=10)
+                ax.set_xlabel("Residual"); ax.set_ylabel("Frequency")
+                ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+                plt.tight_layout(); pp.savefig(fig, facecolor="white")
                 resid_png = os.path.join(export_path, "residual_distribution.png")
-                fig.savefig(resid_png, bbox_inches="tight")
-                plt.close(fig)
+                fig.savefig(resid_png, bbox_inches="tight", facecolor="white"); plt.close(fig)
                 png_paths["residual_distribution"] = resid_png
 
                 # --- Actual vs Predicted ---
                 fig, ax = plt.subplots(figsize=(6, 6))
-                ax.scatter(y_test, preds, alpha=0.6)
-                ax.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], "k--", lw=1.5)
-                ax.set_xlabel("Actual Values")
-                ax.set_ylabel("Predicted Values")
-                ax.set_title("Actual vs Predicted Scatter Plot")
-                plt.tight_layout()
-                pp.savefig(fig)
+                ax.scatter(y_test, preds, alpha=0.6, color=accent, edgecolor="black", linewidth=0.5)
+                ax.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], "k--", lw=1.5, label="Perfect Prediction")
+                ax.set_xlabel("Actual Values"); ax.set_ylabel("Predicted Values")
+                ax.set_title("Actual vs Predicted Scatter Plot", color=accent, fontsize=13, weight='bold', pad=10)
+                ax.legend(); plt.tight_layout(); pp.savefig(fig, facecolor="white")
                 scatter_png = os.path.join(export_path, "actual_vs_predicted.png")
-                fig.savefig(scatter_png, bbox_inches="tight")
-                plt.close(fig)
+                fig.savefig(scatter_png, bbox_inches="tight", facecolor="white"); plt.close(fig)
                 png_paths["actual_vs_predicted"] = scatter_png
 
-                # --- T-test on residuals (table) ---
+                # --- Residuals vs Predicted ---
+                fig, ax = plt.subplots(figsize=(6, 6))
+                ax.scatter(preds, residuals, alpha=0.6, color="#e53935", edgecolor="black", linewidth=0.5)
+                ax.axhline(y=0, color="black", linestyle="--", linewidth=1.5, label="Zero Line")
+                ax.set_xlabel("Predicted Values"); ax.set_ylabel("Residuals (Actual - Predicted)")
+                ax.set_title("Residuals vs Predicted Values", color="#e53935", fontsize=13, weight='bold', pad=10)
+                ax.legend(); plt.tight_layout(); pp.savefig(fig, facecolor="white")
+                resid_pred_png = os.path.join(export_path, "residuals_vs_predicted.png")
+                fig.savefig(resid_pred_png, bbox_inches="tight", facecolor="white"); plt.close(fig)
+                png_paths["residuals_vs_predicted"] = resid_pred_png
+
+                # --- T-Test ---
                 t_stat, p_val = stats.ttest_1samp(residuals, 0)
                 t_test_result = {"t_stat": float(t_stat), "p_value": float(p_val)}
                 fig, ax = plt.subplots(figsize=(6, 2))
                 ax.axis("off")
-                ax.text(0.5, 0.5, f"T-test on Residuals:\nT-statistic = {t_stat:.4f}\nP-value = {p_val:.4f}",
-                        fontsize=12, ha="center", va="center")
-                pp.savefig(fig)
+                ax.text(0.5, 0.5,
+                        f"T-test on Residuals:\nT-statistic = {t_stat:.4f}\nP-value = {p_val:.4f}",
+                        fontsize=12, ha="center", va="center", color="black",
+                        bbox=dict(boxstyle="round,pad=0.5", facecolor=accent, edgecolor="black", alpha=0.2))
+                pp.savefig(fig, facecolor="white")
                 ttest_png = os.path.join(export_path, "t_test_residuals.png")
-                fig.savefig(ttest_png, bbox_inches="tight")
-                plt.close(fig)
+                fig.savefig(ttest_png, bbox_inches="tight", facecolor="white"); plt.close(fig)
                 png_paths["t_test_residuals"] = ttest_png
 
+                # --- Independent Var Distributions ---
                 for col in independent_vars:
                     try:
                         fig, ax = plt.subplots(figsize=(6, 4))
-                        sns.histplot(df_valid[col].dropna(), kde=True, ax=ax, color="#00ff9d", edgecolor="black")
-                        ax.set_title(f"Distribution of {col}", fontsize=12, color="#00ff9d")
-                        ax.set_xlabel(col, color="white")
-                        ax.set_ylabel("Frequency", color="white")
-                        ax.tick_params(colors="white")
-                        ax.set_facecolor("black")
-                        fig.patch.set_facecolor("black")
-                        plt.tight_layout()
-                        pp.savefig(fig)  # ✅ Add to PDF directly
-                        plt.close(fig)
+                        sns.histplot(df_valid[col].dropna(), kde=True, ax=ax, color=accent, edgecolor="black")
+                        ax.set_title(f"Distribution of {col}", color=accent, fontsize=13, weight='bold', pad=10)
+                        ax.set_xlabel(col); ax.set_ylabel("Frequency")
+                        ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+                        pp.savefig(fig, facecolor="white"); plt.close(fig)
                     except Exception as e:
-                         print(f"⚠️ Could not add {col} distribution to PDF: {e}")
+                        print(f"⚠️ Could not add {col} distribution: {e}")
+
+                # --- Dependent Var Distribution ---
+                try:
+                    fig, ax = plt.subplots(figsize=(6, 4))
+                    sns.histplot(df_valid[target].dropna(), kde=True, ax=ax, color=accent, edgecolor="black")
+                    ax.set_title(f"Distribution of {target} (Dependent Variable)", color=accent, fontsize=13, weight='bold', pad=10)
+                    ax.set_xlabel(target); ax.set_ylabel("Frequency")
+                    ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
+                    pp.savefig(fig, facecolor="white"); plt.close(fig)
+                except Exception as e:
+                    print(f"⚠️ Could not add dependent variable: {e}")
 
             # ✅ Predict on full dataset
             df_full["prediction"] = np.nan
@@ -1407,7 +1419,7 @@ async def train_linear_regression_db(
         rmse = np.sqrt(mse)
         r2 = r2_score(y_test, preds)
         t_stat, p_val = stats.ttest_1samp(residuals, 0)
-
+        t_test_result = {"t_stat": float(t_stat), "p_value": float(p_val)}
         std_X = np.std(X_train_scaled, axis=0)
         std_y = np.std(y_train)
         importance = model.coef_ * std_X / std_y
