@@ -57,25 +57,25 @@ const PropertySearch = () => {
     const sections = new Set();
 
     joinedTable.forEach((p) => {
-      if (p.province) provinces.add(p.province);
+      if (p.prov_code) provinces.add(p.prov_code);
 
-      if (!filters.province || p.province === filters.province) {
-        if (p.municipal) municipals.add(p.municipal);
+      if (!filters.province || p.prov_code === filters.province) {
+        if (p.lgu_code) municipals.add(p.lgu_code);
       }
 
       if (
-        (!filters.province || p.province === filters.province) &&
-        (!filters.municipal || p.municipal === filters.municipal)
+        (!filters.province || p.prov_code === filters.province) &&
+        (!filters.municipal || p.lgu_code === filters.municipal)
       ) {
-        if (p.barangay) barangays.add(p.barangay);
+        if (p.brgy_nm) barangays.add(p.brgy_nm);
       }
 
       if (
-        (!filters.province || p.province === filters.province) &&
-        (!filters.municipal || p.municipal === filters.municipal) &&
-        (!filters.barangay || p.barangay === filters.barangay)
+        (!filters.province || p.prov_code === filters.province) &&
+        (!filters.municipal || p.lgu_code === filters.municipal) &&
+        (!filters.barangay || p.brgy_nm === filters.barangay)
       ) {
-        if (p.section) sections.add(p.section);
+        if (p.sect_code) sections.add(p.sect_code);
       }
     });
 
@@ -128,13 +128,13 @@ const PropertySearch = () => {
     // === Perform local filtering ===
     const results = joinedTable.filter((p) => {
       return (
-        (!filters.province || p.province === filters.province) &&
-        (!filters.municipal || p.municipal === filters.municipal) &&
-        (!filters.barangay || p.barangay === filters.barangay) &&
-        (!filters.section || p.section === filters.section) &&
+        (!filters.province || p.prov_code === filters.province) &&
+        (!filters.municipal || p.lgu_code === filters.municipal) &&
+        (!filters.barangay || p.brgy_nm === filters.barangay) &&
+        (!filters.section || p.sect_code === filters.section) &&
         (!filters.parcel ||
-          (p.parcel &&
-            p.parcel.toLowerCase().includes(filters.parcel.toLowerCase()))) &&
+          (p.parcel_cod &&
+            p.parcel_cod.toLowerCase().includes(filters.parcel.toLowerCase()))) &&
         (!filters.pin ||
           (p.pin && p.pin.toLowerCase().includes(filters.pin.toLowerCase()))) &&
         (!filters.arpn ||

@@ -41,7 +41,7 @@ const allowedFieldsByTab = {
     "west",
 
     // Property Location
-    "barangay",
+    "brgy_nm",
     "street",
     "extent",
   ],

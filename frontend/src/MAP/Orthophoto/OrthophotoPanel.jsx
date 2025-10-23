@@ -3,25 +3,31 @@ import { ChevronRight } from "lucide-react";
 
 const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
   const containerRef = useRef(null);
-  
-  const [gserverUrl, setGserverUrl] = useState(initialData?.Gsrvr_URL || "");
-  const [layerName, setLayerName] = useState(initialData?.Layer_Name || "");
-  const [message, setMessage] = useState(initialData?.message || "");
+
+  // ==========================================================
+  // 🌍 Local State
+  // ==========================================================
+  const [gserverUrl, setGserverUrl] = useState("");
+  const [layerName, setLayerName] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [orthoVisible, setOrthoVisible] = useState(initialData?.orthoVisible || false);
+  const [orthoVisible, setOrthoVisible] = useState(false);
 
-  const hasConfig = !!(gserverUrl && layerName);
-
+  // ==========================================================
+  // 🧭 Initialize only when opening
+  // ==========================================================
   useEffect(() => {
-    if (initialData) {
+    if (isVisible && initialData) {
       setGserverUrl(initialData.Gsrvr_URL || "");
       setLayerName(initialData.Layer_Name || "");
       setMessage(initialData.message || "");
       setOrthoVisible(initialData.orthoVisible || false);
     }
-  }, [initialData]);
+  }, [isVisible]);
 
-  // 🧩 Prevent map zoom & drag interference inside panel
+  // ==========================================================
+  // 🔒 Prevent map scroll interference
+  // ==========================================================
   useEffect(() => {
     if (!containerRef.current) return;
     const stopEvent = (e) => e.stopPropagation();
@@ -40,33 +46,54 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
     };
   }, []);
 
+  // ==========================================================
+  // 💾 Save handler
+  // ==========================================================
   const handleSave = async () => {
-    if (!gserverUrl || !layerName) {
+    const urlTrimmed = gserverUrl.trim();
+    const layerTrimmed = layerName.trim();
+
+    if (!urlTrimmed || !layerTrimmed) {
       setMessage("Please fill in both fields before saving.");
       return;
     }
 
     setLoading(true);
-    const result = await onSave({ Gsrvr_URL: gserverUrl, Layer_Name: layerName });
-    setLoading(false);
-    
-    if (result) {
-      setMessage(result.message);
+    try {
+      // ✅ Ensure keys exactly match backend expectations
+      const result = await onSave({
+        Gsrvr_URL: urlTrimmed,
+        Layer_Name: layerTrimmed,
+      });
+
+      if (result?.message) {
+        setMessage(result.message);
+      } else {
+        setMessage("Saved.");
+      }
+    } catch (err) {
+      console.error("❌ Save failed:", err);
+      setMessage("Save failed.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  // ==========================================================
+  // 🛰️ Toggle visibility
+  // ==========================================================
   const handleToggleVisibility = () => {
     if (window._toggleOrthoVisibility) {
       window._toggleOrthoVisibility();
+      setOrthoVisible((v) => !v);
     }
   };
 
-  // ✅ ADDED: Handler to stop keyboard events on inputs
-  const handleInputKeyEvent = (e) => {
-    e.stopPropagation();
-  };
-
+  // ==========================================================
+  // 🧩 Render
+  // ==========================================================
   if (!isVisible) return null;
+  const hasConfig = !!(gserverUrl && layerName);
 
   return (
     <div
@@ -101,19 +128,22 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
                   onChange={handleToggleVisibility}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F7C800]"></div>
+                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F7C800]" />
               </div>
             </label>
             <p className="text-xs text-gray-400 mt-2">
-              {orthoVisible ? "Orthophoto layer is visible" : "Orthophoto layer is hidden"}
+              {orthoVisible
+                ? "Orthophoto layer is visible"
+                : "Orthophoto layer is hidden"}
             </p>
           </div>
         )}
 
         <div className={hasConfig ? "border-t border-[#2A2E35] pt-3" : ""}>
-          <h5 className="text-xs text-gray-400 mb-2 font-semibold">LAYER CONFIGURATION</h5>
+          <h5 className="text-xs text-gray-400 mb-2 font-semibold">
+            LAYER CONFIGURATION
+          </h5>
 
-          {/* GeoServer URL */}
           <div className="space-y-1 mb-3">
             <label htmlFor="gserverUrl" className="block text-gray-300 text-xs">
               GeoServer URL:
@@ -131,7 +161,6 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
             />
           </div>
 
-          {/* Layer Name */}
           <div className="space-y-1 mb-3">
             <label htmlFor="layerName" className="block text-gray-300 text-xs">
               Layer Name:
@@ -163,13 +192,15 @@ const OrthophotoPanel = ({ isVisible, onClose, initialData, onSave }) => {
         </div>
 
         {message && (
-          <div className={`text-xs p-2 rounded ${
-            message.includes("success") 
-              ? "bg-green-900/30 text-green-300" 
-              : message.includes("failed") || message.includes("Error")
-              ? "bg-red-900/30 text-red-300"
-              : "bg-blue-900/30 text-blue-300"
-          }`}>
+          <div
+            className={`text-xs p-2 rounded ${
+              message.includes("success")
+                ? "bg-green-900/30 text-green-300"
+                : message.includes("failed") || message.includes("Error")
+                ? "bg-red-900/30 text-red-300"
+                : "bg-blue-900/30 text-blue-300"
+            }`}
+          >
             {message}
           </div>
         )}
