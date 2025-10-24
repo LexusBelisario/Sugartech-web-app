@@ -1,3 +1,4 @@
+// MapView.jsx
 import { useState } from "react";
 import { MapContainer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -21,38 +22,40 @@ function MapView() {
       <MapContainer
         center={[12.8797, 121.774]}
         zoom={6}
-        zoomControl={false}        // ✅ Remove default zoom controls
-        attributionControl={false} // ✅ Remove Leaflet attribution
+        zoomControl={false}
+        attributionControl={false}
         style={{ height: "100vh", width: "100%", position: "relative", zIndex: 0 }}
         className="leaflet-map-container"
       >
         {/* 🌍 Base Layers + Map registration */}
-        <BaseMapSelector />
+        <BaseMapSelector side="left" />   {/* ⬅️ moved to LEFT */}
         <MapRefRegisterer />
         <ParcelLoader />
         <LoadingHandler />
         <CoordinatesDisplay />
 
-        {/* 🧭 LEFT TOOLBAR (GIS Tools) */}
-        <Toolbar />
+        {/* 🧭 GIS Tools — now on the RIGHT */}
+        <Toolbar side="right" />
 
-        {/* 🧩 RIGHT PANEL (Zoom + Tools) */}
-        <RightControls activeTool={activeTool} setActiveTool={setActiveTool} />
+        {/* 🧩 Zoom + tool toggles — now on the LEFT */}
+        <RightControls side="left" activeTool={activeTool} setActiveTool={setActiveTool} />
 
-        {/* 🔘 Tool Panels — only show when active */}
+        {/* 🔘 Tool Panels — also render on the LEFT to match controls */}
         <SchemaSelector
+          side="left"
           isVisible={activeTool === "schema"}
           onClose={() => setActiveTool(null)}
         />
         <Orthophoto
+          side="left"
           isVisible={activeTool === "ortho"}
           onClose={() => setActiveTool(null)}
         />
         <AdminBoundaries
+          side="left"
           isVisible={activeTool === "admin"}
           onClose={() => setActiveTool(null)}
         />
-        {/* 🔜 Parcel Styling soon */}
       </MapContainer>
     </SchemaProvider>
   );

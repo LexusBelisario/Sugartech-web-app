@@ -14,7 +14,7 @@ import { useSchema } from "./SchemaContext.jsx";
 import AdminBoundariesPanel from "./AdminBoundaries/AdminBoundariesPanel.jsx";
 import SchemaSelectorPanel from "./SchemaSelector/SchemaSelectorPanel.jsx";
 import OrthophotoPanel from "./Orthophoto/OrthophotoPanel.jsx";
-import JoinedTableSyncPanel from "./JoinedTableSync/JoinedTableSyncPanel.jsx"; // 🔹 New import
+import JoinedTableSyncPanel from "./JoinedTableSync/JoinedTableSyncPanel.jsx";
 
 function RightControls({ activeTool, setActiveTool }) {
   const map = useMap();
@@ -95,20 +95,21 @@ function RightControls({ activeTool, setActiveTool }) {
     return { success: false, message: "Save handler not available" };
   };
 
-  // === STYLING ===
+  // === STYLING (left side) ===
   const panelClass =
-    "bg-[#151922E6] rounded-l-lg py-2 w-10 shadow-md backdrop-blur-sm flex flex-col items-center";
+    "bg-[#151922E6] rounded-r-lg py-2 w-10 shadow-md backdrop-blur-sm flex flex-col items-center";
   const buttonBase =
     "relative w-8 h-8 flex items-center justify-center rounded transition text-white group";
 
+  // Tooltip opens to the RIGHT now (since stack is at left)
   const Tooltip = ({ text }) => (
     <span
-      className="absolute right-[115%] top-1/2 -translate-y-1/2 bg-[#1E1E1EE6] text-white text-[11px]
-                 px-2 py-[3px] rounded-md shadow-md opacity-0 translate-x-1
+      className="absolute left-[115%] top-1/2 -translate-y-1/2 bg-[#1E1E1EE6] text-white text-[11px]
+                 px-2 py-[3px] rounded-md shadow-md opacity-0 -translate-x-1
                  group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 ease-out
                  pointer-events-none whitespace-nowrap font-[Inter] tracking-wide
-                 after:content-[''] after:absolute after:right-[-5px] after:top-1/2 after:-translate-y-1/2
-                 after:border-4 after:border-transparent after:border-l-[#1E1E1EE6]"
+                 after:content-[''] after:absolute after:left-[-5px] after:top-1/2 after:-translate-y-1/2
+                 after:border-4 after:border-transparent after:border-r-[#1E1E1EE6]"
     >
       {text}
     </span>
@@ -119,9 +120,8 @@ function RightControls({ activeTool, setActiveTool }) {
 
   return (
     <>
-      {/* 🎛️ Right Side Button Stack */}
-      <div className="absolute top-1/2 right-0 -translate-y-1/2 flex flex-col items-center gap-3 z-[1000] select-none">
-
+      {/* 🎛️ Left Side Button Stack */}
+      <div className="absolute top-1/2 left-0 -translate-y-1/2 flex flex-col items-center gap-3 z-[1000] select-none">
         {/* 🔍 Zoom + Center */}
         <div className={panelClass}>
           <button onClick={handleZoomIn} className={`${buttonBase} ${hoverColor}`}>
@@ -182,7 +182,7 @@ function RightControls({ activeTool, setActiveTool }) {
         </div>
       </div>
 
-      {/* 🧭 Tool Panels */}
+      {/* 🧭 Tool Panels — slide out from LEFT */}
       <SchemaSelectorPanel
         isVisible={activeTool === "schema"}
         onClose={() => setActiveTool(null)}
@@ -206,7 +206,6 @@ function RightControls({ activeTool, setActiveTool }) {
         onClose={() => setActiveTool(null)}
       />
 
-      {/* 🔄 JoinedTable Sync Panel */}
       <JoinedTableSyncPanel
         isVisible={activeTool === "sync"}
         onClose={() => setActiveTool(null)}

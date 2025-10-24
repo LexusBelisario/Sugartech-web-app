@@ -3,7 +3,7 @@
 .basemap-selector-container {
   position: absolute;
   bottom: 20px;
-  right: 14px;
+  left: 14px;  
   z-index: 1000;
   pointer-events: none;
 }

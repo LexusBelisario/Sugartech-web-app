@@ -14,10 +14,9 @@ const SchemaSelectorPanel = ({
   const containerRef = useRef(null);
   const scrollableRef = useRef(null);
 
-  // 🧩 Prevent map zoom & drag interference - but allow scrolling inside the list
+  // Allow scrolling inside; block map scroll under
   useEffect(() => {
     if (!containerRef.current) return;
-
     const handleWheel = (e) => {
       if (scrollableRef.current && scrollableRef.current.contains(e.target)) {
         e.stopPropagation();
@@ -26,13 +25,10 @@ const SchemaSelectorPanel = ({
         e.preventDefault();
       }
     };
-
     const stopEvent = (e) => e.stopPropagation();
     const el = containerRef.current;
-
     el.addEventListener("wheel", handleWheel, { passive: false });
     el.addEventListener("dblclick", stopEvent);
-
     return () => {
       el.removeEventListener("wheel", handleWheel);
       el.removeEventListener("dblclick", stopEvent);
@@ -44,17 +40,15 @@ const SchemaSelectorPanel = ({
   return (
     <div
       ref={containerRef}
-      className="absolute top-1/2 -translate-y-1/2 right-14 w-[260px] bg-[#151922] text-white rounded-l-lg shadow-xl border border-[#2A2E35] animate-slideIn z-[9999]"
+      className="absolute top-1/2 -translate-y-1/2 left-14 w-[260px] bg-[#151922] text-white rounded-r-lg shadow-xl border border-[#2A2E35] animate-slideIn z-[9999]"
       style={{ pointerEvents: "auto" }}
     >
       {/* Header */}
-      <div className="flex justify-between items-center bg-[#F7C800] text-black font-semibold px-4 py-2 rounded-tl-lg">
+      <div className="flex justify-between items-center bg-[#F7C800] text-black font-semibold px-4 py-2 rounded-tr-lg">
         <span>Select Municipality / City</span>
-        <button
-          className="text-black hover:opacity-70 transition"
-          onClick={onClose}
-        >
-          <ChevronRight size={20} />
+        <button className="text-black hover:opacity-70 transition" onClick={onClose}>
+          {/* flip chevron to point left by rotating */}
+          <ChevronRight size={20} className="-rotate-180" />
         </button>
       </div>
 
@@ -79,10 +73,7 @@ const SchemaSelectorPanel = ({
               className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar"
             >
               {schemas.map((schema) => (
-                <li
-                  key={schema}
-                  className="hover:text-[#F7C800] transition cursor-pointer"
-                >
+                <li key={schema} className="hover:text-[#F7C800] transition cursor-pointer">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
@@ -98,11 +89,9 @@ const SchemaSelectorPanel = ({
             </ul>
 
             {selectedSchema && (
-              <div className="text-xs text-gray-300 border-t border-[#2A2E35] pt-2 mt-2">
+              <div className="text-xs text-gray-300 border-top border-[#2A2E35] pt-2 mt-2">
                 Current:{" "}
-                <span className="font-semibold text-[#F7C800]">
-                  {selectedSchema}
-                </span>
+                <span className="font-semibold text-[#F7C800]">{selectedSchema}</span>
               </div>
             )}
           </>
@@ -115,32 +104,14 @@ const SchemaSelectorPanel = ({
         )}
       </div>
 
-      {/* ✅ FIXED: remove 'jsx' attribute */}
+      {/* ✅ keep style block, no jsx attr */}
       <style>
         {`
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-          }
-
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: #1a1d26;
-            border-radius: 3px;
-          }
-
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #2a2e35;
-            border-radius: 3px;
-          }
-
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #f7c800;
-          }
-
-          /* Firefox */
-          .custom-scrollbar {
-            scrollbar-width: thin;
-            scrollbar-color: #2a2e35 #1a1d26;
-          }
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: #1a1d26; border-radius: 3px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #2a2e35; border-radius: 3px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #f7c800; }
+          .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #2a2e35 #1a1d26; }
         `}
       </style>
     </div>

@@ -9,9 +9,6 @@ function BaseMapSelector() {
   const [isExpanded, setIsExpanded] = useState(false);
   const containerRef = useRef(null);
 
-  // ==========================================================
-  // 🗺️ Basemap Options
-  // ==========================================================
   const basemaps = [
     {
       key: "osm",
@@ -44,23 +41,13 @@ function BaseMapSelector() {
     },
   ];
 
-  // ==========================================================
-  // 🗺️ Initialize Default Basemap
-  // ==========================================================
   useEffect(() => {
     if (!map) return;
-
-    console.log("🗺️ Initializing basemap selector...");
-
-    // Store layers globally
     window._basemapLayers = {};
     basemaps.forEach(({ key, layer }) => {
       window._basemapLayers[key] = layer;
     });
-
-    // Add default basemap
     window._basemapLayers[activeBase].addTo(map);
-
     return () => {
       Object.values(window._basemapLayers).forEach((layer) => {
         if (map.hasLayer(layer)) map.removeLayer(layer);
@@ -69,64 +56,37 @@ function BaseMapSelector() {
     };
   }, [map]);
 
-  // ==========================================================
-  // 🔁 Switch Basemap
-  // ==========================================================
   const switchBase = (key) => {
     if (!map || !window._basemapLayers) return;
-
-    console.log(`🔄 Switching to ${key}`);
-
-    // Remove current basemap
-    if (activeBase && window._basemapLayers[activeBase]) {
+    if (window._basemapLayers[activeBase])
       map.removeLayer(window._basemapLayers[activeBase]);
-    }
-
-    // Add new basemap
     const newLayer = window._basemapLayers[key];
     newLayer.addTo(map);
     setActiveBase(key);
-
-    // ✅ Keep orthophoto above basemap if it exists
-    if (window._orthoLayer && map.hasLayer(window._orthoLayer)) {
+    if (window._orthoLayer && map.hasLayer(window._orthoLayer))
       window._orthoLayer.bringToFront();
-    }
-
-    // Collapse after selection
     setIsExpanded(false);
   };
 
-  // ==========================================================
-  // 🖱️ Click Outside to Close
-  // ==========================================================
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
+      if (containerRef.current && !containerRef.current.contains(e.target))
         setIsExpanded(false);
-      }
     };
-
-    if (isExpanded) {
-      setTimeout(() => {
-        document.addEventListener("mousedown", handleClickOutside);
-      }, 0);
-    }
-
+    if (isExpanded)
+      setTimeout(
+        () => document.addEventListener("mousedown", handleClickOutside),
+        0
+      );
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isExpanded]);
 
-  // ==========================================================
-  // 📝 Get Sorted Basemaps (Active at Bottom)
-  // ==========================================================
   const activeBasemap = basemaps.find((b) => b.key === activeBase);
   const inactiveBasemaps = basemaps.filter((b) => b.key !== activeBase);
 
-  // ==========================================================
-  // 🧩 Collapsible UI
-  // ==========================================================
   return (
     <div
-      className="absolute bottom-5 right-3.5 z-[1000] pointer-events-none"
+      className="absolute bottom-5 left-3.5 z-[1000] pointer-events-none"
       ref={containerRef}
     >
       <div
@@ -136,7 +96,6 @@ function BaseMapSelector() {
             : "shadow-[0_4px_12px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.1)]"
         }`}
       >
-        {/* Other Cards - Show when Expanded */}
         {isExpanded && (
           <div className="flex flex-col gap-2 animate-[slideDown_0.3s_cubic-bezier(0.4,0,0.2,1)]">
             {inactiveBasemaps.map(({ key, label, thumbnail }) => (
@@ -161,7 +120,6 @@ function BaseMapSelector() {
           </div>
         )}
 
-        {/* Active Card - Always at Bottom */}
         <button
           className="group bg-[rgba(26,115,232,0.12)] border-2 border-[#1a73e8] rounded-lg p-0 cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden w-[90px] relative backdrop-blur-[5px] [-webkit-backdrop-filter:blur(5px)] select-none hover:-translate-y-0.5 hover:scale-[1.02] hover:border-[#f7c800] hover:bg-[rgba(247,200,0,0.2)] hover:shadow-[0_0_0_2px_rgba(247,200,0,0.5),0_5px_18px_rgba(247,200,0,0.4),0_0_25px_rgba(247,200,0,0.2)] focus:outline-2 focus:outline-[#f7c800] focus:outline-offset-2 focus:not(:focus-visible):outline-none motion-reduce:transition-none motion-reduce:hover:transform-none contrast-more:border-[3px] contrast-more:hover:border-[#f7c800] max-[768px]:w-[75px] max-[480px]:w-[65px]"
           onClick={() => setIsExpanded(!isExpanded)}
@@ -179,9 +137,7 @@ function BaseMapSelector() {
                 height="20"
                 viewBox="0 0 24 24"
                 fill="white"
-                className={`transition-transform duration-300 ease-in-out group-hover:[filter:drop-shadow(0_0_3px_rgba(0,0,0,0.5))] motion-reduce:transition-none max-[768px]:w-3.5 max-[768px]:h-3.5 max-[480px]:w-3 max-[480px]:h-3 ${
-                  isExpanded ? "rotate-180" : "rotate-0"
-                }`}
+                className={`transition-transform duration-300 ease-in-out group-hover:[filter:drop-shadow(0_0_3px_rgba(0,0,0,0.5))] motion-reduce:transition-none max-[768px]:w-3.5 max-[768px]:h-3.5 max-[480px]:w-3 max-[480px]:h-3 ${isExpanded ? "rotate-180" : "rotate-0"}`}
               >
                 <path d="M7 14l5-5 5 5z" />
               </svg>
@@ -193,18 +149,11 @@ function BaseMapSelector() {
         </button>
       </div>
 
-      {/* ✅ FIX: remove jsx attribute */}
       <style>
         {`
           @keyframes slideDown {
-            from {
-              opacity: 0;
-              transform: translateY(8px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
           }
         `}
       </style>

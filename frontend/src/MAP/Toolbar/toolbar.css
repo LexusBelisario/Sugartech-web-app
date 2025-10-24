@@ -1,9 +1,10 @@
 @import "./PredictiveModelTools.css";
 
-/* === TOOLBAR CONTAINER === */
+/* === TOOLBAR CONTAINER — now anchored to the RIGHT === */
 .toolbar-panel {
   position: absolute;
   top: 54px;
+  right: 10px;              /* ⬅️ anchor to right edge */
   background: #000;
   border: 1px solid #fff;
   margin-top: 71px;
@@ -12,9 +13,9 @@
   padding: 15px;
   overflow-y: auto;
   z-index: 2000;
-  transform: translateX(-100%);
+  transform: translateX(100%);           /* ⬅️ slide in from the RIGHT */
   transition: transform 0.3s ease;
-  border-right: 2px solid #333;
+  border-left: 2px solid #333;           /* ⬅️ divider on the left now */
   font-family: sans-serif;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 }
@@ -23,11 +24,11 @@
   transform: translateX(0);
 }
 
-/* === TOGGLE BUTTON === */
+/* === TOGGLE BUTTON — park it on the RIGHT === */
 #toggleToolbarBtn {
   position: absolute;
   top: 75px;
-  left: 10px; /* ✅ Add left position so it sits on the left side */
+  right: 10px;            /* ⬅️ was left:10px */
   z-index: 2100;
   padding: 8px 12px;
   background-color: #000;
@@ -38,7 +39,7 @@
   height: 50px;
   font-size: 18px;
   font-family: sans-serif;
-  display: block; /* ✅ Always visible now */
+  display: block;
 }
 
 #toggleToolbarBtn:hover {
@@ -64,7 +65,7 @@
 /* === TOOL BUTTON GRID === */
 .toolbar-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* Max 3 buttons per row */
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
@@ -87,24 +88,11 @@
   box-sizing: border-box;
 }
 
-.tool-button:hover {
-  background-color: #333;
-  border-color: #fff;
-}
+.tool-button:hover { background-color: #333; border-color: #fff; }
+.tool-button.active { background-color: #555; border-color: #fff; }
 
-.tool-button.active {
-  background-color: #555;
-  border-color: #fff;
-}
+.tool-button img { width: 28px; height: 28px; margin-bottom: 4px; }
 
-/* === ICON INSIDE TOOL BUTTON === */
-.tool-button img {
-  width: 28px;
-  height: 28px;
-  margin-bottom: 4px;
-}
-
-/* === LABEL INSIDE TOOL BUTTON === */
 .tool-button span {
   font-size: 10px;
   line-height: 1.1;
@@ -114,14 +102,8 @@
   word-break: break-word;
 }
 
-.active-tool {
-  background-color: #414141 !important; /* gold */
-  border: 2px solid #fffefe;
-}
-
-.active-tool:hover {
-  background-color: #acacac !important;
-}
+.active-tool { background-color: #414141 !important; border: 2px solid #fffefe; }
+.active-tool:hover { background-color: #acacac !important; }
 
 .icon-placeholder {
   font-size: 32px;

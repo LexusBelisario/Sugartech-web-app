@@ -69,17 +69,18 @@ const AdminBoundariesPanel = ({ isVisible, onClose }) => {
   return (
     <div
       ref={containerRef}
-      className="absolute top-1/2 -translate-y-1/2 right-14 w-[260px] bg-[#151922] text-white rounded-l-lg shadow-xl border border-[#2A2E35] animate-slideIn z-[9999]"
+      className="absolute top-1/2 -translate-y-1/2 left-14 w-[260px] bg-[#151922] text-white rounded-r-lg shadow-xl border border-[#2A2E35] animate-slideIn z-[9999]"
       style={{ pointerEvents: "auto" }}
     >
       {/* Header */}
-      <div className="flex justify-between items-center bg-[#F7C800] text-black font-semibold px-4 py-2 rounded-tl-lg">
+      <div className="flex justify-between items-center bg-[#F7C800] text-black font-semibold px-4 py-2 rounded-tr-lg">
         <span>Admin Boundaries</span>
         <button
           className="text-black hover:opacity-70 transition"
           onClick={onClose}
         >
-          <ChevronRight size={20} />
+          {/* flip to point toward the left edge */}
+          <ChevronRight size={20} className="-rotate-180" />
         </button>
       </div>
 

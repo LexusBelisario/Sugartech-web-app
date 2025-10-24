@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Save, Settings, ArrowLeft, Upload, Download } from "lucide-react";
 import { useSchema } from "../SchemaContext.jsx";
 import { ApiService } from "../../api_service.js";
@@ -11,16 +11,29 @@ const JoinedTableSyncPanel = ({ isVisible, onClose }) => {
   const [port, setPort] = useState("");
   const [username, setUsername] = useState("");
   const [isConfiguring, setIsConfiguring] = useState(false);
+  const containerRef = useRef(null);
 
-  // 🧩 Auto-fetch provincial DB name
+  // 🧩 Auto-fetch provincial DB name (from userAccess)
   useEffect(() => {
     const interval = setInterval(() => {
-      if (window._schemaSelectorData?.userAccess?.provincial) {
-        setDbName(window._schemaSelectorData.userAccess.provincial);
-      }
+      const prov = window._schemaSelectorData?.userAccess?.provincial;
+      if (prov) setDbName(prov);
     }, 300);
     return () => clearInterval(interval);
   }, []);
+
+  // ⛔ stop map interactions beneath the panel
+  useEffect(() => {
+    if (!isVisible || !containerRef.current) return;
+    const el = containerRef.current;
+    const stop = (e) => e.stopPropagation();
+    el.addEventListener("wheel", stop);
+    el.addEventListener("dblclick", stop);
+    return () => {
+      el.removeEventListener("wheel", stop);
+      el.removeEventListener("dblclick", stop);
+    };
+  }, [isVisible]);
 
   // 🔹 Load saved credentials
   const fetchCreds = async (targetSchema) => {
@@ -41,11 +54,9 @@ const JoinedTableSyncPanel = ({ isVisible, onClose }) => {
     }
   };
 
-  // 🔹 Auto-load when schema changes
+  // 🔹 Auto-load when schema changes (only while configuring)
   useEffect(() => {
-    if (isVisible && isConfiguring && schema) {
-      fetchCreds(schema);
-    }
+    if (isVisible && isConfiguring && schema) fetchCreds(schema);
   }, [schema, isVisible, isConfiguring]);
 
   // 🔹 Save credentials
@@ -68,11 +79,11 @@ const JoinedTableSyncPanel = ({ isVisible, onClose }) => {
   if (!isVisible) return null;
 
   return (
-    <div className="sync-panel">
+    <div ref={containerRef} className="sync-panel">
       {/* Header */}
       <div className="sync-header">
         <h3 className="sync-title">RPT-GIS Sync Tool</h3>
-        <button onClick={onClose} className="sync-close-btn">
+        <button onClick={onClose} className="sync-close-btn" aria-label="Close sync panel">
           <X size={16} />
         </button>
       </div>
@@ -151,7 +162,7 @@ const JoinedTableSyncPanel = ({ isVisible, onClose }) => {
             >
               <ArrowLeft size={14} /> Back
             </button>
-            <button onClick={handleSave} className="sync-save-btn prominent">
+            <button onClick={handleSave} className="sync-save-btn">
               <Save size={14} /> Save
             </button>
           </div>

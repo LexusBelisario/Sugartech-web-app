@@ -1,11 +1,13 @@
 /* ============================================================
    🎛️ JoinedTable Sync Panel — Push, Pull, Configure Layout
    Clean initial screen (no text)
+   (anchored LEFT)
    ============================================================ */
 
 .sync-panel {
   position: absolute;
-  right: 3.5rem;
+  left: 3.5rem;              /* ⬅️ moved from right to left */
+  right: auto;               /* ⬅️ ensure right is not used */
   top: 50%;
   transform: translateY(-50%);
   width: 320px;
