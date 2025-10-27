@@ -1,23 +1,26 @@
 /* ============================================================
-   🎛️ JoinedTable Sync Panel — Push, Pull, Configure Layout
-   Clean initial screen (no text)
-   (anchored LEFT)
+   🎛️ JoinedTable Sync Panel — Maroon palette (anchored LEFT)
+   Panel uses near-white; accents in maroon; neutrals for inputs
    ============================================================ */
 
 .sync-panel {
   position: absolute;
-  left: 3.5rem;              /* ⬅️ moved from right to left */
-  right: auto;               /* ⬅️ ensure right is not used */
+  left: 3.5rem;              /* anchored left */
+  right: auto;
   top: 50%;
   transform: translateY(-50%);
   width: 320px;
-  background: rgba(21, 25, 34, 0.9);
-  color: white;
-  border: 1px solid #2c2f36;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+  /* panel styling */
+  background: #FAFAF9;       /* near-white (not pure white) */
+  color: #111827;            /* slate-900-ish text */
+  border: 1px solid #B22234; /* brick red border */
+  border-radius: 0.75rem;
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.18),
+    0 0 0 1px rgba(178,34,52,0.18); /* subtle maroon outline */
   padding: 1rem;
-  font-family: "Inter", sans-serif;
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   z-index: 1100;
 }
 
@@ -30,17 +33,19 @@
 }
 
 .sync-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #f7c800;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #D50032;  /* primary maroon */
+  letter-spacing: .2px;
 }
 
 .sync-close-btn {
-  color: #9ca3af;
-  transition: color 0.2s ease;
+  color: rgba(17,24,39,.7);
+  transition: color 0.2s ease, transform 0.15s ease;
 }
 .sync-close-btn:hover {
-  color: #ffffff;
+  color: #D50032;
+  transform: translateY(-1px);
 }
 
 /* === Placeholder View === */
@@ -66,43 +71,52 @@
   justify-content: center;
   gap: 0.4rem;
   border: none;
-  border-radius: 0.3rem;
+  border-radius: 0.375rem;
   font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.5rem 0.8rem;
+  font-weight: 700;
+  padding: 0.55rem 0.9rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
-/* --- Button Variants --- */
+/* --- Button Variants (maroon palette) --- */
 .sync-btn.push {
-  background: #f7c800;
-  color: #151922;
+  background: #D50032;       /* primary maroon */
+  color: #FAFAF9;            /* near-white text */
 }
 .sync-btn.push:hover {
-  background: #ffe760;
+  background: #B22234;       /* darker maroon */
+  box-shadow: 0 6px 16px rgba(213,0,50,0.25);
+  transform: translateY(-1px);
 }
 
 .sync-btn.pull {
-  background: #87077b;
-  color: #ffffff;
+  background: #A50034;       /* deep maroon */
+  color: #FAFAF9;
 }
 .sync-btn.pull:hover {
-  background: #60a5fa;
+  background: #B22234;
+  box-shadow: 0 6px 16px rgba(178,34,52,0.25);
+  transform: translateY(-1px);
 }
 
 .sync-btn.configure {
-  background: #2c2f36;
-  color: #ffffff;
+  background: #FFFFFF;       /* clean card look for config */
+  color: #111827;
+  border: 1px solid #E5E7EB;
 }
 .sync-btn.configure:hover {
-  background: #3b3f47;
+  background: #FEF2F2;       /* soft maroon tint */
+  border-color: #D50032;
+  box-shadow: 0 5px 14px rgba(213,0,50,0.18);
+  transform: translateY(-1px);
 }
 
 /* === Configuration Box === */
 .sync-box {
-  background: #1f2329;
-  border: 1px solid #2c2f36;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
   border-radius: 0.5rem;
   padding: 0.75rem;
   display: flex;
@@ -111,28 +125,30 @@
 }
 
 .sync-box label {
-  color: #9ca3af;
+  color: #374151;            /* gray-700 */
   font-size: 0.75rem;
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.2rem;
   display: block;
 }
 
 .sync-box input {
   width: 100%;
-  background: #2c2f36;
-  border: 1px solid #3b3f47;
-  color: white;
-  font-size: 0.75rem;
-  padding: 0.35rem 0.4rem;
-  border-radius: 0.25rem;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  color: #111827;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.375rem;
   outline: none;
-  transition: border 0.2s ease;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
 }
 .sync-box input:focus {
-  border-color: #f7c800;
+  border-color: #D50032;     /* maroon focus */
+  box-shadow: 0 0 0 3px rgba(213,0,50,0.15);
 }
 .sync-box input[readonly] {
-  color: #bbb;
+  color: #9CA3AF;
+  background: #F9FAFB;
   cursor: not-allowed;
 }
 
@@ -148,17 +164,17 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: transparent;
-  border: 1px solid #3b3f47;
-  padding: 0.35rem 0.8rem;
-  border-radius: 0.25rem;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.375rem;
   font-size: 0.75rem;
-  color: #d1d5db;
-  transition: all 0.2s ease;
+  color: #374151;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 .sync-back-btn:hover {
-  background: #2c2f36;
-  color: #ffffff;
+  background: #F3F4F6;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
 }
 
 .sync-save-btn {
@@ -166,14 +182,16 @@
   align-items: center;
   gap: 0.4rem;
   border: none;
-  padding: 0.45rem 1rem;
-  border-radius: 0.25rem;
+  padding: 0.5rem 1.05rem;
+  border-radius: 0.375rem;
   font-size: 0.8rem;
-  font-weight: 600;
-  background: #f7c800;
-  color: #151922;
-  transition: all 0.2s ease;
+  font-weight: 700;
+  background: #D50032;       /* primary maroon */
+  color: #FAFAF9;            /* near-white */
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
 }
 .sync-save-btn:hover {
-  background: #ffe760;
+  background: #B22234;
+  box-shadow: 0 6px 16px rgba(213,0,50,0.25);
+  transform: translateY(-1px);
 }

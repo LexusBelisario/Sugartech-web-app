@@ -33,7 +33,6 @@ function LoginPage() {
       });
 
       const data = await resp.json();
-      console.log("Login response:", data);
 
       if (!resp.ok) {
         if (resp.status === 403) {
@@ -89,49 +88,22 @@ function LoginPage() {
         />
       </div>
 
-      {/* Decorative Elements */}
-      <div className="absolute top-10 left-10 w-32 h-32 bg-gradient-to-br from-[#F2C300]/10 to-[#D4AF37]/5 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-10 right-10 w-40 h-40 bg-gradient-to-br from-[#0B4EA2]/10 to-[#702082]/5 rounded-full blur-3xl"></div>
-      <div className="absolute top-1/3 right-20 w-24 h-24 bg-gradient-to-br from-[#C51E2A]/10 to-[#7F0F1A]/5 rounded-full blur-2xl"></div>
+      {/* Decorative Elements (tinted to maroon family) */}
+      <div className="absolute top-10 left-10 w-32 h-32 bg-gradient-to-br from-[#D50032]/10 to-[#A50034]/5 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-10 right-10 w-40 h-40 bg-gradient-to-br from-[#B22234]/10 to-[#D50032]/5 rounded-full blur-3xl"></div>
+      <div className="absolute top-1/3 right-20 w-24 h-24 bg-gradient-to-br from-[#A50034]/10 to-[#B22234]/5 rounded-full blur-2xl"></div>
 
       {/* Login Card */}
-      <div className="relative bg-white rounded-3xl p-8 shadow-[0_20px_60px_rgba(34,34,34,0.08)] border border-[#222222]/5 w-[500px] min-h-[600px] flex flex-col backdrop-blur-sm">
+      <div className="relative bg-[#FAFAF9] rounded-3xl p-8 shadow-[0_20px_60px_rgba(34,34,34,0.08)] border border-[#B22234]/30 w-[500px] min-h-[600px] flex flex-col backdrop-blur-sm">
         {/* Header Section */}
         <div className="flex flex-col items-center justify-center mb-8">
           <div className="relative mb-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-[#F2C300] to-[#D4AF37] rounded-full p-[2px] shadow-lg">
+            <div className="w-20 h-20 bg-gradient-to-br from-[#D50032] to-[#A50034] rounded-full p-[2px] shadow-lg">
               <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
-                <div className="text-3xl font-bold bg-gradient-to-br from-[#0B4EA2] to-[#702082] text-transparent bg-clip-text">
+                <div className="text-3xl font-bold bg-gradient-to-br from-[#A50034] to-[#B22234] text-transparent bg-clip-text">
                   RPT
                 </div>
               </div>
-            </div>
-            <div className="absolute -top-2 left-1/2 -translate-x-1/2">
-              <svg
-                className="w-4 h-4 text-[#F2C300]"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            </div>
-            <div className="absolute top-1/2 -left-4 -translate-y-1/2">
-              <svg
-                className="w-4 h-4 text-[#F2C300]"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            </div>
-            <div className="absolute top-1/2 -right-4 -translate-y-1/2">
-              <svg
-                className="w-4 h-4 text-[#F2C300]"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
             </div>
           </div>
           <h1 className="text-[#222222] text-4xl font-bold tracking-wide">
@@ -153,14 +125,14 @@ function LoginPage() {
                 <div
                   className={`w-12 h-full flex items-center justify-center border-r transition-colors duration-200 ${
                     usernameFocused || username
-                      ? "border-[#F2C300]/50"
+                      ? "border-[#D50032]/40"
                       : "border-[#222222]/10"
                   }`}
                 >
                   <svg
                     className={`w-5 h-5 transition-colors duration-200 ${
                       usernameFocused || username
-                        ? "text-[#F2C300]"
+                        ? "text-[#D50032]"
                         : "text-[#222222]/40"
                     }`}
                     fill="none"
@@ -184,7 +156,7 @@ function LoginPage() {
                 onBlur={() => setUsernameFocused(false)}
                 className={`w-full pl-14 pr-4 py-4 bg-[#F5F5F5] border rounded-xl text-[#222222] placeholder-transparent focus:outline-none transition-all duration-300 ${
                   usernameFocused || username
-                    ? "border-[#F2C300] bg-white shadow-[0_0_20px_rgba(242,195,0,0.2)]"
+                    ? "border-[#D50032] bg-white shadow-[0_0_20px_rgba(213,0,50,0.16)]"
                     : "border-[#222222]/10 hover:border-[#222222]/20"
                 }`}
                 placeholder="Username"
@@ -194,7 +166,7 @@ function LoginPage() {
                 htmlFor="username"
                 className={`absolute left-14 transition-all duration-300 pointer-events-none ${
                   usernameFocused || username
-                    ? "top-0 -translate-y-1/2 text-xs text-[#F2C300] bg-white px-2 font-medium"
+                    ? "top-0 -translate-y-1/2 text-xs text-[#D50032] bg-white px-2 font-medium"
                     : "top-4 text-base text-[#222222]/60"
                 }`}
               >
@@ -210,14 +182,14 @@ function LoginPage() {
                 <div
                   className={`w-12 h-full flex items-center justify-center border-r transition-colors duration-200 ${
                     passwordFocused || password
-                      ? "border-[#F2C300]/50"
+                      ? "border-[#D50032]/40"
                       : "border-[#222222]/10"
                   }`}
                 >
                   <svg
                     className={`w-5 h-5 transition-colors duration-200 ${
                       passwordFocused || password
-                        ? "text-[#F2C300]"
+                        ? "text-[#D50032]"
                         : "text-[#222222]/40"
                     }`}
                     fill="none"
@@ -241,7 +213,7 @@ function LoginPage() {
                 onBlur={() => setPasswordFocused(false)}
                 className={`w-full pl-14 pr-12 py-4 bg-[#F5F5F5] border rounded-xl text-[#222222] placeholder-transparent focus:outline-none transition-all duration-300 ${
                   passwordFocused || password
-                    ? "border-[#F2C300] bg-white shadow-[0_0_20px_rgba(242,195,0,0.2)]"
+                    ? "border-[#D50032] bg-white shadow-[0_0_20px_rgba(213,0,50,0.16)]"
                     : "border-[#222222]/10 hover:border-[#222222]/20"
                 }`}
                 placeholder="Password"
@@ -251,7 +223,7 @@ function LoginPage() {
                 htmlFor="password"
                 className={`absolute left-14 transition-all duration-300 pointer-events-none ${
                   passwordFocused || password
-                    ? "top-0 -translate-y-1/2 text-xs text-[#F2C300] bg-white px-2 font-medium"
+                    ? "top-0 -translate-y-1/2 text-xs text-[#D50032] bg-white px-2 font-medium"
                     : "top-4 text-base text-[#222222]/60"
                 }`}
               >
@@ -262,7 +234,7 @@ function LoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
                 className={`absolute inset-y-0 right-3 flex items-center transition-all duration-200 z-10 ${
                   passwordFocused || password
-                    ? "text-[#F2C300] hover:text-[#D4AF37]"
+                    ? "text-[#D50032] hover:text-[#B22234]"
                     : "text-[#222222]/40 hover:text-[#222222]/60"
                 }`}
               >
@@ -310,13 +282,13 @@ function LoginPage() {
             <label className="flex items-center text-[#222222]/60 text-sm cursor-pointer hover:text-[#222222]/80 transition-colors">
               <input
                 type="checkbox"
-                className="mr-2 rounded border-[#222222]/20 text-[#F2C300] focus:ring-[#F2C300] focus:ring-offset-0 focus:ring-2"
+                className="mr-2 rounded border-[#222222]/20 text-[#D50032] focus:ring-[#D50032] focus:ring-offset-0 focus:ring-2"
               />
               Remember me
             </label>
             <a
               href="#"
-              className="text-sm text-[#702082] hover:text-[#C51E2A] transition-colors duration-200 font-medium"
+              className="text-sm text-[#A50034] hover:text-[#D50032] transition-colors duration-200 font-medium"
             >
               Forgot password?
             </a>
@@ -327,7 +299,7 @@ function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full bg-gradient-to-r from-[#F2C300] to-[#D4AF37] hover:from-[#D4AF37] hover:to-[#F2C300] text-[#222222] text-lg font-bold py-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-[0_12px_30px_rgba(242,195,0,0.3)] relative overflow-hidden ${
+              className={`group w-full bg-gradient-to-r from-[#D50032] to-[#A50034] hover:from-[#A50034] hover:to-[#D50032] text-[#FAFAF9] text-lg font-bold py-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-[0_12px_30px_rgba(213,0,50,0.25)] relative overflow-hidden ${
                 isLoading ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
@@ -336,7 +308,7 @@ function LoginPage() {
                 {isLoading ? (
                   <span className="flex items-center justify-center">
                     <svg
-                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-[#222222]"
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-[#FAFAF9]"
                       fill="none"
                       viewBox="0 0 24 24"
                     >
@@ -365,25 +337,26 @@ function LoginPage() {
         </form>
 
         {/* Register */}
-        <div className="flex items-center justify-center gap-1 pt-6 border-t border-[#222222]/5">
+        <div className="flex items-center justify-center gap-1 pt-6 border-t border-[#B22234]/20">
           <span className="text-[#222222]/60 text-sm">
             Don't have an account?
           </span>
           <a
             href="/register"
-            className="text-sm text-[#0B4EA2] hover:text-[#702082] font-medium transition-colors duration-200 underline-offset-2 hover:underline"
+            className="text-sm text-[#A50034] hover:text-[#D50032] font-medium transition-colors duration-200 underline-offset-2 hover:underline"
           >
             Register
           </a>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#0B4EA2] via-[#C51E2A] to-[#F2C300] rounded-b-3xl"></div>
+        {/* Bottom brand bar */}
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#A50034] via-[#B22234] to-[#D50032] rounded-b-3xl"></div>
       </div>
 
-      {/* Stars */}
+      {/* Sparse star accents (maroon tint) */}
       <div className="absolute top-20 left-1/4 opacity-20">
         <svg
-          className="w-8 h-8 text-[#F2C300]"
+          className="w-8 h-8 text-[#D50032]"
           fill="currentColor"
           viewBox="0 0 20 20"
         >
@@ -392,7 +365,7 @@ function LoginPage() {
       </div>
       <div className="absolute bottom-20 right-1/4 opacity-20">
         <svg
-          className="w-6 h-6 text-[#F2C300]"
+          className="w-6 h-6 text-[#A50034]"
           fill="currentColor"
           viewBox="0 0 20 20"
         >

@@ -41,25 +41,21 @@ function RightControls({ activeTool, setActiveTool }) {
   // ✅ Sync schema selector data
   useEffect(() => {
     const syncData = () => {
-      if (window._schemaSelectorData) {
-        setSchemaData({ ...window._schemaSelectorData });
-      }
+      if (window._schemaSelectorData) setSchemaData({ ...window._schemaSelectorData });
     };
     syncData();
-    const interval = setInterval(syncData, 100);
-    return () => clearInterval(interval);
+    const i = setInterval(syncData, 100);
+    return () => clearInterval(i);
   }, []);
 
   // ✅ Sync orthophoto data
   useEffect(() => {
     const syncOrthoData = () => {
-      if (window._orthophotoData) {
-        setOrthophotoData({ ...window._orthophotoData });
-      }
+      if (window._orthophotoData) setOrthophotoData({ ...window._orthophotoData });
     };
     syncOrthoData();
-    const interval = setInterval(syncOrthoData, 100);
-    return () => clearInterval(interval);
+    const i = setInterval(syncOrthoData, 100);
+    return () => clearInterval(i);
   }, []);
 
   // === MAP CONTROLS ===
@@ -68,43 +64,33 @@ function RightControls({ activeTool, setActiveTool }) {
   const handleCenter = () => {
     if (selectedSchemaBounds) {
       const [[minx, miny, maxx, maxy]] = [selectedSchemaBounds];
-      map.fitBounds([
-        [miny, minx],
-        [maxy, maxx],
-      ]);
+      map.fitBounds([[miny, minx], [maxy, maxx]]);
     } else {
       map.setView([12.8797, 121.774], 6);
     }
   };
 
   // === TOOL HANDLERS ===
-  const toggleTool = (toolName) => {
-    setActiveTool((prev) => (prev === toolName ? null : toolName));
-  };
-
-  const handleSchemaChange = (schema) => {
-    if (window._handleSchemaChange) {
-      window._handleSchemaChange(schema);
-    }
-  };
-
-  const handleOrthophotoSave = async (data) => {
-    if (window._handleOrthophotoSave) {
-      return await window._handleOrthophotoSave(data);
-    }
-    return { success: false, message: "Save handler not available" };
-  };
+  const toggleTool = (toolName) => setActiveTool((prev) => (prev === toolName ? null : toolName));
+  const handleSchemaChange = (schema) => window._handleSchemaChange?.(schema);
+  const handleOrthophotoSave = async (data) =>
+    window._handleOrthophotoSave ? await window._handleOrthophotoSave(data) : { success: false, message: "Save handler not available" };
 
   // === STYLING (left side) ===
+  // Panel: near-white bg, red border, subtle shadow
   const panelClass =
-    "bg-[#151922E6] rounded-r-lg py-2 w-10 shadow-md backdrop-blur-sm flex flex-col items-center";
-  const buttonBase =
-    "relative w-8 h-8 flex items-center justify-center rounded transition text-white group";
+    "bg-[#FAFAF9]/95 border border-[#B22234] rounded-r-xl py-2 w-11 shadow-[0_6px_18px_rgba(213,0,50,.18),0_0_0_1px_rgba(178,34,52,.12)] " +
+    "backdrop-blur-sm flex flex-col items-center";
 
-  // Tooltip opens to the RIGHT now (since stack is at left)
+  // Buttons: default maroon text; focus ring; smooth transitions
+  const buttonBase =
+    "relative w-8 h-8 flex items-center justify-center rounded text-[#A50034] transition " +
+    "focus:outline-none focus:ring-2 focus:ring-[#D50032]/40 group";
+
+  // Tooltip (kept dark for contrast)
   const Tooltip = ({ text }) => (
     <span
-      className="absolute left-[115%] top-1/2 -translate-y-1/2 bg-[#1E1E1EE6] text-white text-[11px]
+      className="absolute left-[115%] top-1/2 -translate-y-1/2 bg-[#1E1E1EE6] text-[#FAFAF9] text-[11px]
                  px-2 py-[3px] rounded-md shadow-md opacity-0 -translate-x-1
                  group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 ease-out
                  pointer-events-none whitespace-nowrap font-[Inter] tracking-wide
@@ -115,8 +101,9 @@ function RightControls({ activeTool, setActiveTool }) {
     </span>
   );
 
-  const hoverColor = "hover:bg-[#F7C80033]";
-  const activeColor = "bg-[#F7C800]";
+  // Palette: hover gets a soft maroon wash; active is solid maroon with light icon
+  const hoverColor = "hover:bg-[#D5003220]"; // ~12.5% alpha
+  const activeColor = "bg-[#D50032] text-[#FAFAF9]";
 
   return (
     <>

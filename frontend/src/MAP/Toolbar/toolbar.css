@@ -1,65 +1,91 @@
 @import "./PredictiveModelTools.css";
 
-/* === TOOLBAR CONTAINER — now anchored to the RIGHT === */
+/* ---------- Palette ---------- */
+:root{
+  --brand-1:#A50034;     /* deep maroon */
+  --brand-2:#D50032;     /* primary maroon */
+  --brand-3:#B22234;     /* brick/darker */
+  --near-white:#FAFAF9;  /* white-but-not-white */
+  --ink:#111827;         /* dark text */
+}
+
+/* === TOOLBAR CONTAINER — anchored RIGHT === */
 .toolbar-panel {
   position: absolute;
   top: 54px;
-  right: 10px;              /* ⬅️ anchor to right edge */
-  background: #000;
-  border: 1px solid #fff;
+  right: 10px;                         /* anchor to right edge */
   margin-top: 71px;
   width: 340px;
   height: fit-content;
   padding: 15px;
   overflow-y: auto;
   z-index: 2000;
-  transform: translateX(100%);           /* ⬅️ slide in from the RIGHT */
+
+  background: var(--near-white);       /* not pure white */
+  color: var(--ink);
+  border: 1px solid var(--brand-3);    /* red shade border */
+  border-left: 3px solid var(--brand-2);
+  border-radius: 10px;
+
+  transform: translateX(100%);         /* slide in from RIGHT */
   transition: transform 0.3s ease;
-  border-left: 2px solid #333;           /* ⬅️ divider on the left now */
-  font-family: sans-serif;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+
+  box-shadow:
+    0 8px 22px rgba(0,0,0,0.16),
+    0 0 0 1px rgba(178,34,52,0.15);     /* subtle maroon outline */
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
-.toolbar-panel.visible {
-  transform: translateX(0);
-}
+.toolbar-panel.visible { transform: translateX(0); }
 
-/* === TOGGLE BUTTON — park it on the RIGHT === */
+/* === TOGGLE BUTTON — parked on the RIGHT === */
 #toggleToolbarBtn {
   position: absolute;
   top: 75px;
-  right: 10px;            /* ⬅️ was left:10px */
+  right: 10px;
   z-index: 2100;
-  padding: 8px 12px;
-  background-color: #000;
-  color: #fff;
-  border: 1px solid #fff;
-  border-radius: 4px;
-  cursor: pointer;
-  height: 50px;
-  font-size: 18px;
-  font-family: sans-serif;
-  display: block;
-}
 
+  height: 50px;
+  padding: 8px 12px;
+  display: block;
+  cursor: pointer;
+
+  background-color: var(--near-white);
+  color: var(--brand-2);
+  border: 1px solid var(--brand-2);
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 700;
+
+  transition: background .2s ease, transform .15s ease, box-shadow .2s ease;
+  box-shadow: 0 3px 10px rgba(0,0,0,.12);
+}
 #toggleToolbarBtn:hover {
-  background-color: #838383;
-  border-color: #fff;
+  background: #FDF2F2;                 /* soft maroon tint */
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(213,0,50,.22);
 }
 
 /* === DROPDOWN CATEGORY SELECTOR === */
 .toolbar-dropdown {
   width: 100%;
-  padding: 8px 12px;
-  font-size: 14px;
-  font-weight: bold;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  background-color: #222;
-  color: white;
+  padding: 10px 12px;
   margin-bottom: 14px;
+
+  background: var(--near-white);
+  color: var(--ink);
+  border: 1.5px solid var(--brand-3);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-  font-family: sans-serif;
+
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.toolbar-dropdown:focus {
+  outline: none;
+  border-color: var(--brand-2);
+  box-shadow: 0 0 0 3px rgba(213,0,50,.15);
 }
 
 /* === TOOL BUTTON GRID === */
@@ -75,36 +101,54 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  color: white;
-  background: #1a1a1a;
-  border: 1px solid #555;
-  border-radius: 6px;
+
   width: 100%;
-  height: 80px;
-  padding: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  height: 84px;
+  padding: 8px;
   box-sizing: border-box;
+  text-align: center;
+  cursor: pointer;
+
+  background: #FFFFFF;                         /* card on near-white */
+  color: var(--ink);
+  border: 1px solid rgba(178,34,52,.40);       /* red-ish stroke */
+  border-radius: 10px;
+
+  transition: transform .12s ease,
+              box-shadow .2s ease,
+              background .2s ease,
+              border-color .2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
-.tool-button:hover { background-color: #333; border-color: #fff; }
-.tool-button.active { background-color: #555; border-color: #fff; }
+.tool-button:hover {
+  background: #FEF2F2;                         /* soft maroon tint */
+  border-color: var(--brand-2);
+  box-shadow: 0 6px 16px rgba(213,0,50,.18);
+  transform: translateY(-1px);
+}
 
-.tool-button img { width: 28px; height: 28px; margin-bottom: 4px; }
+.tool-button.active,
+.active-tool {
+  background: linear-gradient(180deg, #fff 0%, #FDECEC 100%);
+  border: 2px solid var(--brand-2);
+  box-shadow: 0 8px 18px rgba(213,0,50,.24);
+}
+
+.tool-button img { width: 28px; height: 28px; margin-bottom: 6px; }
 
 .tool-button span {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.1;
-  text-align: center;
-  color: white;
-  padding: 0 4px;
+  padding: 0 2px;
   word-break: break-word;
+  color: var(--ink);
 }
 
-.active-tool { background-color: #414141 !important; border: 2px solid #fffefe; }
-.active-tool:hover { background-color: #acacac !important; }
+/* keep explicit active hover for clarity */
+.active-tool:hover { background-color: #F8D7DA !important; }
 
+/* === Placeholder icon style (if you render a fallback) === */
 .icon-placeholder {
   font-size: 32px;
   width: 48px;
@@ -112,7 +156,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 8px;
+
+  background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
+  color: #fff;
+  border-radius: 10px;
   margin-bottom: 8px;
 }

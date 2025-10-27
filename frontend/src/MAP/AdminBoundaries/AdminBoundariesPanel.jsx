@@ -69,15 +69,19 @@ const AdminBoundariesPanel = ({ isVisible, onClose }) => {
   return (
     <div
       ref={containerRef}
-      className="absolute top-1/2 -translate-y-1/2 left-14 w-[260px] bg-[#151922] text-white rounded-r-lg shadow-xl border border-[#2A2E35] animate-slideIn z-[9999]"
+      className="absolute top-1/2 -translate-y-1/2 left-14 w-[260px] z-[9999]
+                 bg-[#FAFAF9] text-[#111827] rounded-r-xl border border-[#B22234]
+                 shadow-[0_10px_24px_rgba(0,0,0,0.18),0_0_0_1px_rgba(178,34,52,0.18)]
+                 animate-slideIn"
       style={{ pointerEvents: "auto" }}
     >
       {/* Header */}
-      <div className="flex justify-between items-center bg-[#F7C800] text-black font-semibold px-4 py-2 rounded-tr-lg">
+      <div className="flex justify-between items-center bg-[#A50034] text-[#FAFAF9] font-semibold px-4 py-2 rounded-tr-xl">
         <span>Admin Boundaries</span>
         <button
-          className="text-black hover:opacity-70 transition"
+          className="text-[#FAFAF9]/90 hover:opacity-80 transition"
           onClick={onClose}
+          aria-label="Close admin boundaries panel"
         >
           {/* flip to point toward the left edge */}
           <ChevronRight size={20} className="-rotate-180" />
@@ -87,61 +91,62 @@ const AdminBoundariesPanel = ({ isVisible, onClose }) => {
       {/* Body */}
       <div className="p-4 text-sm space-y-3">
         {/* Municipal Boundary */}
-        <label className="flex items-center gap-2 cursor-pointer hover:text-[#F7C800] transition">
+        <label className="flex items-center gap-2 cursor-pointer transition hover:text-[#D50032]">
           <input
             type="checkbox"
             checked={municipalChecked}
             onChange={handleToggle("Municipal", setMunicipalChecked)}
-            className="accent-[#F7C800] w-4 h-4"
+            className="accent-[#D50032] w-4 h-4"
           />
           <span>Municipal Boundary</span>
         </label>
 
         {/* Barangay Boundary */}
-        <label className="flex items-center gap-2 cursor-pointer hover:text-[#F7C800] transition">
+        <label className="flex items-center gap-2 cursor-pointer transition hover:text-[#D50032]">
           <input
             type="checkbox"
             checked={barangayChecked}
             onChange={handleToggle("Barangay", setBarangayChecked)}
-            className="accent-[#F7C800] w-4 h-4"
+            className="accent-[#D50032] w-4 h-4"
           />
           <span>Barangay Boundary</span>
         </label>
 
         {/* Section Boundary */}
-        <label className="flex items-center gap-2 cursor-pointer hover:text-[#F7C800] transition">
+        <label className="flex items-center gap-2 cursor-pointer transition hover:text-[#D50032]">
           <input
             type="checkbox"
             checked={sectionChecked}
             onChange={handleToggle("Section", setSectionChecked)}
-            className="accent-[#F7C800] w-4 h-4"
+            className="accent-[#D50032] w-4 h-4"
           />
           <span>Section Boundary</span>
         </label>
 
-        <hr className="border-[#2A2E35]" />
+        <hr className="border-[#E5E7EB]" />
 
         {/* Parcels */}
-        <label className="flex items-center gap-2 cursor-pointer hover:text-[#F7C800] transition">
+        <label className="flex items-center gap-2 cursor-pointer transition hover:text-[#D50032]">
           <input
             type="checkbox"
             checked={parcelsChecked}
             onChange={handleParcelToggle}
-            className="accent-[#F7C800] w-4 h-4"
+            className="accent-[#D50032] w-4 h-4"
           />
           <span>Parcels</span>
         </label>
 
         {/* Parcel Color Selector */}
         <div className="space-y-2">
-          <label htmlFor="parcelColor" className="block text-gray-300 text-xs">
+          <label htmlFor="parcelColor" className="block text-gray-700 text-xs">
             Parcel Outline Color:
           </label>
           <select
             id="parcelColor"
             value={parcelColor}
             onChange={handleColorChange}
-            className="w-full bg-[#1E1E1E] text-white border border-[#2A2E35] rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#F7C800] cursor-pointer"
+            className="w-full bg-white text-[#111827] border border-[#E5E7EB] rounded px-2 py-1.5 text-sm
+                       focus:outline-none focus:border-[#D50032] focus:ring-2 focus:ring-[#D50032]/30 cursor-pointer"
           >
             <option value="red">Red</option>
             <option value="orange">Orange</option>
