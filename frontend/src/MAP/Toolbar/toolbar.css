@@ -7,13 +7,19 @@
   --brand-3:#B22234;     /* brick/darker */
   --near-white:#FAFAF9;  /* white-but-not-white */
   --ink:#111827;         /* dark text */
+  
+  /* Extended palette for softer shades */
+  --red-50: #FEF2F2;     /* very light rose */
+  --red-100: #FEE2E2;    /* light rose */
+  --red-200: #FECACA;    /* soft pink */
+  --red-800: #991B1B;    /* dark burgundy */
 }
 
 /* === TOOLBAR CONTAINER — anchored RIGHT === */
 .toolbar-panel {
   position: absolute;
   top: 54px;
-  right: 10px;                         /* anchor to right edge */
+  right: 10px;
   margin-top: 71px;
   width: 340px;
   height: fit-content;
@@ -21,22 +27,24 @@
   overflow-y: auto;
   z-index: 2000;
 
-  background: var(--near-white);       /* not pure white */
+  background: var(--near-white);
   color: var(--ink);
-  border: 1px solid var(--brand-3);    /* red shade border */
+  border: 1px solid var(--brand-3);
   border-left: 3px solid var(--brand-2);
   border-radius: 10px;
 
-  transform: translateX(100%);         /* slide in from RIGHT */
+  transform: translateX(100%);
   transition: transform 0.3s ease;
 
   box-shadow:
     0 8px 22px rgba(0,0,0,0.16),
-    0 0 0 1px rgba(178,34,52,0.15);     /* subtle maroon outline */
+    0 0 0 1px rgba(178,34,52,0.15);
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
-.toolbar-panel.visible { transform: translateX(0); }
+.toolbar-panel.visible { 
+  transform: translateX(0); 
+}
 
 /* === TOGGLE BUTTON — parked on the RIGHT === */
 #toggleToolbarBtn {
@@ -60,8 +68,9 @@
   transition: background .2s ease, transform .15s ease, box-shadow .2s ease;
   box-shadow: 0 3px 10px rgba(0,0,0,.12);
 }
+
 #toggleToolbarBtn:hover {
-  background: #FDF2F2;                 /* soft maroon tint */
+  background: var(--red-50);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(213,0,50,.22);
 }
@@ -82,6 +91,7 @@
 
   transition: border-color .2s ease, box-shadow .2s ease;
 }
+
 .toolbar-dropdown:focus {
   outline: none;
   border-color: var(--brand-2);
@@ -95,70 +105,196 @@
   gap: 10px;
 }
 
-/* === TOOL BUTTON STYLE === */
+/* === ENHANCED TOOL BUTTON STYLE === */
 .tool-button {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 6px;
 
   width: 100%;
   height: 84px;
-  padding: 8px;
+  padding: 10px 8px;
   box-sizing: border-box;
   text-align: center;
   cursor: pointer;
 
-  background: #FFFFFF;                         /* card on near-white */
+  background: #FFFFFF;
   color: var(--ink);
-  border: 1px solid rgba(178,34,52,.40);       /* red-ish stroke */
+  border: 1px solid rgba(178,34,52,.25);
   border-radius: 10px;
 
-  transition: transform .12s ease,
-              box-shadow .2s ease,
-              background .2s ease,
-              border-color .2s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: 
+    transform .12s ease,
+    box-shadow .2s ease,
+    background .2s ease,
+    border-color .2s ease;
+  box-shadow: 
+    0 2px 6px rgba(165,0,52,0.08),
+    0 1px 2px rgba(0,0,0,0.04);
 }
 
 .tool-button:hover {
-  background: #FEF2F2;                         /* soft maroon tint */
+  background: var(--red-50);
   border-color: var(--brand-2);
-  box-shadow: 0 6px 16px rgba(213,0,50,.18);
+  box-shadow: 
+    0 4px 12px rgba(213,0,50,.16),
+    0 2px 4px rgba(165,0,52,.12);
+  transform: translateY(-2px);
+}
+
+/* Active state with gradient */
+.tool-button.active,
+.active-tool {
+  background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
+  border: 2px solid var(--brand-1);
+  color: var(--near-white);
+  box-shadow: 
+    0 6px 20px rgba(213,0,50,.28),
+    0 2px 8px rgba(165,0,52,.20),
+    inset 0 1px 0 rgba(255,255,255,.15);
   transform: translateY(-1px);
 }
 
-.tool-button.active,
-.active-tool {
-  background: linear-gradient(180deg, #fff 0%, #FDECEC 100%);
-  border: 2px solid var(--brand-2);
-  box-shadow: 0 8px 18px rgba(213,0,50,.24);
+.tool-button.active:hover,
+.active-tool:hover {
+  background: linear-gradient(135deg, #E6003D 0%, #B8002E 100%);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 24px rgba(213,0,50,.32),
+    0 4px 12px rgba(165,0,52,.24),
+    inset 0 1px 0 rgba(255,255,255,.2);
 }
 
-.tool-button img { width: 28px; height: 28px; margin-bottom: 6px; }
+/* Icon styling for Lucide icons */
+.tool-button svg {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  color: var(--brand-3);
+  transition: color .2s ease, transform .2s ease;
+  stroke-width: 2.5;
+}
 
+.tool-button:hover svg {
+  color: var(--brand-2);
+  transform: scale(1.08);
+}
+
+.tool-button.active svg,
+.active-tool svg {
+  color: var(--near-white);
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.2));
+}
+
+/* Legacy image icons (if still using .png files) */
+.tool-button img { 
+  width: 28px; 
+  height: 28px;
+  transition: transform .2s ease, filter .2s ease;
+}
+
+.tool-button:hover img {
+  transform: scale(1.08);
+}
+
+.tool-button.active img,
+.active-tool img {
+  filter: brightness(0) invert(1);
+}
+
+/* Label text */
 .tool-button span {
   font-size: 11px;
-  line-height: 1.1;
+  line-height: 1.2;
+  font-weight: 600;
   padding: 0 2px;
   word-break: break-word;
   color: var(--ink);
+  transition: color .2s ease;
+  letter-spacing: 0.01em;
 }
 
-/* keep explicit active hover for clarity */
-.active-tool:hover { background-color: #F8D7DA !important; }
+.tool-button:hover span {
+  color: var(--brand-1);
+}
 
-/* === Placeholder icon style (if you render a fallback) === */
+.tool-button.active span,
+.active-tool span {
+  color: var(--near-white);
+  text-shadow: 0 1px 2px rgba(0,0,0,.15);
+}
+
+/* === Icon Placeholder (fallback) === */
 .icon-placeholder {
-  font-size: 32px;
-  width: 48px;
-  height: 48px;
+  font-size: 28px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
 
   background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
-  color: #fff;
-  border-radius: 10px;
-  margin-bottom: 8px;
+  color: var(--near-white);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(213,0,50,.20);
+  transition: transform .2s ease;
+}
+
+.tool-button:hover .icon-placeholder {
+  transform: scale(1.08);
+}
+
+/* === Responsive adjustments === */
+@media (max-width: 768px) {
+  .toolbar-panel {
+    width: 300px;
+  }
+  
+  .toolbar-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .tool-button {
+    height: 90px;
+  }
+}
+
+
+/* === TOOLBAR SECTIONS === */
+.toolbar-section {
+  margin-bottom: 20px;
+}
+
+.toolbar-section:last-of-type {
+  margin-bottom: 0;
+}
+
+/* Force sections to stack vertically even inside a parent grid */
+.toolbar-section {
+  grid-column: 1 / -1;   /* span full width of parent grid */
+  display: block;
+  width: 100%;
+  margin: 6px 0 16px;
+}
+
+.toolbar-section-title {
+  display: block;        /* ensure title breaks to new line */
+  margin: 0 0 10px;
+}
+
+.toolbar-category-label {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand-2);
+  margin: 12px 0 8px 0;
+  padding: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.toolbar-category-label:first-child {
+  margin-top: 0;
 }

@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import {
+  Search as SearchIcon,
+  Merge,
+  Scissors,
+  Info,
+  Edit3,
+  Map,
+  FileCheck,
+  FileText,
+} from "lucide-react";
 import ParcelClickHandler from "../ParcelClickHandler.jsx";
 import Search from "../Search/Search.jsx";
 import InfoTool from "../InfoTool/InfoTool.jsx";
@@ -7,171 +17,164 @@ import Consolidate from "../Consolidate/consolidate.jsx";
 import Subdivide from "../Subdivide/subdivide.jsx";
 import "./toolbar.css";
 
+const TOOLS = {
+  SEARCH: "search",
+  CONSOLIDATE: "consolidate",
+  SUBDIVIDE: "subdivide",
+  INFO: "info",
+  EDIT: "edit",
+  TAXMAP: "taxmap",
+};
+
 const TBMainToolbar = ({ activeTool, setActiveTool }) => {
   const [showTMCR, setShowTMCR] = useState(false);
   const [showMismatchChecker, setShowMismatchChecker] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [toolbarVisible, setToolbarVisible] = useState(true);
-
   const [infoProps, setInfoProps] = useState({});
   const [editHeader, setEditHeader] = useState("Land Parcel Information");
 
-  // === Sync global tool state ===
+  // Sync global tool state & register helpers
   useEffect(() => {
     window.currentActiveTool = activeTool;
-    return () => {
-      window.currentActiveTool = null;
-    };
-  }, [activeTool]);
-
-  // === Register global helpers ===
-  useEffect(() => {
-    window.switchToEditMode = () => setActiveTool("edit");
-    window.switchToInfoMode = () => setActiveTool("info");
-
-    // 🩵 Allow SearchResults to open InfoTool directly
+    window.switchToEditMode = () => setActiveTool(TOOLS.EDIT);
+    window.switchToInfoMode = () => setActiveTool(TOOLS.INFO);
     window.setReactInfoToolData = (parcelData) => {
       setInfoProps(parcelData);
-      setActiveTool("info");
+      setActiveTool(TOOLS.INFO);
     };
 
     return () => {
+      window.currentActiveTool = null;
       delete window.switchToEditMode;
       delete window.switchToInfoMode;
       delete window.setReactInfoToolData;
     };
-  }, [setActiveTool]);
+  }, [activeTool, setActiveTool]);
 
   const toggleTool = (tool) => {
     setActiveTool(activeTool === tool ? null : tool);
   };
 
-  const infoOrEditActive = activeTool === "info" || activeTool === "edit";
+  const handleLayerRefresh = () => {
+    window.onParcelsLoaded?.();
+    window.enforceLayerOrder?.();
+  };
 
-  // === Handle Search open/close ===
   const openSearch = () => {
-    if (window.onParcelsLoaded) window.onParcelsLoaded();
-    if (window.enforceLayerOrder) window.enforceLayerOrder();
+    handleLayerRefresh();
     setToolbarVisible(false);
     setShowSearch(true);
-    setActiveTool("search");
+    setActiveTool(TOOLS.SEARCH);
   };
 
   const closeSearch = () => {
     setShowSearch(false);
     setToolbarVisible(true);
     setActiveTool(null);
-    if (window.onParcelsLoaded) window.onParcelsLoaded();
-    if (window.enforceLayerOrder) window.enforceLayerOrder();
+    handleLayerRefresh();
   };
+
+  const infoOrEditActive = [TOOLS.INFO, TOOLS.EDIT].includes(activeTool);
+
+  const toolButtons = [
+    {
+      id: TOOLS.SEARCH,
+      icon: SearchIcon,
+      label: "Search",
+      title: "Search for a parcel/property/road/landmark by its attributes",
+      onClick: openSearch,
+    },
+    {
+      id: TOOLS.CONSOLIDATE,
+      icon: Merge,
+      label: "Consolidate",
+      title: "Merge 2 or more property features",
+      onClick: () => toggleTool(TOOLS.CONSOLIDATE),
+    },
+    {
+      id: TOOLS.SUBDIVIDE,
+      icon: Scissors,
+      label: "Subdivide",
+      title: "Split a parcel",
+      onClick: () => toggleTool(TOOLS.SUBDIVIDE),
+    },
+    {
+      id: TOOLS.INFO,
+      icon: Info,
+      label: "Land Parcel Info Tool",
+      title: "Click on any parcel to see its property information",
+      onClick: () => toggleTool(TOOLS.INFO),
+    },
+    {
+      id: TOOLS.EDIT,
+      icon: Edit3,
+      label: "Parcel Attribute Editing Tool",
+      title: "Select a parcel and edit its attributes",
+      onClick: () => toggleTool(TOOLS.EDIT),
+    },
+    {
+      id: TOOLS.TAXMAP,
+      icon: Map,
+      label: "Taxmap Layout",
+      title:
+        "Create map layout for Section Index Map or Property Identification Map",
+      onClick: () => setActiveTool(TOOLS.TAXMAP),
+    },
+    {
+      id: "matching",
+      icon: FileCheck,
+      label: "Matching Report",
+      title: "Generate Matching Report based on PIN of RPT and GIS",
+      onClick: () => setShowMismatchChecker(true),
+    },
+    {
+      id: "tmcr",
+      icon: FileText,
+      label: "TMCR",
+      title: "Generate and Print Tax Map Control Roll",
+      onClick: () => setShowTMCR(true),
+    },
+  ];
 
   return (
     <>
-      {/* === Main Toolbar Buttons === */}
+      {/* Main Toolbar Buttons */}
       {toolbarVisible && (
         <>
-          <button
-            className={`tool-button ${activeTool === "search" ? "active" : ""}`}
-            onClick={openSearch}
-            title="Search for a parcel/property/road/landmark by its attributes"
-          >
-            <img src="/icons/property_search_tool_icon.png" alt="Search" />
-            <span>Search</span>
-          </button>
-
-          <button
-            className={`tool-button ${activeTool === "info" ? "active" : ""}`}
-            onClick={() => toggleTool("info")}
-            title="Click on any parcel to see its property information"
-          >
-            <img src="/icons/land_parcel_info_icon.png" alt="Info" />
-            <span>Land Parcel Info Tool</span>
-          </button>
-
-          <button
-            className={`tool-button ${activeTool === "edit" ? "active" : ""}`}
-            onClick={() => toggleTool("edit")}
-            title="Select a parcel and edit its attributes"
-          >
-            <img src="/icons/parcel_editing_tool_icon.png" alt="Edit" />
-            <span>Parcel Attribute Editing Tool</span>
-          </button>
-
-          <button
-            className={`tool-button ${activeTool === "taxmap" ? "active" : ""}`}
-            id="btnLayout"
-            onClick={() => setActiveTool("taxmap")}
-            title="Create map layout for Section Index Map or Property Identification Map"
-          >
-            <img src="/icons/taxmap_layout_icon.png" alt="Layout" />
-            <span>Taxmap Layout</span>
-          </button>
-
-          <button
-            className="tool-button"
-            id="btnTMCR"
-            onClick={() => setShowTMCR(true)}
-            title="Generate and Print Tax Map Control Roll"
-          >
-            <img src="/icons/tmcr_icon.png" alt="TMCR" />
-            <span>TMCR Report</span>
-          </button>
-
-          <button
-            className="tool-button"
-            id="btnMatch"
-            onClick={() => setShowMismatchChecker(true)}
-            title="Generate Matching Report based on PIN of RPT and GIS"
-          >
-            <img src="/icons/matching_report_icon.png" alt="Match" />
-            <span>Matching Report</span>
-          </button>
-
-          <button
-            className={`tool-button ${activeTool === "consolidate" ? "active" : ""}`}
-            onClick={() => toggleTool("consolidate")}
-            title="Merge 2 or more property features"
-          >
-            <img src="/icons/consolidate_icon.png" alt="Consolidate" />
-            <span>Consolidate</span>
-          </button>
-
-          <button
-            className={`tool-button ${activeTool === "subdivide" ? "active" : ""}`}
-            onClick={() => toggleTool("subdivide")}
-            title="Split a parcel"
-          >
-            <img src="/icons/subdivide_icon.png" alt="Subdivide" />
-            <span>Subdivide</span>
-          </button>
+          {toolButtons.map(({ id, icon: Icon, label, title, onClick }) => (
+            <button
+              key={id}
+              className={`tool-button ${activeTool === id ? "active" : ""}`}
+              onClick={onClick}
+              title={title}
+            >
+              <Icon size={20} strokeWidth={2} />
+              <span>{label}</span>
+            </button>
+          ))}
         </>
       )}
 
-      {/* === Search Panel === */}
+      {/* Modals & Tools */}
       {showSearch &&
         createPortal(
           <Search visible={showSearch} onClose={closeSearch} />,
           document.body
         )}
 
-      {/* === Consolidate Tool === */}
-      {activeTool === "consolidate" &&
+      {activeTool === TOOLS.CONSOLIDATE &&
         createPortal(
           <Consolidate onClose={() => setActiveTool(null)} />,
           document.body
         )}
 
-      {/* === Subdivide Tool (Popup Now Visible) === */}
-      {activeTool === "subdivide" &&
+      {activeTool === TOOLS.SUBDIVIDE &&
         createPortal(
-          <Subdivide
-            visible={activeTool === "subdivide"}
-            onClose={() => setActiveTool(null)}
-          />,
+          <Subdivide visible={true} onClose={() => setActiveTool(null)} />,
           document.body
         )}
 
-      {/* === Parcel Click Handler === */}
       <ParcelClickHandler
         activeTool={activeTool}
         setInfoProps={setInfoProps}
@@ -180,14 +183,13 @@ const TBMainToolbar = ({ activeTool, setActiveTool }) => {
         setEditHeader={setEditHeader}
       />
 
-      {/* === Info Tool (Portal) === */}
       {infoOrEditActive &&
         createPortal(
           <InfoTool
             visible={true}
             onClose={() => setActiveTool(null)}
             data={infoProps}
-            editable={activeTool === "edit"}
+            editable={activeTool === TOOLS.EDIT}
             position={infoProps?.fromSearch ? "right" : "left"}
           />,
           document.body

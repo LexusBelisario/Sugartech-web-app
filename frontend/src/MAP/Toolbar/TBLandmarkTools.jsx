@@ -1,78 +1,75 @@
 // src/components/TBLandmarkTools.jsx
 import React, { useState } from "react";
+import { Eye, MapPinPlus, Info, Edit3, Trash2 } from "lucide-react";
 import "./toolbar.css";
-
-import Landmarks from "../LandmarkTools/Landmarks.jsx"; // ✅ Landmarks manager (now uses context)
+import Landmarks from "../LandmarkTools/Landmarks.jsx";
 
 const TBLandmarkTools = () => {
   const [activeTool, setActiveTool] = useState(null);
   const [landmarksVisible, setLandmarksVisible] = useState(false);
 
+  const landmarkTools = [
+    {
+      id: "showLandmarks",
+      icon: Eye,
+      label: "Show Landmarks",
+      title: "Click to show all landmarks.",
+      onClick: () =>
+        setActiveTool(activeTool === "showLandmarks" ? null : "showLandmarks"),
+    },
+    {
+      id: "landmarkInfo",
+      icon: Info,
+      label: "Landmark Info Tool",
+      title: "Click on any landmark and see its information",
+      onClick: () =>
+        setActiveTool(activeTool === "landmarkInfo" ? null : "landmarkInfo"),
+    },
+    {
+      id: "updateLandmark",
+      icon: Edit3,
+      label: "Update Landmark",
+      title: "Updates the attributes' values of a Landmark",
+      onClick: () =>
+        setActiveTool(
+          activeTool === "updateLandmark" ? null : "updateLandmark"
+        ),
+    },
+    {
+      id: "addLandmark",
+      icon: MapPinPlus,
+      label: "Add Landmark",
+      title: "Click on any part of the map to add landmark",
+      onClick: () =>
+        setActiveTool(activeTool === "addLandmark" ? null : "addLandmark"),
+    },
+    {
+      id: "removeLandmark",
+      icon: Trash2,
+      label: "Remove Landmark",
+      title: "Mark landmarks for deletion by clicking them",
+      onClick: () =>
+        setActiveTool(
+          activeTool === "removeLandmark" ? null : "removeLandmark"
+        ),
+    },
+  ];
+
   return (
     <>
-      {/* === Toolbar Buttons === */}
-      <button
-        className={`tool-button ${activeTool === "showLandmarks" ? "active" : ""}`}
-        id="btnShowLandmark"
-        onClick={() => {
-          setActiveTool(activeTool === "showLandmarks" ? null : "showLandmarks");
-        }}
-        title="Click to show all landmarks."
-      >
-        <img src="/icons/show_landmark_icon.png" alt="Show Landmarks" />
-        <span>Show Landmarks</span>
-      </button>
+      {landmarkTools.map(({ id, icon: Icon, label, title, onClick }) => (
+        <button
+          key={id}
+          className={`tool-button ${activeTool === id ? "active" : ""}`}
+          id={`btn${id.charAt(0).toUpperCase() + id.slice(1)}`}
+          onClick={onClick}
+          title={title}
+        >
+          <Icon size={24} strokeWidth={2.5} />
+          <span>{label}</span>
+        </button>
+      ))}
 
-      <button
-        className={`tool-button ${activeTool === "addLandmark" ? "active" : ""}`}
-        id="btnAddLandmark"
-        onClick={() =>
-          setActiveTool(activeTool === "addLandmark" ? null : "addLandmark")
-        }
-        title="Click on any part of the map to add landmark"
-      >
-        <img src="/icons/add_landmark_icon.png" alt="Add Landmark" />
-        <span>Add Landmark</span>
-      </button>
-
-      <button
-        className={`tool-button ${activeTool === "landmarkInfo" ? "active" : ""}`}
-        id="btnLandmarkInfo"
-        onClick={() => {
-          if (activeTool !== "landmarkInfo") setActiveTool("landmarkInfo");
-          else setActiveTool(null);
-        }}
-        title="Click on any landmark and see its information"
-      >
-        <img src="/icons/info_landmark_icon.png" alt="Landmark Info" />
-        <span>Landmark Info Tool</span>
-      </button>
-
-      <button
-        className={`tool-button ${activeTool === "updateLandmark" ? "active" : ""}`}
-        id="btnUpdateLandmark"
-        onClick={() =>
-          setActiveTool(activeTool === "updateLandmark" ? null : "updateLandmark")
-        }
-        title="Updates the attributes' values of a Landmark"
-      >
-        <img src="/icons/update_landmark_icon.png" alt="Update Landmark" />
-        <span>Update Landmark</span>
-      </button>
-
-      <button
-        className={`tool-button ${activeTool === "removeLandmark" ? "active" : ""}`}
-        id="btnRemoveLandmark"
-        onClick={() =>
-          setActiveTool(activeTool === "removeLandmark" ? null : "removeLandmark")
-        }
-        title="Mark landmarks for deletion by clicking them"
-      >
-        <img src="/icons/remove_landmark_icon.png" alt="Remove Landmark" />
-        <span>Remove Landmark</span>
-      </button>
-
-      {/* === Landmarks Manager === */}
       <Landmarks
         activeTool={activeTool}
         setActiveTool={setActiveTool}

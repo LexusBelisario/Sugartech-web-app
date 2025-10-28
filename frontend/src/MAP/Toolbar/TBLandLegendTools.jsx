@@ -1,7 +1,28 @@
 // src/components/TBLandLegendTools.jsx
 import React from "react";
+import {
+  DollarSign,
+  Users,
+  Shield,
+  Layers,
+  CreditCard,
+  AlertTriangle,
+  Clock,
+  Building,
+} from "lucide-react";
 import "./toolbar.css";
-import LandLegendTools from "../LandLegend/LandLegendTools.jsx"; // ✅ logic container
+import LandLegendTools from "../LandLegend/LandLegendTools.jsx";
+
+const LAND_TOOLS = {
+  VALUATION: "landvaluation",
+  OWNERSHIP: "landownership",
+  TAXABILITY: "taxability",
+  ACTUAL_USE: "actualuse",
+  PAYMENT: "payment",
+  DELINQ_AMOUNT: "delinqamount",
+  DELINQ_AGING: "delinqaging",
+  DELINQ_USE: "delinquse",
+};
 
 const TBLandLegendTools = ({ activeTool, setActiveTool }) => {
   const toggleTool = (tool, callback) => {
@@ -10,90 +31,129 @@ const TBLandLegendTools = ({ activeTool, setActiveTool }) => {
     callback?.();
   };
 
+  const landLegendTools = [
+    {
+      id: LAND_TOOLS.VALUATION,
+      icon: DollarSign,
+      label: "Unit Value",
+      title: "Toggle thematic map for Land Valuation",
+      onClick: () =>
+        toggleTool(LAND_TOOLS.VALUATION, () =>
+          window.toggleLandValuationLayer?.()
+        ),
+      hasActive: true,
+    },
+    {
+      id: LAND_TOOLS.OWNERSHIP,
+      icon: Users,
+      label: "Ownership",
+      title: "Toggle thematic map for Land Ownership",
+      onClick: () =>
+        toggleTool(LAND_TOOLS.OWNERSHIP, () =>
+          window.toggleLandOwnershipLayer?.()
+        ),
+      hasActive: true,
+    },
+    {
+      id: LAND_TOOLS.TAXABILITY,
+      icon: Shield,
+      label: "Taxability",
+      title: "Toggle layer for Land Parcel Taxability",
+      onClick: () =>
+        toggleTool(LAND_TOOLS.TAXABILITY, () =>
+          window.toggleTaxabilityLayer?.()
+        ),
+      hasActive: true,
+    },
+    {
+      id: LAND_TOOLS.ACTUAL_USE,
+      icon: Layers,
+      label: "Actual Use",
+      title: "Toggle layer for Land Parcel Actual Use",
+      onClick: () =>
+        toggleTool(LAND_TOOLS.ACTUAL_USE, () =>
+          window.toggleActualUseLayer?.()
+        ),
+      hasActive: true,
+    },
+    {
+      id: LAND_TOOLS.PAYMENT,
+      icon: CreditCard,
+      label: "Payment",
+      title: "Toggle layer for Land Parcel Payment",
+      onClick: () => window.togglePaymentLayer?.(),
+      hasActive: false,
+    },
+  ];
+
+  const delinquencyTools = [
+    {
+      id: LAND_TOOLS.DELINQ_AMOUNT,
+      icon: AlertTriangle,
+      label: "Amount",
+      title: "Toggle layer for Delinquency Amount",
+      onClick: () =>
+        toggleTool(LAND_TOOLS.DELINQ_AMOUNT, () =>
+          window.toggleDelinqAmountLayer?.()
+        ),
+      hasActive: true,
+    },
+    {
+      id: LAND_TOOLS.DELINQ_AGING,
+      icon: Clock,
+      label: "Aging",
+      title: "Toggle layer for Delinquency Aging",
+      onClick: () => window.toggleDelinqAgingLayer?.(),
+      hasActive: false,
+    },
+    {
+      id: LAND_TOOLS.DELINQ_USE,
+      icon: Building,
+      label: "Actual Use",
+      title: "Toggle layer for Delinquency Actual Use",
+      onClick: () => window.toggleDelinqUseLayer?.(),
+      hasActive: false,
+    },
+  ];
+
   return (
     <>
-      {/* === Land Legend Buttons === */}
-      <button
-        className={`tool-button ${activeTool === "landvaluation" ? "active" : ""}`}
-        id="btnLandValuation"
-        onClick={() => toggleTool("landvaluation", () => window.toggleLandValuationLayer?.())}
-        title="Toggle thematic map for Land Valuation"
-      >
-        <img src="/icons/land_parcel_unitvalue_icon.png" alt="Valuation" />
-        <span>Land Parcel: Unit Value</span>
-      </button>
+      {/* Land Legends Label */}
+      <div className="toolbar-category-label">Land Legends:</div>
 
-      <button
-        className={`tool-button ${activeTool === "landownership" ? "active" : ""}`}
-        id="btnLandOwnership"
-        onClick={() => toggleTool("landownership", () => window.toggleLandOwnershipLayer?.())}
-        title="Toggle thematic map for Land Ownership"
-      >
-        <img src="/icons/landownershipmap.png" alt="Ownership" />
-        <span>Land Parcel: Ownership</span>
-      </button>
+      {/* Land Legends Buttons */}
+      {landLegendTools.map(
+        ({ id, icon: Icon, label, title, onClick, hasActive }) => (
+          <button
+            key={id}
+            className={`tool-button ${hasActive && activeTool === id ? "active" : ""}`}
+            onClick={onClick}
+            title={title}
+          >
+            <Icon size={24} strokeWidth={2.5} />
+            <span>{label}</span>
+          </button>
+        )
+      )}
 
-      <button
-        className={`tool-button ${activeTool === "taxability" ? "active" : ""}`}
-        id="btnTaxability"
-        onClick={() => toggleTool("taxability", () => window.toggleTaxabilityLayer?.())}
-        title="Toggle layer for Land Parcel Taxability"
-      >
-        <img src="/icons/land_parcel_taxability_icon.png" alt="Taxability" />
-        <span>Land Parcel: Taxability</span>
-      </button>
+      {/* Delinquency Label */}
+      <div className="toolbar-category-label">Delinquency:</div>
 
-      <button
-        className={`tool-button ${activeTool === "actualuse" ? "active" : ""}`}
-        id="btnActualUse"
-        onClick={() => toggleTool("actualuse", () => window.toggleActualUseLayer?.())}
-        title="Toggle layer for Land Parcel Actual Use"
-      >
-        <img src="/icons/land_parcel_actualuse_icon.png" alt="Actual Use" />
-        <span>Land Parcel: Actual Use</span>
-      </button>
+      {/* Delinquency Buttons */}
+      {delinquencyTools.map(
+        ({ id, icon: Icon, label, title, onClick, hasActive }) => (
+          <button
+            key={id}
+            className={`tool-button ${hasActive && activeTool === id ? "active" : ""}`}
+            onClick={onClick}
+            title={title}
+          >
+            <Icon size={24} strokeWidth={2.5} />
+            <span>{label}</span>
+          </button>
+        )
+      )}
 
-      <button
-        className="tool-button"
-        id="btnPayment"
-        onClick={() => window.togglePaymentLayer?.()}
-        title="Toggle layer for Land Parcel Payment"
-      >
-        <img src="/icons/land_parcel_payment_icon.png" alt="Payment" />
-        <span>Land Parcel: Payment</span>
-      </button>
-
-      <button
-        className={`tool-button ${activeTool === "delinqamount" ? "active" : ""}`}
-        id="btnDelinqAmount"
-        onClick={() => toggleTool("delinqamount", () => window.toggleDelinqAmountLayer?.())}
-        title="Toggle layer for Delinquency Amount"
-      >
-        <img src="/icons/delinquency_amount_icon.png" alt="Delinquency Amount" />
-        <span>Delinquency: Amount</span>
-      </button>
-
-      <button
-        className="tool-button"
-        id="btnDelinqAging"
-        onClick={() => window.toggleDelinqAgingLayer?.()}
-        title="Toggle layer for Delinquency Aging"
-      >
-        <img src="/icons/delinquency_aging_icon.png" alt="Delinquency Aging" />
-        <span>Delinquency: Aging</span>
-      </button>
-
-      <button
-        className="tool-button"
-        id="btnDelinqUse"
-        onClick={() => window.toggleDelinqUseLayer?.()}
-        title="Toggle layer for Delinquency Actual Use"
-      >
-        <img src="/icons/delinquency_actualuse_icon.png" alt="Delinquency Actual Use" />
-        <span>Delinquency: Actual Use</span>
-      </button>
-
-      {/* === Logic container mounted in the background === */}
       <LandLegendTools />
     </>
   );

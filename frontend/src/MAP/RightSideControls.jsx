@@ -3,11 +3,9 @@ import { useState, useEffect } from "react";
 import {
   Plus,
   Minus,
-  Crosshair,
   Folder,
   Satellite,
   MapPinned,
-  Paintbrush,
   ArrowUpDown,
 } from "lucide-react";
 import { useSchema } from "./SchemaContext.jsx";
@@ -119,10 +117,6 @@ function RightControls({ activeTool, setActiveTool }) {
             <Minus size={18} />
             <Tooltip text="Zoom Out" />
           </button>
-          <button onClick={handleCenter} className={`${buttonBase} ${hoverColor}`}>
-            <Crosshair size={18} />
-            <Tooltip text="Center Map" />
-          </button>
         </div>
 
         {/* 🧩 Tool Buttons */}
@@ -157,14 +151,6 @@ function RightControls({ activeTool, setActiveTool }) {
           >
             <ArrowUpDown size={18} />
             <Tooltip text="RPT-GIS Sync Tool" />
-          </button>
-
-          <button
-            onClick={() => toggleTool("parcel")}
-            className={`${buttonBase} ${activeTool === "parcel" ? activeColor : hoverColor}`}
-          >
-            <Paintbrush size={18} />
-            <Tooltip text="Parcel Styling" />
           </button>
         </div>
       </div>
