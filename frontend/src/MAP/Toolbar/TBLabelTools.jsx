@@ -2,7 +2,10 @@
 import React from "react";
 import { 
   Signpost,
-  MapPin
+  MapPin,
+    Tags,
+  Building2,
+  Wrench,
 } from "lucide-react";
 import LabelTools from "../LabelTools/LabelTools.jsx";
 import "./toolbar.css";
@@ -22,7 +25,28 @@ const TBLabelTools = () => {
       label: "Landmark Label",
       title: "Toggle Landmark Labels",
       onClick: () => window.toggleLandmarkLabel?.()
-    }
+    },
+    {
+      id: "brgylabel",
+      icon: Tags,
+      label: "Land Parcel Multi-label",
+      title: "Toggle Barangay, Section, Parcel labels",
+      onClick: () => window.toggleBrgyLabel?.()
+    },
+    {
+      id: "bldglabel",
+      icon: Building2,
+      label: "Bldg Count Label",
+      title: "Toggle Building Labels",
+      onClick: () => window.toggleBldgLabel?.()
+    },
+    {
+      id: "machlabel",
+      icon: Wrench,
+      label: "Mach. Count Label",
+      title: "Toggle Machinery Labels",
+      onClick: () => window.toggleMachLabel?.()
+    },
   ];
 
   return (

@@ -2,20 +2,71 @@
 
 /* ---------- Palette ---------- */
 :root{
-  --brand-1:#A50034;     /* deep maroon */
-  --brand-2:#D50032;     /* primary maroon */
-  --brand-3:#B22234;     /* brick/darker */
-  --near-white:#FAFAF9;  /* white-but-not-white */
-  --ink:#111827;         /* dark text */
+  --brand-1:#A50034;
+  --brand-2:#D50032;
+  --brand-3:#B22234;
+  --near-white:#FAFAF9;
+  --ink:#111827;
   
-  /* Extended palette for softer shades */
-  --red-50: #FEF2F2;     /* very light rose */
-  --red-100: #FEE2E2;    /* light rose */
-  --red-200: #FECACA;    /* soft pink */
-  --red-800: #991B1B;    /* dark burgundy */
+  --red-50: #FEF2F2;
+  --red-100: #FEE2E2;
+  --red-200: #FECACA;
+  --red-800: #991B1B;
+  
+  --toolbar-shift-amount: 420px;
 }
 
-/* === TOOLBAR CONTAINER — anchored RIGHT === */
+/* === ANIMATIONS === */
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+/* === TOOLBAR CONTAINER === */
 .toolbar-panel {
   position: absolute;
   top: 54px;
@@ -23,7 +74,7 @@
   margin-top: 71px;
   width: 340px;
   height: fit-content;
-  padding: 15px;
+  padding: 18px;
   overflow-y: auto;
   z-index: 2000;
 
@@ -31,71 +82,168 @@
   color: var(--ink);
   border: 1px solid var(--brand-3);
   border-left: 3px solid var(--brand-2);
-  border-radius: 10px;
+  border-radius: 12px;
 
   transform: translateX(100%);
-  transition: transform 0.3s ease;
+  opacity: 0;
+  transition: 
+    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.4s ease,
+    right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
   box-shadow:
-    0 8px 22px rgba(0,0,0,0.16),
+    0 10px 30px rgba(0,0,0,0.18),
     0 0 0 1px rgba(178,34,52,0.15);
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
 .toolbar-panel.visible { 
-  transform: translateX(0); 
+  transform: translateX(0);
+  opacity: 1;
+  animation: slideInFromRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* === TOGGLE BUTTON — parked on the RIGHT === */
+.toolbar-panel.shifted-left {
+  right: calc(10px + var(--toolbar-shift-amount));
+}
+
+/* === TOOLBAR HEADER === */
+.toolbar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--red-100);
+  animation: fadeIn 0.5s ease;
+}
+
+.toolbar-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
+  color: var(--near-white);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(213,0,50,.25);
+  transition: transform 0.3s ease;
+}
+
+.toolbar-header:hover .toolbar-header-icon {
+  transform: rotate(15deg) scale(1.05);
+}
+
+.toolbar-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--brand-1);
+  letter-spacing: -0.02em;
+}
+
+/* === TOGGLE BUTTON === */
 #toggleToolbarBtn {
   position: absolute;
   top: 75px;
   right: 10px;
   z-index: 2100;
 
-  height: 50px;
-  padding: 8px 12px;
-  display: block;
+  min-height: 50px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: row; /* row para magkatabi */
+  align-items: center;
+  justify-content: center;
+  gap: 10px; /* space between icon and text */
   cursor: pointer;
 
-  background-color: var(--near-white);
+  background: linear-gradient(135deg, var(--near-white) 0%, #FFFFFF 100%);
   color: var(--brand-2);
-  border: 1px solid var(--brand-2);
-  border-radius: 8px;
-  font-size: 18px;
+  border: 2px solid var(--brand-2);
+  border-radius: 12px;
+  font-size: 16px;
   font-weight: 700;
 
-  transition: background .2s ease, transform .15s ease, box-shadow .2s ease;
-  box-shadow: 0 3px 10px rgba(0,0,0,.12);
+  transition: 
+    all 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 4px 12px rgba(213,0,50,.15),
+    0 2px 4px rgba(0,0,0,.08);
 }
 
+#toggleToolbarBtn .toolbar-icon {
+    width: 18px;
+    height: 18px;
+  }
+  
 #toggleToolbarBtn:hover {
-  background: var(--red-50);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(213,0,50,.22);
+  background: linear-gradient(135deg, var(--red-50) 0%, var(--red-100) 100%);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 8px 20px rgba(213,0,50,.25),
+    0 4px 8px rgba(0,0,0,.12);
+  border-color: var(--brand-1);
 }
 
-/* === DROPDOWN CATEGORY SELECTOR === */
+#toggleToolbarBtn:hover .toolbar-icon {
+  transform: rotate(15deg);
+}
+
+#toggleToolbarBtn.active {
+  background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
+  color: var(--near-white);
+  border-color: var(--brand-1);
+  box-shadow: 
+    0 6px 16px rgba(213,0,50,.35),
+    inset 0 1px 0 rgba(255,255,255,.2);
+}
+
+#toggleToolbarBtn.active .toolbar-icon {
+  transform: rotate(180deg);
+}
+
+#toggleToolbarBtn.shifted {
+  right: calc(10px + var(--toolbar-shift-amount));
+}
+
+#toggleToolbarBtn span {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap; /* prevent text wrapping */
+}
+
+/* === DROPDOWN === */
 .toolbar-dropdown {
   width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 14px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
 
-  background: var(--near-white);
+  background: linear-gradient(135deg, #FFFFFF 0%, var(--near-white) 100%);
   color: var(--ink);
-  border: 1.5px solid var(--brand-3);
-  border-radius: 8px;
+  border: 2px solid var(--brand-3);
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 
-  transition: border-color .2s ease, box-shadow .2s ease;
+  transition: all 0.3s ease;
+  animation: scaleIn 0.4s ease 0.1s backwards;
+}
+
+.toolbar-dropdown:hover {
+  border-color: var(--brand-2);
+  box-shadow: 0 4px 12px rgba(213,0,50,.12);
+  transform: translateY(-1px);
 }
 
 .toolbar-dropdown:focus {
   outline: none;
   border-color: var(--brand-2);
-  box-shadow: 0 0 0 3px rgba(213,0,50,.15);
+  box-shadow: 0 0 0 4px rgba(213,0,50,.15);
+  transform: scale(1.01);
 }
 
 /* === TOOL BUTTON GRID === */
@@ -103,9 +251,10 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
+  animation: fadeIn 0.5s ease 0.2s backwards;
 }
 
-/* === ENHANCED TOOL BUTTON STYLE === */
+/* === ENHANCED TOOL BUTTON === */
 .tool-button {
   display: flex;
   flex-direction: column;
@@ -119,89 +268,109 @@
   box-sizing: border-box;
   text-align: center;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
 
-  background: #FFFFFF;
+  background: linear-gradient(135deg, #FFFFFF 0%, var(--near-white) 100%);
   color: var(--ink);
-  border: 1px solid rgba(178,34,52,.25);
-  border-radius: 10px;
+  border: 1.5px solid rgba(178,34,52,.2);
+  border-radius: 12px;
 
   transition: 
-    transform .12s ease,
-    box-shadow .2s ease,
-    background .2s ease,
-    border-color .2s ease;
+    all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 
-    0 2px 6px rgba(165,0,52,0.08),
-    0 1px 2px rgba(0,0,0,0.04);
+    0 2px 8px rgba(165,0,52,0.08),
+    0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* Hover shimmer effect */
+.tool-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.4),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.tool-button:hover::before {
+  left: 100%;
 }
 
 .tool-button:hover {
-  background: var(--red-50);
+  background: linear-gradient(135deg, var(--red-50) 0%, var(--red-100) 100%);
   border-color: var(--brand-2);
   box-shadow: 
-    0 4px 12px rgba(213,0,50,.16),
-    0 2px 4px rgba(165,0,52,.12);
-  transform: translateY(-2px);
+    0 6px 16px rgba(213,0,50,.18),
+    0 3px 8px rgba(165,0,52,.12);
+  transform: translateY(-3px) scale(1.02);
 }
 
-/* Active state with gradient */
 .tool-button.active,
 .active-tool {
   background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
   border: 2px solid var(--brand-1);
   color: var(--near-white);
   box-shadow: 
-    0 6px 20px rgba(213,0,50,.28),
-    0 2px 8px rgba(165,0,52,.20),
-    inset 0 1px 0 rgba(255,255,255,.15);
-  transform: translateY(-1px);
+    0 8px 24px rgba(213,0,50,.32),
+    0 4px 12px rgba(165,0,52,.24),
+    inset 0 1px 0 rgba(255,255,255,.2);
+  transform: translateY(-2px) scale(1.03);
+  animation: pulse 2s ease-in-out infinite;
 }
 
 .tool-button.active:hover,
 .active-tool:hover {
   background: linear-gradient(135deg, #E6003D 0%, #B8002E 100%);
-  transform: translateY(-2px);
+  transform: translateY(-4px) scale(1.04);
   box-shadow: 
-    0 8px 24px rgba(213,0,50,.32),
-    0 4px 12px rgba(165,0,52,.24),
-    inset 0 1px 0 rgba(255,255,255,.2);
+    0 10px 30px rgba(213,0,50,.38),
+    0 6px 16px rgba(165,0,52,.28),
+    inset 0 1px 0 rgba(255,255,255,.25);
 }
 
-/* Icon styling for Lucide icons */
+/* Icon styling */
 .tool-button svg {
   flex-shrink: 0;
   width: 24px;
   height: 24px;
   color: var(--brand-3);
-  transition: color .2s ease, transform .2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   stroke-width: 2.5;
 }
 
 .tool-button:hover svg {
   color: var(--brand-2);
-  transform: scale(1.08);
+  transform: scale(1.12) rotate(5deg);
 }
 
 .tool-button.active svg,
 .active-tool svg {
   color: var(--near-white);
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,.2));
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.25));
+  transform: scale(1.1);
 }
 
-/* Legacy image icons (if still using .png files) */
 .tool-button img { 
   width: 28px; 
   height: 28px;
-  transition: transform .2s ease, filter .2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tool-button:hover img {
-  transform: scale(1.08);
+  transform: scale(1.12) rotate(5deg);
 }
 
 .tool-button.active img,
 .active-tool img {
-  filter: brightness(0) invert(1);
+  filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,.25));
 }
 
 /* Label text */
@@ -212,21 +381,56 @@
   padding: 0 2px;
   word-break: break-word;
   color: var(--ink);
-  transition: color .2s ease;
+  transition: all 0.3s ease;
   letter-spacing: 0.01em;
 }
 
 .tool-button:hover span {
   color: var(--brand-1);
+  transform: scale(1.02);
 }
 
 .tool-button.active span,
 .active-tool span {
   color: var(--near-white);
-  text-shadow: 0 1px 2px rgba(0,0,0,.15);
+  text-shadow: 0 1px 3px rgba(0,0,0,.2);
 }
 
-/* === Icon Placeholder (fallback) === */
+/* === Overlay === */
+.toolbar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(8px);
+  background: rgba(0,0,0,0.4);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: 10px;
+  pointer-events: auto;
+  animation: fadeIn 0.3s ease;
+}
+
+.overlay-content {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 20px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.2);
+  animation: scaleIn 0.4s ease;
+}
+
+.overlay-content p {
+  margin: 4px 0;
+}
+
+/* === Icon Placeholder === */
 .icon-placeholder {
   font-size: 28px;
   width: 40px;
@@ -237,19 +441,21 @@
 
   background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
   color: var(--near-white);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(213,0,50,.20);
-  transition: transform .2s ease;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(213,0,50,.25);
+  transition: transform 0.3s ease;
 }
 
 .tool-button:hover .icon-placeholder {
-  transform: scale(1.08);
+  transform: scale(1.12) rotate(5deg);
 }
 
-/* === Responsive adjustments === */
+/* === Responsive === */
+/* === Responsive === */
 @media (max-width: 768px) {
   .toolbar-panel {
     width: 300px;
+    padding: 15px;
   }
   
   .toolbar-grid {
@@ -259,28 +465,48 @@
   .tool-button {
     height: 90px;
   }
-}
+  
+  #toggleToolbarBtn {
+    min-height: 45px;
+    padding: 8px 14px;
+    font-size: 14px;
+    gap: 8px;
+  }
 
+  
+  .toolbar-header-icon {
+    width: 34px;
+    height: 34px;
+  }
+  
+  .toolbar-title {
+    font-size: 18px;
+  }
+  
+  :root {
+    --toolbar-shift-amount: 320px;
+  }
+}
 
 /* === TOOLBAR SECTIONS === */
 .toolbar-section {
   margin-bottom: 20px;
+  animation: fadeIn 0.5s ease;
 }
 
 .toolbar-section:last-of-type {
   margin-bottom: 0;
 }
 
-/* Force sections to stack vertically even inside a parent grid */
 .toolbar-section {
-  grid-column: 1 / -1;   /* span full width of parent grid */
+  grid-column: 1 / -1;
   display: block;
   width: 100%;
   margin: 6px 0 16px;
 }
 
 .toolbar-section-title {
-  display: block;        /* ensure title breaks to new line */
+  display: block;
   margin: 0 0 10px;
 }
 
@@ -293,8 +519,105 @@
   padding: 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  position: relative;
+  padding-left: 12px;
+  animation: fadeIn 0.5s ease;
+}
+
+.toolbar-category-label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 14px;
+  background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
+  border-radius: 2px;
 }
 
 .toolbar-category-label:first-child {
   margin-top: 0;
+}
+
+/* === Scrollbar Styling === */
+.toolbar-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.toolbar-panel::-webkit-scrollbar-track {
+  background: var(--red-50);
+  border-radius: 10px;
+}
+
+.toolbar-panel::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.toolbar-panel::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #E6003D 0%, #B8002E 100%);
+}
+
+/* === Staggered Animation for Tool Buttons === */
+.toolbar-grid .tool-button:nth-child(1) { animation: scaleIn 0.4s ease 0.05s backwards; }
+.toolbar-grid .tool-button:nth-child(2) { animation: scaleIn 0.4s ease 0.1s backwards; }
+.toolbar-grid .tool-button:nth-child(3) { animation: scaleIn 0.4s ease 0.15s backwards; }
+.toolbar-grid .tool-button:nth-child(4) { animation: scaleIn 0.4s ease 0.2s backwards; }
+.toolbar-grid .tool-button:nth-child(5) { animation: scaleIn 0.4s ease 0.25s backwards; }
+.toolbar-grid .tool-button:nth-child(6) { animation: scaleIn 0.4s ease 0.3s backwards; }
+.toolbar-grid .tool-button:nth-child(7) { animation: scaleIn 0.4s ease 0.35s backwards; }
+.toolbar-grid .tool-button:nth-child(8) { animation: scaleIn 0.4s ease 0.4s backwards; }
+.toolbar-grid .tool-button:nth-child(9) { animation: scaleIn 0.4s ease 0.45s backwards; }
+
+/* === Loading State === */
+.toolbar-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--brand-2);
+  font-weight: 600;
+}
+
+.toolbar-loading::after {
+  content: '...';
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* === Tooltip Enhancement === */
+.tool-button[title] {
+  position: relative;
+}
+
+.tool-button[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  background: rgba(17, 24, 39, 0.95);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.tool-button[title]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-2px);
+  border: 6px solid transparent;
+  border-top-color: rgba(17, 24, 39, 0.95);
+  z-index: 1000;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease;
 }

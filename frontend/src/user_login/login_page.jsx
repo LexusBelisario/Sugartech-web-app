@@ -78,10 +78,26 @@ function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] via-[#FAFAF9] to-[#F5F5F5] relative overflow-hidden">
       {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-[#D50032]/5 to-[#A50034]/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-[#B22234]/5 to-[#D50032]/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-[#B22234]/5 to-[#D50032]/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-[#A50034]/3 to-[#B22234]/3 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Montalban Logo - Full Screen Background */}
+      <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
+        <img
+          src="/Montalban_Logo.png"
+          alt="Montalban Logo"
+          className="w-full h-full object-contain select-none"
+          style={{
+            opacity: 0.20,
+            filter: "drop-shadow(0 10px 40px rgba(213, 0, 50, 0.1))",
+            transform: "scale(0.65)",
+          }}
+        />
+        {/* Overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-white/40"></div>
       </div>
 
       {/* Navbar with Integrated Login */}
@@ -99,9 +115,11 @@ function LoginPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-[#222222]">
-                  <span className="text-[#D50032]">Sugartech</span> Web App
+                  <span className="text-[#D50032]">Sugartech</span> GIS
                 </h1>
-                <p className="text-xs text-[#222222]/60">GIS Web Application</p>
+                <p className="text-xs text-[#222222]/60">
+                  A GIS Web Application
+                </p>
               </div>
             </div>
 
@@ -117,6 +135,7 @@ function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Username"
+                  required
                   className="w-48 px-4 py-2.5 bg-[#F5F5F5] border border-[#222222]/10 rounded-lg text-sm text-[#222222] placeholder-[#222222]/40 focus:outline-none focus:border-[#D50032] focus:bg-white focus:shadow-lg transition-all duration-300"
                 />
               </div>
@@ -128,12 +147,14 @@ function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
+                  required
                   className="w-48 px-4 py-2.5 pr-10 bg-[#F5F5F5] border border-[#222222]/10 rounded-lg text-sm text-[#222222] placeholder-[#222222]/40 focus:outline-none focus:border-[#D50032] focus:bg-white focus:shadow-lg transition-all duration-300"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-[#222222]/40 hover:text-[#D50032] transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
                     <svg
@@ -235,7 +256,10 @@ function LoginPage() {
             </form>
 
             {/* Mobile Menu Button */}
-            <button className="lg:hidden p-2 rounded-lg hover:bg-[#F5F5F5] transition-colors">
+            <button 
+              className="lg:hidden p-2 rounded-lg hover:bg-[#F5F5F5] transition-colors"
+              aria-label="Toggle menu"
+            >
               <svg
                 className="w-6 h-6 text-[#222222]"
                 fill="none"
@@ -254,152 +278,9 @@ function LoginPage() {
         </div>
       </nav>
 
-      {/* Main Hero Section - Simplified */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-12rem)]">
-          {/* Left Content */}
-          <div className="space-y-8">
-            <div className="space-y-6">
-              <h1 className="text-5xl lg:text-7xl font-bold text-[#222222] leading-tight">
-                Mapping the
-                <span className="block bg-gradient-to-r from-[#D50032] to-[#A50034] text-transparent bg-clip-text">
-                  Philippines
-                </span>
-              </h1>
-
-              <p className="text-xl text-[#222222]/70 leading-relaxed max-w-lg">
-                Advanced Geographic Information System for visualizing,
-                analyzing, and managing spatial data across the Philippine
-                archipelago.
-              </p>
-            </div>
-
-            {/* Key Features - Visual only */}
-            <div className="flex flex-wrap gap-3 pt-4">
-              <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full border border-[#D50032]/10 shadow-sm">
-                <svg
-                  className="w-5 h-5 text-[#D50032]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-[#222222]/70">
-                  Interactive Mapping
-                </span>
-              </div>
-
-              <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full border border-[#D50032]/10 shadow-sm">
-                <svg
-                  className="w-5 h-5 text-[#D50032]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-[#222222]/70">
-                  Data Analytics
-                </span>
-              </div>
-
-              <div className="inline-flex items-center space-x-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full border border-[#D50032]/10 shadow-sm">
-                <svg
-                  className="w-5 h-5 text-[#D50032]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-[#222222]/70">
-                  Secure Access
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Visual - Philippine Map Focus */}
-          <div className="relative flex items-center justify-center">
-            {/* Decorative Background Layers */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-[90%] h-[90%] bg-gradient-to-br from-[#D50032]/10 to-[#A50034]/10 rounded-[3rem] transform rotate-6 blur-2xl"></div>
-            </div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-[85%] h-[85%] bg-gradient-to-br from-[#B22234]/10 to-[#D50032]/10 rounded-[3rem] transform -rotate-3 blur-xl"></div>
-            </div>
-
-            {/* Main Map Container */}
-            <div className="relative bg-white/80 backdrop-blur-sm rounded-[3rem] p-8 shadow-2xl border border-[#B22234]/20">
-              <div className="relative">
-                {/* Philippine Map */}
-                <div className="relative w-full h-[500px] flex items-center justify-center">
-                  <img
-                    src="https://www.nicepng.com/png/detail/102-1026494_philippine-map-clipart-png-vice-mayors-league-of.png"
-                    alt="Philippine Map"
-                    className="w-full h-full object-contain drop-shadow-2xl"
-                  />
-
-                  {/* Animated Location Pins */}
-                  <div className="absolute top-1/4 left-1/3 group">
-                    <div className="relative">
-                      <div className="w-4 h-4 bg-[#D50032] rounded-full border-2 border-white shadow-lg animate-bounce"></div>
-                      <div className="absolute inset-0 w-4 h-4 bg-[#D50032] rounded-full animate-ping opacity-75"></div>
-                    </div>
-                  </div>
-
-                  <div
-                    className="absolute top-1/2 left-1/2 group"
-                    style={{ animationDelay: "0.2s" }}
-                  >
-                    <div className="relative">
-                      <div className="w-4 h-4 bg-[#A50034] rounded-full border-2 border-white shadow-lg animate-bounce"></div>
-                      <div className="absolute inset-0 w-4 h-4 bg-[#A50034] rounded-full animate-ping opacity-75"></div>
-                    </div>
-                  </div>
-
-                  <div
-                    className="absolute top-2/3 left-2/3 group"
-                    style={{ animationDelay: "0.4s" }}
-                  >
-                    <div className="relative">
-                      <div className="w-4 h-4 bg-[#B22234] rounded-full border-2 border-white shadow-lg animate-bounce"></div>
-                      <div className="absolute inset-0 w-4 h-4 bg-[#B22234] rounded-full animate-ping opacity-75"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom Accent Bar */}
-              <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-[#A50034] via-[#B22234] to-[#D50032] rounded-b-[3rem]"></div>
-            </div>
-
-            {/* Floating Accent Elements */}
-            <div className=" absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-[#D50032] to-[#A50034] rounded-2xl shadow-xl transform rotate-12 animate-pulse"></div>
-            <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-gradient-to-br from-[#A50034] to-[#B22234] rounded-full shadow-xl animate-bounce"></div>
-          </div>
-        </div>
-      </div>
-
       {/* Mobile Login Form */}
-      <div className="lg:hidden relative z-10 max-w-md mx-auto px-4 pb-16">
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-[#B22234]/20">
+      <div className="lg:hidden relative z-10 max-w-md mx-auto px-4 py-16">
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-[#B22234]/20">
           <h2 className="text-2xl font-bold text-[#222222] mb-6 text-center">
             Sign in to continue
           </h2>
@@ -430,6 +311,7 @@ function LoginPage() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  required
                   className="w-full pl-10 pr-4 py-3 bg-[#F5F5F5] border border-[#222222]/10 rounded-lg text-[#222222] focus:outline-none focus:border-[#D50032] focus:bg-white focus:shadow-lg transition-all duration-300"
                   placeholder="Enter your username"
                 />
@@ -461,6 +343,7 @@ function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
                   className="w-full pl-10 pr-12 py-3 bg-[#F5F5F5] border border-[#222222]/10 rounded-lg text-[#222222] focus:outline-none focus:border-[#D50032] focus:bg-white focus:shadow-lg transition-all duration-300"
                   placeholder="Enter your password"
                 />
@@ -468,6 +351,7 @@ function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#222222]/40 hover:text-[#D50032] transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
                     <svg
@@ -575,19 +459,19 @@ function LoginPage() {
         </div>
       </div>
 
-      {/* Footer - Ultra Minimal */}
-      <div className="relative z-10 border-t border-[#B22234]/10 bg-white/60 backdrop-blur-sm mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Footer */}
+      <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-[#B22234]/10 bg-white/60 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="text-center">
             <p className="text-sm text-[#222222]/60">
-              © {new Date().getFullYear()} GIS Platform. All rights reserved.
+              © {new Date().getFullYear()} Sugartech GIS Web App. All rights reserved.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Decorative Stars - Minimal */}
-      <div className="absolute top-40 left-1/4 opacity-10">
+      {/* Decorative Stars */}
+      <div className="absolute top-40 left-1/4 opacity-10 z-10 pointer-events-none">
         <svg
           className="w-6 h-6 text-[#D50032]"
           fill="currentColor"
@@ -596,7 +480,7 @@ function LoginPage() {
           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
         </svg>
       </div>
-      <div className="absolute bottom-40 right-1/4 opacity-10">
+      <div className="absolute bottom-40 right-1/4 opacity-10 z-10 pointer-events-none">
         <svg
           className="w-8 h-8 text-[#A50034]"
           fill="currentColor"

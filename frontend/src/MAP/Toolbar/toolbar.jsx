@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./toolbar.css";
 import TBMainToolbar from "./TBMainToolbar.jsx";
 import TBLandLegendTools from "./TBLandLegendTools.jsx";
@@ -6,6 +6,7 @@ import TBThematicMaps from "./TBThematicMaps.jsx";
 import TBLabelTools from "./TBLabelTools.jsx";
 import TBLandmarkTools from "./TBLandmarkTools.jsx";
 import { useSchema } from "../SchemaContext.jsx";
+import { Wrench } from "lucide-react"; // New icon!
 
 const tabs = [
   { id: "parcel", label: "Main Toolbar" },
@@ -23,13 +24,36 @@ const Toolbar = ({
   onSubdivideClick,
   onLandmarkInfoClick,
   onShowLandmarksClick,
+  isConsolidatePanelOpen,
+  isSubdividePanelOpen,
+  isAttributeEditPanelOpen,
+  isSearchPanelOpen,
+  isInfoPanelOpen,
 }) => {
   const [visible, setVisible] = useState(false);
   const [activeTool, setActiveTool] = useState(null);
   const [activeTab, setActiveTab] = useState("parcel");
+  const [shouldShift, setShouldShift] = useState(false);
   const { schema } = useSchema();
 
   const handleToggle = () => setVisible(v => !v);
+
+  useEffect(() => {
+    const anyPanelOpen = 
+      isConsolidatePanelOpen || 
+      isSubdividePanelOpen || 
+      isAttributeEditPanelOpen ||
+      isSearchPanelOpen ||
+      isInfoPanelOpen;
+    
+    setShouldShift(anyPanelOpen);
+  }, [
+    isConsolidatePanelOpen, 
+    isSubdividePanelOpen, 
+    isAttributeEditPanelOpen,
+    isSearchPanelOpen,
+    isInfoPanelOpen
+  ]);
 
   const renderButtons = () => {
     switch (activeTab) {
@@ -67,12 +91,31 @@ const Toolbar = ({
 
   return (
     <>
-      <button id="toggleToolbarBtn" onClick={handleToggle}>
-        ☰ GISTools
+      <button 
+        id="toggleToolbarBtn" 
+        onClick={handleToggle}
+        className={`${shouldShift ? "shifted" : ""} ${visible ? "active" : ""}`}
+      >
+        <Wrench className="toolbar-icon" size={20} strokeWidth={2.5} />
+        <span>Toolbar</span>
       </button>
 
-      <div className={`toolbar-panel ${visible ? "visible" : ""}`} id="toolbarPanel">
-        <select className="toolbar-dropdown" value={activeTab} onChange={e => setActiveTab(e.target.value)}>
+      <div 
+        className={`toolbar-panel ${visible ? "visible" : ""} ${shouldShift ? "shifted-left" : ""}`} 
+        id="toolbarPanel"
+      >
+        <div className="toolbar-header">
+          <div className="toolbar-header-icon">
+            <Wrench size={22} strokeWidth={2.5} />
+          </div>
+          <h3 className="toolbar-title">Toolbar</h3>
+        </div>
+
+        <select 
+          className="toolbar-dropdown" 
+          value={activeTab} 
+          onChange={e => setActiveTab(e.target.value)}
+        >
           {tabs.map((tab) => (
             <option key={tab.id} value={tab.id}>{tab.label}</option>
           ))}
@@ -81,16 +124,8 @@ const Toolbar = ({
         <div className="toolbar-grid" style={{ position: "relative" }}>
           {renderButtons()}
           {!schema && (
-            <div
-              style={{
-                position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-                backdropFilter: "blur(5px)", backgroundColor: "rgba(0,0,0,0.35)", zIndex: 5,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                textAlign: "center", color: "white", fontSize: "14px", fontWeight: "500",
-                borderRadius: "6px", pointerEvents: "auto",
-              }}
-            >
-              <div>
+            <div className="toolbar-overlay">
+              <div className="overlay-content">
                 <p>No Mun/City selected yet.</p>
                 <p>Please select a Mun/City first.</p>
               </div>
