@@ -107,17 +107,7 @@ function RightControls({ activeTool, setActiveTool }) {
     <>
       {/* 🎛️ Left Side Button Stack */}
       <div className="absolute top-1/2 left-0 -translate-y-1/2 flex flex-col items-center gap-3 z-[1000] select-none">
-        {/* 🔍 Zoom + Center */}
-        <div className={panelClass}>
-          <button onClick={handleZoomIn} className={`${buttonBase} ${hoverColor}`}>
-            <Plus size={18} />
-            <Tooltip text="Zoom In" />
-          </button>
-          <button onClick={handleZoomOut} className={`${buttonBase} ${hoverColor}`}>
-            <Minus size={18} />
-            <Tooltip text="Zoom Out" />
-          </button>
-        </div>
+
 
         {/* 🧩 Tool Buttons */}
         <div className={panelClass}>
