@@ -1,19 +1,18 @@
 @import "./PredictiveModelTools.css";
 
 /* ---------- Palette ---------- */
-:root{
-  --brand-1:#A50034;
-  --brand-2:#D50032;
-  --brand-3:#B22234;
-  --near-white:#FAFAF9;
-  --ink:#111827;
-  
+:root {
+  --brand-1: #A50034;
+  --brand-2: #D50032;
+  --brand-3: #B22234;
+  --near-white: #FAFAF9;
+  --ink: #111827;
   --red-50: #FEF2F2;
   --red-100: #FEE2E2;
   --red-200: #FECACA;
   --red-800: #991B1B;
-  
-  --toolbar-shift-amount: 420px;
+  --toolbar-width: 360px;
+  --toolbar-shift-amount: 400px;
 }
 
 /* === ANIMATIONS === */
@@ -29,12 +28,8 @@
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes scaleIn {
@@ -48,74 +43,81 @@
   }
 }
 
-@keyframes pulse {
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulseGlow {
   0%, 100% {
-    transform: scale(1);
+    box-shadow: 0 8px 24px rgba(213, 0, 50, 0.32),
+                0 4px 12px rgba(165, 0, 52, 0.24),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
   50% {
-    transform: scale(1.05);
+    box-shadow: 0 10px 32px rgba(213, 0, 50, 0.42),
+                0 6px 16px rgba(165, 0, 52, 0.34),
+                inset 0 1px 0 rgba(255, 255, 255, 0.25);
   }
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -100% 0;
-  }
-  100% {
-    background-position: 100% 0;
-  }
-}
-
-/* === TOOLBAR CONTAINER === */
 .toolbar-panel {
-  position: absolute;
-  top: 54px;
-  right: 10px;
-  margin-top: 71px;
-  width: 340px;
-  height: fit-content;
+  position: fixed;
+  top: 125px;
+  right: 20px;
+  width: var(--toolbar-width);
+  max-height: calc(100vh - 145px);
+  height: auto;
   padding: 18px;
-  overflow-y: auto;
+  overflow-y: scroll;
+  overflow-x: hidden;
   z-index: 2000;
-
   background: var(--near-white);
   color: var(--ink);
   border: 1px solid var(--brand-3);
-  border-left: 3px solid var(--brand-2);
-  border-radius: 12px;
-
-  transform: translateX(100%);
+  border-left: 4px solid var(--brand-2);
+  border-radius: 16px;
+  transform: translateX(calc(100% + 40px));
   opacity: 0;
-  transition: 
-    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.4s ease,
-    right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-
-  box-shadow:
-    0 10px 30px rgba(0,0,0,0.18),
-    0 0 0 1px rgba(178,34,52,0.15);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.4s ease,
+              right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15),
+              0 10px 20px rgba(0, 0, 0, 0.1),
+              0 0 0 1px rgba(178, 34, 52, 0.1);
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  box-sizing: border-box;
+  
+  /* Enable smooth scrolling */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  
+  /* Ensure mouse events work */
+  pointer-events: auto;
+  cursor: default;
 }
 
-.toolbar-panel.visible { 
+.toolbar-panel.visible {
   transform: translateX(0);
   opacity: 1;
   animation: slideInFromRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .toolbar-panel.shifted-left {
-  right: calc(10px + var(--toolbar-shift-amount));
+  right: calc(20px + var(--toolbar-shift-amount));
 }
 
 /* === TOOLBAR HEADER === */
 .toolbar-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 14px;
   padding-bottom: 12px;
   border-bottom: 2px solid var(--red-100);
   animation: fadeIn 0.5s ease;
+  position: relative;
+  z-index: 100;
 }
 
 .toolbar-header-icon {
@@ -126,402 +128,166 @@
   height: 38px;
   background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
   color: var(--near-white);
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(213,0,50,.25);
-  transition: transform 0.3s ease;
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(213, 0, 50, 0.3);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 101;
 }
 
 .toolbar-header:hover .toolbar-header-icon {
-  transform: rotate(15deg) scale(1.05);
+  transform: rotate(12deg) scale(1.08);
 }
 
 .toolbar-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 700;
   color: var(--brand-1);
   letter-spacing: -0.02em;
+  line-height: 1.2;
+  position: relative;
+  z-index: 101;
 }
 
 /* === TOGGLE BUTTON === */
 #toggleToolbarBtn {
-  position: absolute;
+  position: fixed;
   top: 75px;
-  right: 10px;
+  right: 20px;
   z-index: 2100;
-
   min-height: 50px;
-  padding: 10px 16px;
+  padding: 12px 18px;
   display: flex;
-  flex-direction: row; /* row para magkatabi */
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 10px; /* space between icon and text */
+  gap: 10px;
   cursor: pointer;
-
-  background: linear-gradient(135deg, var(--near-white) 0%, #FFFFFF 100%);
+  background: linear-gradient(135deg, #FFFFFF 0%, var(--near-white) 100%);
   color: var(--brand-2);
   border: 2px solid var(--brand-2);
-  border-radius: 12px;
+  border-radius: 14px;
   font-size: 16px;
   font-weight: 700;
-
-  transition: 
-    all 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 
-    0 4px 12px rgba(213,0,50,.15),
-    0 2px 4px rgba(0,0,0,.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(213, 0, 50, 0.18),
+              0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 #toggleToolbarBtn .toolbar-icon {
-    width: 18px;
-    height: 18px;
-  }
-  
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+#toggleToolbarBtn span {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
 #toggleToolbarBtn:hover {
   background: linear-gradient(135deg, var(--red-50) 0%, var(--red-100) 100%);
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 
-    0 8px 20px rgba(213,0,50,.25),
-    0 4px 8px rgba(0,0,0,.12);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(213, 0, 50, 0.28),
+              0 4px 10px rgba(0, 0, 0, 0.12);
   border-color: var(--brand-1);
 }
 
 #toggleToolbarBtn:hover .toolbar-icon {
-  transform: rotate(15deg);
+  transform: rotate(15deg) scale(1.1);
 }
 
 #toggleToolbarBtn.active {
   background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
   color: var(--near-white);
   border-color: var(--brand-1);
-  box-shadow: 
-    0 6px 16px rgba(213,0,50,.35),
-    inset 0 1px 0 rgba(255,255,255,.2);
+  box-shadow: 0 6px 20px rgba(213, 0, 50, 0.4),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+#toggleToolbarBtn.active:hover {
+  background: linear-gradient(135deg, #E6003D 0%, #B8002E 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(213, 0, 50, 0.5),
+              inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 #toggleToolbarBtn.active .toolbar-icon {
   transform: rotate(180deg);
 }
 
-#toggleToolbarBtn.shifted {
-  right: calc(10px + var(--toolbar-shift-amount));
+#toggleToolbarBtn.active:hover .toolbar-icon {
+  transform: rotate(195deg) scale(1.1);
 }
 
-#toggleToolbarBtn span {
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  white-space: nowrap; /* prevent text wrapping */
+#toggleToolbarBtn.shifted {
+  right: calc(20px + var(--toolbar-shift-amount));
 }
 
 /* === DROPDOWN === */
 .toolbar-dropdown {
   width: 100%;
-  padding: 12px 14px;
-  margin-bottom: 16px;
-
+  padding: 11px 13px;
+  margin-bottom: 14px;
   background: linear-gradient(135deg, #FFFFFF 0%, var(--near-white) 100%);
   color: var(--ink);
   border: 2px solid var(--brand-3);
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
-
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: scaleIn 0.4s ease 0.1s backwards;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 50;
 }
 
 .toolbar-dropdown:hover {
   border-color: var(--brand-2);
-  box-shadow: 0 4px 12px rgba(213,0,50,.12);
+  box-shadow: 0 4px 16px rgba(213, 0, 50, 0.15);
   transform: translateY(-1px);
 }
 
 .toolbar-dropdown:focus {
   outline: none;
   border-color: var(--brand-2);
-  box-shadow: 0 0 0 4px rgba(213,0,50,.15);
-  transform: scale(1.01);
+  box-shadow: 0 0 0 4px rgba(213, 0, 50, 0.15),
+              0 4px 16px rgba(213, 0, 50, 0.2);
 }
 
 /* === TOOL BUTTON GRID === */
 .toolbar-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 9px;
   animation: fadeIn 0.5s ease 0.2s backwards;
-}
-
-/* === ENHANCED TOOL BUTTON === */
-.tool-button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-
-  width: 100%;
-  height: 84px;
-  padding: 10px 8px;
-  box-sizing: border-box;
-  text-align: center;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-
-  background: linear-gradient(135deg, #FFFFFF 0%, var(--near-white) 100%);
-  color: var(--ink);
-  border: 1.5px solid rgba(178,34,52,.2);
-  border-radius: 12px;
-
-  transition: 
-    all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 
-    0 2px 8px rgba(165,0,52,0.08),
-    0 1px 3px rgba(0,0,0,0.06);
-}
-
-/* Hover shimmer effect */
-.tool-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255,255,255,0.4),
-    transparent
-  );
-  transition: left 0.5s ease;
-}
-
-.tool-button:hover::before {
-  left: 100%;
-}
-
-.tool-button:hover {
-  background: linear-gradient(135deg, var(--red-50) 0%, var(--red-100) 100%);
-  border-color: var(--brand-2);
-  box-shadow: 
-    0 6px 16px rgba(213,0,50,.18),
-    0 3px 8px rgba(165,0,52,.12);
-  transform: translateY(-3px) scale(1.02);
-}
-
-.tool-button.active,
-.active-tool {
-  background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
-  border: 2px solid var(--brand-1);
-  color: var(--near-white);
-  box-shadow: 
-    0 8px 24px rgba(213,0,50,.32),
-    0 4px 12px rgba(165,0,52,.24),
-    inset 0 1px 0 rgba(255,255,255,.2);
-  transform: translateY(-2px) scale(1.03);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-.tool-button.active:hover,
-.active-tool:hover {
-  background: linear-gradient(135deg, #E6003D 0%, #B8002E 100%);
-  transform: translateY(-4px) scale(1.04);
-  box-shadow: 
-    0 10px 30px rgba(213,0,50,.38),
-    0 6px 16px rgba(165,0,52,.28),
-    inset 0 1px 0 rgba(255,255,255,.25);
-}
-
-/* Icon styling */
-.tool-button svg {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  color: var(--brand-3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  stroke-width: 2.5;
-}
-
-.tool-button:hover svg {
-  color: var(--brand-2);
-  transform: scale(1.12) rotate(5deg);
-}
-
-.tool-button.active svg,
-.active-tool svg {
-  color: var(--near-white);
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,.25));
-  transform: scale(1.1);
-}
-
-.tool-button img { 
-  width: 28px; 
-  height: 28px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.tool-button:hover img {
-  transform: scale(1.12) rotate(5deg);
-}
-
-.tool-button.active img,
-.active-tool img {
-  filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,.25));
-}
-
-/* Label text */
-.tool-button span {
-  font-size: 11px;
-  line-height: 1.2;
-  font-weight: 600;
-  padding: 0 2px;
-  word-break: break-word;
-  color: var(--ink);
-  transition: all 0.3s ease;
-  letter-spacing: 0.01em;
-}
-
-.tool-button:hover span {
-  color: var(--brand-1);
-  transform: scale(1.02);
-}
-
-.tool-button.active span,
-.active-tool span {
-  color: var(--near-white);
-  text-shadow: 0 1px 3px rgba(0,0,0,.2);
-}
-
-/* === Overlay === */
-.toolbar-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  backdrop-filter: blur(8px);
-  background: rgba(0,0,0,0.4);
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  border-radius: 10px;
-  pointer-events: auto;
-  animation: fadeIn 0.3s ease;
-}
-
-.overlay-content {
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 20px;
-  background: rgba(0,0,0,0.3);
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.2);
-  animation: scaleIn 0.4s ease;
-}
-
-.overlay-content p {
-  margin: 4px 0;
-}
-
-/* === Icon Placeholder === */
-.icon-placeholder {
-  font-size: 28px;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
-  color: var(--near-white);
-  border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(213,0,50,.25);
-  transition: transform 0.3s ease;
-}
-
-.tool-button:hover .icon-placeholder {
-  transform: scale(1.12) rotate(5deg);
-}
-
-/* === Responsive === */
-/* === Responsive === */
-@media (max-width: 768px) {
-  .toolbar-panel {
-    width: 300px;
-    padding: 15px;
-  }
-  
-  .toolbar-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .tool-button {
-    height: 90px;
-  }
-  
-  #toggleToolbarBtn {
-    min-height: 45px;
-    padding: 8px 14px;
-    font-size: 14px;
-    gap: 8px;
-  }
-
-  
-  .toolbar-header-icon {
-    width: 34px;
-    height: 34px;
-  }
-  
-  .toolbar-title {
-    font-size: 18px;
-  }
-  
-  :root {
-    --toolbar-shift-amount: 320px;
-  }
-}
-
-/* === TOOLBAR SECTIONS === */
-.toolbar-section {
-  margin-bottom: 20px;
-  animation: fadeIn 0.5s ease;
-}
-
-.toolbar-section:last-of-type {
   margin-bottom: 0;
+  position: relative;
+  z-index: 1;
+  height: auto;
+  max-height: none;
+  pointer-events: auto; /* Ensure grid receives mouse events */
 }
 
-.toolbar-section {
-  grid-column: 1 / -1;
-  display: block;
-  width: 100%;
-  margin: 6px 0 16px;
-}
-
-.toolbar-section-title {
-  display: block;
-  margin: 0 0 10px;
-}
-
+/* === CATEGORY LABELS === */
 .toolbar-category-label {
   grid-column: 1 / -1;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--brand-2);
-  margin: 12px 0 8px 0;
-  padding: 0;
+  margin: 10px 0 8px 0;
+  padding-left: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   position: relative;
-  padding-left: 12px;
   animation: fadeIn 0.5s ease;
+  line-height: 1.2;
+  z-index: 2;
 }
 
 .toolbar-category-label::before {
@@ -531,36 +297,295 @@
   top: 50%;
   transform: translateY(-50%);
   width: 4px;
-  height: 14px;
+  height: 13px;
   background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
 .toolbar-category-label:first-child {
   margin-top: 0;
 }
 
-/* === Scrollbar Styling === */
+/* === ENHANCED TOOL BUTTON === */
+.tool-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 86px;
+  padding: 9px 7px;
+  box-sizing: border-box;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #FFFFFF 0%, var(--near-white) 100%);
+  color: var(--ink);
+  border: 2px solid rgba(178, 34, 52, 0.15);
+  border-radius: 13px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(165, 0, 52, 0.08),
+              0 1px 3px rgba(0, 0, 0, 0.06);
+  z-index: 2;
+  pointer-events: auto; /* Buttons receive clicks */
+  touch-action: manipulation; /* Better touch/scroll behavior */
+}
+
+/* Shimmer effect */
+.tool-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -200%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.5),
+    transparent
+  );
+  transition: left 0.6s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tool-button:hover::before {
+  left: 200%;
+}
+
+/* Normal Hover State */
+.tool-button:hover:not(.active):not(.active-tool) {
+  background: linear-gradient(135deg, var(--red-50) 0%, var(--red-100) 100%);
+  border-color: var(--brand-2);
+  box-shadow: 0 6px 20px rgba(213, 0, 50, 0.2),
+              0 3px 10px rgba(165, 0, 52, 0.15);
+  transform: translateY(-4px) scale(1.03);
+  z-index: 3;
+}
+
+/* Active State - Multiple buttons can be active */
+.tool-button.active,
+.tool-button.active-tool {
+  background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%) !important;
+  border: 2px solid var(--brand-1) !important;
+  color: var(--near-white) !important;
+  box-shadow: 0 8px 24px rgba(213, 0, 50, 0.32),
+              0 4px 12px rgba(165, 0, 52, 0.24),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-2px) scale(1.02);
+  animation: pulseGlow 2s ease-in-out infinite;
+  z-index: 3;
+}
+
+/* Active + Hover State */
+.tool-button.active:hover,
+.tool-button.active-tool:hover {
+  background: linear-gradient(135deg, #E6003D 0%, #B8002E 100%) !important;
+  border-color: #8B0025 !important;
+  transform: translateY(-5px) scale(1.05) !important;
+  box-shadow: 0 12px 36px rgba(213, 0, 50, 0.45),
+              0 6px 18px rgba(165, 0, 52, 0.32),
+              inset 0 2px 0 rgba(255, 255, 255, 0.3) !important;
+  animation: none;
+  z-index: 4;
+}
+
+/* Icon Styling - Normal State */
+.tool-button svg {
+  flex-shrink: 0;
+  width: 25px;
+  height: 25px;
+  color: var(--brand-3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  stroke-width: 2.5;
+  position: relative;
+  z-index: 2;
+}
+
+.tool-button:hover:not(.active):not(.active-tool) svg {
+  color: var(--brand-2);
+  transform: scale(1.15) rotate(8deg);
+}
+
+/* Icon Styling - Active State */
+.tool-button.active svg,
+.tool-button.active-tool svg {
+  color: var(--near-white) !important;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+  transform: scale(1.1);
+}
+
+/* Icon Styling - Active + Hover State */
+.tool-button.active:hover svg,
+.tool-button.active-tool:hover svg {
+  transform: scale(1.2) rotate(12deg) !important;
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.4)) !important;
+}
+
+/* Image Icon Handling */
+.tool-button img {
+  width: 27px;
+  height: 27px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.tool-button:hover:not(.active):not(.active-tool) img {
+  transform: scale(1.15) rotate(8deg);
+}
+
+.tool-button.active img,
+.tool-button.active-tool img {
+  filter: brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3)) !important;
+  transform: scale(1.1);
+}
+
+.tool-button.active:hover img,
+.tool-button.active-tool:hover img {
+  transform: scale(1.2) rotate(12deg) !important;
+  filter: brightness(0) invert(1) drop-shadow(0 3px 8px rgba(0, 0, 0, 0.4)) !important;
+}
+
+/* Label Text - Normal State */
+.tool-button span {
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 600;
+  padding: 0 2px;
+  word-break: break-word;
+  color: var(--ink);
+  transition: all 0.3s ease;
+  letter-spacing: 0.01em;
+  display: block;
+  position: relative;
+  z-index: 2;
+}
+
+.tool-button:hover:not(.active):not(.active-tool) span {
+  color: var(--brand-1);
+  font-weight: 700;
+  transform: scale(1.03);
+}
+
+/* Label Text - Active State */
+.tool-button.active span,
+.tool-button.active-tool span {
+  color: var(--near-white) !important;
+  font-weight: 700;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* Label Text - Active + Hover State */
+.tool-button.active:hover span,
+.tool-button.active-tool:hover span {
+  transform: scale(1.05) !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* === OVERLAY === */
+.toolbar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: 13px;
+  pointer-events: none; /* Changed to none so it doesn't block scrolling */
+  animation: fadeIn 0.3s ease;
+}
+
+.overlay-content {
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: scaleIn 0.4s ease;
+  position: relative;
+  z-index: 11;
+  pointer-events: auto; /* Content can receive clicks */
+}
+
+.overlay-content p {
+  margin: 5px 0;
+  line-height: 1.4;
+}
+
+/* === ICON PLACEHOLDER === */
+.icon-placeholder {
+  font-size: 26px;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
+  color: var(--near-white);
+  border-radius: 11px;
+  box-shadow: 0 4px 12px rgba(213, 0, 50, 0.3);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.tool-button:hover:not(.active):not(.active-tool) .icon-placeholder {
+  transform: scale(1.15) rotate(8deg);
+}
+
+.tool-button.active:hover .icon-placeholder,
+.tool-button.active-tool:hover .icon-placeholder {
+  transform: scale(1.2) rotate(12deg) !important;
+}
+
+/* === SCROLLBAR STYLING === */
 .toolbar-panel::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  display: block !important;
+  cursor: pointer; /* Cursor changes on scrollbar */
 }
 
 .toolbar-panel::-webkit-scrollbar-track {
   background: var(--red-50);
   border-radius: 10px;
+  margin: 8px 0;
+  cursor: pointer;
+}
+
+.toolbar-panel::-webkit-scrollbar-thumb:active {
+  cursor: grabbing; /* Grabbing when dragging */
 }
 
 .toolbar-panel::-webkit-scrollbar-thumb {
   background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
   border-radius: 10px;
-  transition: background 0.3s ease;
+  border: 2px solid var(--red-50);
+  transition: all 0.3s ease;
+  min-height: 40px;
+  cursor: grab; /* Grab cursor for scrollbar thumb */
 }
 
 .toolbar-panel::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(135deg, #E6003D 0%, #B8002E 100%);
+  border-color: var(--red-100);
+  cursor: grab;
 }
 
-/* === Staggered Animation for Tool Buttons === */
+/* === STAGGERED ANIMATIONS === */
 .toolbar-grid .tool-button:nth-child(1) { animation: scaleIn 0.4s ease 0.05s backwards; }
 .toolbar-grid .tool-button:nth-child(2) { animation: scaleIn 0.4s ease 0.1s backwards; }
 .toolbar-grid .tool-button:nth-child(3) { animation: scaleIn 0.4s ease 0.15s backwards; }
@@ -570,23 +595,32 @@
 .toolbar-grid .tool-button:nth-child(7) { animation: scaleIn 0.4s ease 0.35s backwards; }
 .toolbar-grid .tool-button:nth-child(8) { animation: scaleIn 0.4s ease 0.4s backwards; }
 .toolbar-grid .tool-button:nth-child(9) { animation: scaleIn 0.4s ease 0.45s backwards; }
+.toolbar-grid .tool-button:nth-child(10) { animation: scaleIn 0.4s ease 0.5s backwards; }
+.toolbar-grid .tool-button:nth-child(11) { animation: scaleIn 0.4s ease 0.55s backwards; }
+.toolbar-grid .tool-button:nth-child(12) { animation: scaleIn 0.4s ease 0.6s backwards; }
+.toolbar-grid .tool-button:nth-child(13) { animation: scaleIn 0.4s ease 0.65s backwards; }
+.toolbar-grid .tool-button:nth-child(14) { animation: scaleIn 0.4s ease 0.7s backwards; }
+.toolbar-grid .tool-button:nth-child(15) { animation: scaleIn 0.4s ease 0.75s backwards; }
 
-/* === Loading State === */
+/* === LOADING STATE === */
 .toolbar-loading {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 30px 20px;
   color: var(--brand-2);
   font-weight: 600;
+  font-size: 14px;
 }
 
 .toolbar-loading::after {
   content: '...';
-  animation: pulse 1.5s ease-in-out infinite;
+  display: inline-block;
+  animation: pulseGlow 1.5s ease-in-out infinite;
+  margin-left: 4px;
 }
 
-/* === Tooltip Enhancement === */
+/* === ENHANCED TOOLTIPS === */
 .tool-button[title] {
   position: relative;
 }
@@ -594,30 +628,164 @@
 .tool-button[title]:hover::after {
   content: attr(title);
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% + 10px);
   left: 50%;
-  transform: translateX(-50%) translateY(-8px);
-  background: rgba(17, 24, 39, 0.95);
+  transform: translateX(-50%);
+  background: rgba(17, 24, 39, 0.96);
   color: white;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
   font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
-  z-index: 1000;
+  z-index: 10000;
   pointer-events: none;
   animation: fadeIn 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3),
+              0 2px 8px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.01em;
+  line-height: 1.3;
 }
 
 .tool-button[title]:hover::before {
   content: '';
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% + 2px);
   left: 50%;
-  transform: translateX(-50%) translateY(-2px);
-  border: 6px solid transparent;
-  border-top-color: rgba(17, 24, 39, 0.95);
-  z-index: 1000;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: rgba(17, 24, 39, 0.96);
+  z-index: 10000;
   pointer-events: none;
   animation: fadeIn 0.2s ease;
 }
+
+/* Active button tooltips with different styling */
+.tool-button.active[title]:hover::after,
+.tool-button.active-tool[title]:hover::after {
+  background: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-1) 100%);
+  box-shadow: 0 6px 20px rgba(213, 0, 50, 0.4),
+              0 2px 8px rgba(165, 0, 52, 0.3);
+}
+
+.tool-button.active[title]:hover::before,
+.tool-button.active-tool[title]:hover::before {
+  border-top-color: var(--brand-2);
+}
+
+/* === SECTIONS === */
+.toolbar-section {
+  margin-bottom: 14px;
+  animation: fadeIn 0.5s ease;
+}
+
+.toolbar-section:last-of-type {
+  margin-bottom: 0 !important;
+}
+
+.toolbar-section-title {
+  display: block;
+  margin: 0 0 9px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-1);
+  line-height: 1.3;
+}
+
+/* === UTILITY CLASSES === */
+.toolbar-divider {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--red-200), transparent);
+  margin: 14px 0;
+  border: none;
+}
+
+/* === FOCUS VISIBLE STATES === */
+.tool-button:focus-visible {
+  outline: 3px solid var(--brand-2);
+  outline-offset: 2px;
+  border-radius: 13px;
+}
+
+#toggleToolbarBtn:focus-visible {
+  outline: 3px solid var(--brand-2);
+  outline-offset: 2px;
+}
+
+.toolbar-dropdown:focus-visible {
+  outline: 3px solid var(--brand-2);
+  outline-offset: 2px;
+}
+
+/* === DISABLED STATE === */
+.tool-button:disabled,
+.tool-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.6);
+}
+
+/* === EMPTY STATE === */
+.toolbar-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 15px;
+  text-align: center;
+  color: var(--brand-3);
+}
+
+.toolbar-empty-state svg {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 14px;
+  opacity: 0.5;
+}
+
+.toolbar-empty-state p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* === PERFORMANCE OPTIMIZATIONS === */
+.toolbar-panel,
+.tool-button,
+#toggleToolbarBtn {
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Remove will-change after animations complete */
+.toolbar-panel.visible {
+  will-change: auto;
+}
+
+/* === FIX FOR EXTRA SPACING AND OVERLAP === */
+.toolbar-grid:last-child {
+  margin-bottom: 0 !important;
+}
+
+.toolbar-category-label:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Ensure no extra padding at bottom */
+.toolbar-panel > div:last-child {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* Fix z-index stacking context */
+.toolbar-panel > * {
+  position: relative;
+}
+

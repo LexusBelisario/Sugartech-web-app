@@ -109,7 +109,7 @@ const TBMainToolbar = ({ activeTool, setActiveTool }) => {
     {
       id: TOOLS.EDIT,
       icon: Edit3,
-      label: "Parcel Attribute Editing Tool",
+      label: "Attribute Editing Tool",
       title: "Select a parcel and edit its attributes",
       onClick: () => toggleTool(TOOLS.EDIT),
     },

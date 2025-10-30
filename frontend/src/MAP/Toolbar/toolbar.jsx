@@ -121,7 +121,7 @@ const Toolbar = ({
           ))}
         </select>
 
-        <div className="toolbar-grid" style={{ position: "relative" }}>
+        <div className="toolbar-grid">
           {renderButtons()}
           {!schema && (
             <div className="toolbar-overlay">

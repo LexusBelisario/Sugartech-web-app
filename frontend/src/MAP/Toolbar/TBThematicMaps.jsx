@@ -1,5 +1,5 @@
 // src/components/TBThematicMaps.jsx
-import React from "react";
+import React, { useState } from "react";
 import { 
   Map,
   MapPin,
@@ -18,6 +18,25 @@ import "./toolbar.css";
 import Thematic from "../Thematic/Thematic.jsx";
 
 const TBThematicMaps = () => {
+  // State to track active buttons
+  const [activeButtons, setActiveButtons] = useState(new Set());
+
+  // Function to toggle button active state
+  const handleButtonClick = (id, callback) => {
+    setActiveButtons(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+    
+    // Call the original callback
+    if (callback) callback();
+  };
+
   const hazardsRisks = [
     {
       id: "landslide",
@@ -120,9 +139,9 @@ const TBThematicMaps = () => {
       {hazardsRisks.map(({ id, icon: Icon, label, title, onClick }) => (
         <button
           key={id}
-          className="tool-button"
+          className={`tool-button ${activeButtons.has(id) ? 'active' : ''}`}
           id={`btn${id.charAt(0).toUpperCase() + id.slice(1)}`}
-          onClick={onClick}
+          onClick={() => handleButtonClick(id, onClick)}
           title={title}
         >
           <Icon size={24} strokeWidth={2.5} />
@@ -131,15 +150,15 @@ const TBThematicMaps = () => {
       ))}
 
       {/* Land Thematics Label */}
-      <div className="toolbar-category-label">Land Thematics:</div>
+      <div className="toolbar-category-label">Network Layers:</div>
       
       {/* Land Thematics Buttons */}
       {landThematics.map(({ id, icon: Icon, label, title, onClick }) => (
         <button
           key={id}
-          className="tool-button"
+          className={`tool-button ${activeButtons.has(id) ? 'active' : ''}`}
           id={`btn${id.charAt(0).toUpperCase() + id.slice(1)}`}
-          onClick={onClick}
+          onClick={() => handleButtonClick(id, onClick)}
           title={title}
         >
           <Icon size={24} strokeWidth={2.5} />
@@ -154,9 +173,9 @@ const TBThematicMaps = () => {
       {roadThematics.map(({ id, icon: Icon, label, title, onClick }) => (
         <button
           key={id}
-          className="tool-button"
+          className={`tool-button ${activeButtons.has(id) ? 'active' : ''}`}
           id={`btn${id.charAt(0).toUpperCase() + id.slice(1)}`}
-          onClick={onClick}
+          onClick={() => handleButtonClick(id, onClick)}
           title={title}
         >
           <Icon size={24} strokeWidth={2.5} />
